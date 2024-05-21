@@ -1,0 +1,55 @@
+﻿<Window x:Class="SlimMy.View.SignUp"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SlimMy.View"
+        mc:Ignorable="d"
+        Title="SignUp" Height="620" Width="300">
+    <StackPanel Width="200" HorizontalAlignment="Stretch" Margin="0,10,0,0">
+        <Label Width="200" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">회원가입</Label>
+        <StackPanel Orientation="Vertical" Margin="0,10,0,0">
+            <Label>이름</Label>
+            <TextBox></TextBox>
+            
+            <Label Margin="0,10,0,0">성별</Label>
+            <StackPanel Orientation="Horizontal">
+            <CheckBox>남성</CheckBox>
+            <CheckBox>여성</CheckBox>
+            </StackPanel>
+            
+            <Label Margin="0,10,0,0">닉네임</Label>
+            <TextBox></TextBox>
+            
+            <Label Margin="0,10,0,0">Email Address</Label>
+            <TextBox></TextBox>
+            
+            <Label Margin="0,10,0,0">Password</Label>
+            <TextBox></TextBox>
+            
+            <Label Margin="0,10,0,0">생년월일</Label>
+            <DatePicker Name="datePickerBirthDate" Width="200" />
+
+            <Label Margin="0,10,0,0">키</Label>
+            <StackPanel Orientation="Horizontal">
+                <TextBox Width="150"></TextBox>
+                <Label>cm</Label>
+            </StackPanel>
+            
+            <Label Margin="0,10,0,0">몸무게</Label>
+            <StackPanel Orientation="Horizontal">
+            <TextBox Width="150"></TextBox>
+                <Label>kg</Label>
+            </StackPanel>
+
+            <Label Margin="0,10,0,0">다이어트 목표</Label>
+            <ComboBox>
+                <ComboBoxItem Content="체중 감량"/>
+                <ComboBoxItem Content="체중 유지"/>
+                <ComboBoxItem Content="체중 증가"/>
+            </ComboBox>
+
+            <Button Margin="0,20,0,0">회원가입</Button>
+        </StackPanel>
+    </StackPanel>
+</Window>
