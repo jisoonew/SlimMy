@@ -39,5 +39,38 @@ namespace SlimMy
                 }
             }
         }
+
+        public void InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "insert into Users (email, name, gender, nickname, password, birth_date, height, weight, diet_goal) " +
+            "values(:email, :name, :gender, :nickName, :password, :birthDate, :height, :weight, :dietGoal)";
+
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("email", email));
+                        command.Parameters.Add(new OracleParameter("name", name));
+                        command.Parameters.Add(new OracleParameter("gender", gender));
+                        command.Parameters.Add(new OracleParameter("nickName", nickName));
+                        command.Parameters.Add(new OracleParameter("password", password));
+                        command.Parameters.Add(new OracleParameter("birthDate", birthDate));
+                        command.Parameters.Add(new OracleParameter("height", height));
+                        command.Parameters.Add(new OracleParameter("weight", weight));
+                        command.Parameters.Add(new OracleParameter("dietGoal", dietGoal));
+
+                        command.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+                }
+            }
+        }
     }
 }
