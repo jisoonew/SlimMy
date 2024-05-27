@@ -7,9 +7,11 @@
         xmlns:ViewModel="clr-namespace:SlimMy.ViewModel" x:Class="SlimMy.View.SignUp"
         mc:Ignorable="d"
         Title="SignUp" Height="560" Width="300">
+    
     <Window.DataContext>
         <ViewModel:Login/>
     </Window.DataContext>
+
     <StackPanel Width="280" HorizontalAlignment="Stretch" Margin="0,10,0,0" Height="500">
 
         <Label Width="200" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="15" Content="회원가입"/>
@@ -52,7 +54,7 @@
                 <TextBox Margin="0,19,0,0" FontSize="15"/>
 
                 <!-- 생년월일 -->
-                <DatePicker Margin="0,18,0,0" SelectedDate="{x:Static sys:DateTime.Now}" xmlns:sys="clr-namespace:System;assembly=mscorlib"/>
+                <DatePicker Margin="0,18,0,0" SelectedDate="{Binding User.BirthDate}" DisplayDateStart="1900-01-01" DisplayDateEnd="2100-12-31" />
 
                 <!-- 키 -->
                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">

@@ -24,6 +24,8 @@ namespace SlimMy.View
             InitializeComponent();
         }
 
+        public string Password { get; internal set; }
+
         private void login_Click(object sender, RoutedEventArgs e)
         {
             var signUp = new View.SignUp();

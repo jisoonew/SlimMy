@@ -28,6 +28,8 @@ namespace SlimMy.ViewModel
             InsertCommand = new Command(InsertUser);
             _user = new User();
             _repo = new Repo(_connstring);
+
+            User.BirthDate = new DateTime(1990, 1, 1);
         }
 
         public User User
@@ -35,7 +37,6 @@ namespace SlimMy.ViewModel
             get { return _user; }
             set { _user = value; OnPropertyChanged(nameof(User)); }
         }
-
 
         public bool IsMaleChecked
         {
@@ -66,8 +67,9 @@ namespace SlimMy.ViewModel
             _user.Gender = User.Gender == "남성" ? "남성" : "여성";
 
             // 유효성 검사
-            if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateName(User.NickName) && Validator.Validator.ValidateEmail(User.Email) 
-                && Validator.Validator.ValidatePassword(User.Password) && Validator.Validator.ValidateBirthDate(User.BirthDate))
+            if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName) && Validator.Validator.ValidateEmail(User.Email) 
+                && Validator.Validator.ValidatePassword(User.Password) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
+                && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal))
             {
                 _repo.InsertUser(User.Name, User.Gender, User.NickName, User.Email, User.Password, User.BirthDate, User.Height, User.Weight, User.DietGoal);
             }

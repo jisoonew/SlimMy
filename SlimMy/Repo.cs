@@ -40,6 +40,11 @@ namespace SlimMy
             }
         }
 
+        // 이메일 중복 확인
+
+        // 닉네임 중복 확인
+
+        // 회원가입
         public void InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
@@ -64,6 +69,8 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("dietGoal", dietGoal));
 
                         command.ExecuteNonQuery();
+
+                        MessageBox.Show("회원가입 되었습니다!");
                     }
                 }
                 catch (Exception ex)
