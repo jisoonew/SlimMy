@@ -1,4 +1,5 @@
 ﻿using SlimMy.Model;
+using SlimMy.View;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,6 +8,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace SlimMy.ViewModel
@@ -20,6 +23,8 @@ namespace SlimMy.ViewModel
         // 여성 혹은 남성중 어떤 선택을 할 것인지
         private bool _isMaleChecked;
         private bool _isFemaleChecked;
+
+        private SignUp _signUp;
 
         public Command InsertCommand { get; set; }
 
@@ -66,17 +71,34 @@ namespace SlimMy.ViewModel
         {
             _user.Gender = User.Gender == "남성" ? "남성" : "여성";
 
+            // WPF 애플리케이션에서 현재 활성화된 메인 윈도우에서 이름이 "passwordBox"인 컨트롤을 찾기 위해 사용되는 메서드
+            var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
+            var passwordCheckBox = Application.Current.MainWindow.FindName("passwordCheckBox") as PasswordBox;
+
+            string password = passwordBox.Password;
+            string passwordCheck = passwordCheckBox.Password;
+
+            User.Password = password;
+            User.PasswordCheck = passwordCheck;
+
+            _signUp = new SignUp();
+
             // 유효성 검사
-            if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName) && Validator.Validator.ValidateEmail(User.Email) 
-                && Validator.Validator.ValidatePassword(User.Password) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
-                && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal))
+            if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName)
+                && Validator.Validator.ValidatePassword(User.Password, User.PasswordCheck) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
+                && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal) && _repo.BuplicateNickName(User.NickName) && SignUp.count == 1)
             {
                 _repo.InsertUser(User.Name, User.Gender, User.NickName, User.Email, User.Password, User.BirthDate, User.Height, User.Weight, User.DietGoal);
             }
             else
             {
                 // 유효성 검사에 실패한 경우 처리
-                Console.WriteLine("유효하지 않은 이름입니다.");
+                MessageBox.Show("회원가입에 실패하였습니다.");
+            }
+
+            if(SignUp.count == 0)
+            {
+                MessageBox.Show("인증 번호가 일치하지 않습니다.");
             }
         }
 

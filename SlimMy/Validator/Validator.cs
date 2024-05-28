@@ -30,6 +30,12 @@ namespace SlimMy.Validator
                 return false;
             }
 
+            // 입력 확인
+            if(name.Length == 0)
+            {
+                MessageBox.Show("이름을 입력해주세요.");
+            }
+
             // 모든 조건을 통과하면 true를 반환
             return true;
         }
@@ -44,7 +50,7 @@ namespace SlimMy.Validator
                 return false;
             }
 
-            if(nickName == null || nickName == "")
+            if(nickName == null || nickName == "" || nickName.Length == 0)
             {
                 MessageBox.Show("닉네임을 입력해주세요.");
                 return false;
@@ -64,7 +70,7 @@ namespace SlimMy.Validator
                 return false;
             }
 
-            if (email == null || email == "")
+            if (email == null || email == "" || email.Length == 0)
             {
                 MessageBox.Show("이메일을 입력해주세요.");
                 return false;
@@ -75,7 +81,7 @@ namespace SlimMy.Validator
         }
 
         // 비밀번호
-        public static bool ValidatePassword(string password)
+        public static bool ValidatePassword(string password, string passwordCheck)
         {
             // 비밀번호는 최소 8자 최대 100자이면서, 숫자와 특수문자는 최소 1자 이상 포함
             if (!Regex.IsMatch(password, @"^(?=.*[0-9])(?=.*[!@#$%^&*()-_=+{};:,<.>]).{8,100}$"))
@@ -84,9 +90,15 @@ namespace SlimMy.Validator
                 return false;
             }
 
-            if (password == null || password == "")
+            if (password == null || password == "" || password.Length == 0)
             {
                 MessageBox.Show("비밀번호를 입력해주세요.");
+                return false;
+            }
+
+            if(password != passwordCheck)
+            {
+                MessageBox.Show("비밀번호가 일치하지 않습니다.");
                 return false;
             }
 
@@ -124,6 +136,12 @@ namespace SlimMy.Validator
                 return false;
             }
 
+            if(heightstr == null || heightstr == "" || heightstr.Length == 0)
+            {
+                MessageBox.Show("키를 입력해주세요.");
+                return false;
+            }
+
             return true;
         }
 
@@ -138,13 +156,19 @@ namespace SlimMy.Validator
                 return false;
             }
 
+            if (weightstr == null || weightstr == "" || weightstr.Length == 0)
+            {
+                MessageBox.Show("몸무게를 입력해주세요.");
+                return false;
+            }
+
             return true;
         }
 
         // 다이어트 목표
         public static bool ValidateDietGoal(string dietGoal)
         {
-            if(dietGoal == null || dietGoal == "")
+            if(dietGoal == null || dietGoal == "" || dietGoal.Length == 0)
             {
                 MessageBox.Show("다이어트 목표를 입력해주세요.");
                 return false;

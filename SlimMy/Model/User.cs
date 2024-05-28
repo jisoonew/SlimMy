@@ -19,6 +19,7 @@ namespace SlimMy.Model
         private string nickName; // 닉네임
         private string email; // 이메일
         private string password; // 비밀번호
+        private string passwordCheck;
         private DateTime birthDate; // 생년월일
         private int height; // 키
         private int weight; // 몸무게
@@ -56,6 +57,12 @@ namespace SlimMy.Model
         {
             get { return password; }
             set { password = value; OnPropertyChanged(nameof(password)); }
+        }
+
+        public string PasswordCheck
+        {
+            get { return passwordCheck; }
+            set { passwordCheck = value; OnPropertyChanged(nameof(passwordCheck)); }
         }
 
         public DateTime BirthDate

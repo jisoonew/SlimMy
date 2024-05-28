@@ -41,8 +41,76 @@ namespace SlimMy
         }
 
         // 이메일 중복 확인
+        public bool DuplicateEmail(string email)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "select count(*) from Users where email = :email";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("email", email));
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        // 중복이라면 false, 중복이 아니라면 true
+                        if (count >= 1)
+                        {
+                            MessageBox.Show("사용 불가능한 이메일입니다.");
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                } catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+
+                    return false;
+                }
+            }
+        }
 
         // 닉네임 중복 확인
+        public bool BuplicateNickName(string nickname)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "select count(*) from Users where nickname = :nickname";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("nickname", nickname));
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        // 중복이라면 false, 중복이 아니라면 true
+                        if(count >= 1)
+                        {
+                            MessageBox.Show("닉네임이 이미 존재합니다.");
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                } catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+
+                    return false;
+                }
+            }
+        }
 
         // 회원가입
         public void InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
