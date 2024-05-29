@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using Oracle.ManagedDataAccess.Client;
+using SlimMy.View;
 
 namespace SlimMy
 {
@@ -144,6 +145,32 @@ namespace SlimMy
                 catch (Exception ex)
                 {
                     MessageBox.Show("Error : " + ex.Message);
+                }
+            }
+        }
+
+        // 로그인
+        public bool LoginSuccess(string email, string password)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "select count(*) from Users where email = :email and password = :password";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("email", email));
+                        command.Parameters.Add(new OracleParameter("password", password));
+
+                        return (decimal)command.ExecuteScalar() > 0;
+                    }
+                } 
+                catch(Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+                    return false;
                 }
             }
         }

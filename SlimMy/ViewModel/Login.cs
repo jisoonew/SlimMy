@@ -27,10 +27,13 @@ namespace SlimMy.ViewModel
         private SignUp _signUp;
 
         public Command InsertCommand { get; set; }
+        public Command LoginCommand { get; set; }
 
         public Login()
         {
             InsertCommand = new Command(InsertUser);
+            LoginCommand = new Command(LoginSuccess);
+
             _user = new User();
             _repo = new Repo(_connstring);
 
@@ -67,6 +70,7 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 회원가입
         public void InsertUser(object parameter)
         {
             _user.Gender = User.Gender == "남성" ? "남성" : "여성";
@@ -99,6 +103,26 @@ namespace SlimMy.ViewModel
             if(SignUp.count == 0)
             {
                 MessageBox.Show("인증 번호가 일치하지 않습니다.");
+            }
+        }
+
+        // 로그인
+        private void LoginSuccess(object parameter)
+        {
+            var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
+            string password = passwordBox.Password;
+            User.Password = password;
+
+            bool isSuccess = _repo.LoginSuccess(User.Email, password);
+
+            if (isSuccess)
+            {
+                var dashBoard = new DashBoard();
+                dashBoard.Show();
+            }
+            else
+            {
+                MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
             }
         }
 

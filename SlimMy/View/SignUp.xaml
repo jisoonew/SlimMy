@@ -6,7 +6,7 @@
     xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
     x:Class="SlimMy.View.SignUp"
         mc:Ignorable="d"
-        Title="SignUp" Height="700" Width="320"
+        Title="SignUp" Height="650" Width="320"
     WindowStartupLocation="CenterScreen">
     
     <Window.DataContext>

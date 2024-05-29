@@ -26,7 +26,8 @@ namespace SlimMy.View
 
         public string Password { get; internal set; }
 
-        private void login_Click(object sender, RoutedEventArgs e)
+        // 회원가입
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
             var signUp = new View.SignUp();
             signUp.Show();
