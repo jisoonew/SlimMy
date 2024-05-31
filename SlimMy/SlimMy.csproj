@@ -16,4 +16,8 @@
     <PackageReference Include="Topshelf" Version="4.3.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="Resources\Logo.png" />
+  </ItemGroup>
+
 </Project>

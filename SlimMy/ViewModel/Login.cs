@@ -117,8 +117,8 @@ namespace SlimMy.ViewModel
 
             if (isSuccess)
             {
-                var dashBoard = new DashBoard();
-                dashBoard.Show();
+                var MainPage = new MainPage();
+                MainPage.Show();
             }
             else
             {

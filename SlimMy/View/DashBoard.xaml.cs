@@ -16,10 +16,12 @@ using System.Windows.Shapes;
 
 namespace SlimMy.View
 {
-    
-
-    public partial class DashBoard : Window
+    /// <summary>
+    /// DashBoard.xaml에 대한 상호 작용 논리
+    /// </summary>
+    public partial class DashBoard : Page
     {
+
         public SeriesCollection SeriesData { get; private set; }
         public string[] XLabel { get; set; }
         public Func<int, string> Values { get; set; }
@@ -49,7 +51,7 @@ namespace SlimMy.View
             Values = value => value.ToString("N");
 
             DataContext = this; // Data binding 할때 필요함
-        
-    }
+
+        }
     }
 }
