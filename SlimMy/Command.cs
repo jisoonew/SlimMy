@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SlimMy.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,12 @@ namespace SlimMy
     {
         Action<object> ExecuteMethod;
         Func<object, bool> CanexecuteMethod;
+        private Action<User> nickNamePrint;
+
+        public Command(Action<User> nickNamePrint)
+        {
+            this.nickNamePrint = nickNamePrint;
+        }
 
         public Command(Action<object> execute_Method, Func<object, bool> canexecute_Method = null)
         {

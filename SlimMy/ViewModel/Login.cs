@@ -115,13 +115,20 @@ namespace SlimMy.ViewModel
             User.Password = password;
 
             bool isSuccess = _repo.LoginSuccess(User.Email, password);
-            string loggedInUser = _repo.NickName(User.Email);
 
             if (isSuccess)
             {
+                // 로그인 이후 사용자의 닉네임 가져오기
+                string loggedInNickName = _repo.NickName(User.Email);
+                User.NickName = loggedInNickName;
+
+                // MainPage 실행
                 var mainPage = new View.MainPage();
+                mainPage.DataContext = this;
+
                 mainPage.Show();
                 Application.Current.MainWindow.Close();  // 로그인 창 닫기
+
             }
             else
             {

@@ -17,18 +17,31 @@ namespace SlimMy.ViewModel
     class MainPage : INotifyPropertyChanged
     {
         private User _user;
+        private string _username;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
 
-        public MainPage()
-        {
-            _user = User;
-        }
+        public Command InsertCommand { get; set; }
 
         public User User
         {
             get { return _user; }
             set { _user = value; OnPropertyChanged(nameof(User)); }
+        }
+
+        public string Username
+        {
+            get { return _username; }
+            set
+            {
+                _username = value;
+                OnPropertyChanged(nameof(Username));
+            }
+        }
+
+        public MainPage()
+        {
+            _user = User;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

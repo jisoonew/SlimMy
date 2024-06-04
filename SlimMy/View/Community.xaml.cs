@@ -10,28 +10,19 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace SlimMy.View
 {
     /// <summary>
-    /// MainPage.xaml에 대한 상호 작용 논리
+    /// Community.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class MainPage : Window
+    public partial class Community : Page
     {
-        public MainPage()
+        public Community()
         {
             InitializeComponent();
-        }
-
-        private void DashBoard_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("DashBoard.xaml", UriKind.Relative);
-        }
-
-        private void Planner_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("Planner.xaml", UriKind.Relative);
         }
     }
 }
