@@ -8,7 +8,7 @@
       mc:Ignorable="d" 
       Title="DashBoard" Background="White" Height="830" Width="1100">
     <Grid>
-        <Grid Width="400" Background="Yellow" Margin="160,0,0,0" Height="830" HorizontalAlignment="Right" VerticalAlignment="Stretch">
+        <Grid Width="400" Margin="160,0,0,0" Height="830" HorizontalAlignment="Right" VerticalAlignment="Stretch">
             <!-- 핫한 채팅 그룹 -->
             <Border BorderBrush="Black" BorderThickness="1" Margin="30,46,20,0" VerticalAlignment="Top" Width="320">
                 <StackPanel Width="300" Height="750" VerticalAlignment="Top">
@@ -16,18 +16,18 @@
             </Border>
         </Grid>
         
-        <Grid Width="307" Height="380"  Background="Purple" Margin="70,0,0,450">
-                <Border BorderBrush="Black" BorderThickness="1" Height="315" Margin="0,46,0,0" VerticalAlignment="Top" Width="255" HorizontalAlignment="Stretch">
+        <Grid Width="307" Height="360" Margin="70,0,0,470">
+                <Border BorderBrush="Black" BorderThickness="1" Height="282" Margin="0,47,0,0" VerticalAlignment="Top" Width="255" HorizontalAlignment="Stretch">
                     <StackPanel Height="300" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <Label Content="목표 체중" FontSize="30" Padding="35,10,35,10" Margin="10,30,10,10" HorizontalContentAlignment="Center"/>
-                    <Label Content="현재 체중" FontSize="30" Padding="35,10,35,10" Margin="10,20,10,10" HorizontalContentAlignment="Center"/>
-                        <Button Content="목표 설정" FontSize="30" Padding="35,10,35,10" Margin="10,20,10,10" Background="#FFDDDDDD"></Button>
+                    <Label Content="현재 체중" FontSize="30" Padding="35,10,35,10" Margin="10,10,10,10" HorizontalContentAlignment="Center"/>
+                        <Button x:Name="dietGoalBtn" Content="목표 설정" FontSize="30" Padding="35,10,35,10" Margin="10,10,10,10" Background="#FFDDDDDD" Click="DietGoalBtn_Click"></Button>
                     </StackPanel>
                 </Border>
             </Grid>
 
-        <Grid Width="440" Height="380" Background="#FF6666FB" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid Width="400" Height="300" VerticalAlignment="Top" Margin="20,0,20,0">
+        <Grid Width="440" Height="350" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Grid Width="400" Height="270" VerticalAlignment="Top" Margin="20,0,20,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -50,7 +50,7 @@
                 </lvc:CartesianChart>
             </Grid>
 
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="30,10,0,20">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="20,10,0,20">
                 <StackPanel Width="125" Margin="0,0,0,0">
                     <Label Content="누적 운동 날짜" FontSize="15" BorderBrush="#000000"
         BorderThickness="1 1 1 1" Padding="10,10,10,10">
@@ -69,7 +69,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Background="#FF002980" Width="735" Height="450" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+        <Grid Background="#FF002980" Width="735" Height="480" HorizontalAlignment="Left" VerticalAlignment="Bottom">
             
         </Grid>
     </Grid>

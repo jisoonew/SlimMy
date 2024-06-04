@@ -15,11 +15,11 @@ using System.Windows.Shapes;
 namespace SlimMy.View
 {
     /// <summary>
-    /// Test.xaml에 대한 상호 작용 논리
+    /// AddExercise.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class Test : Window
+    public partial class AddExercise : Window
     {
-        public Test()
+        public AddExercise()
         {
             InitializeComponent();
         }

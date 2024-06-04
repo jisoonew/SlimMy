@@ -174,5 +174,32 @@ namespace SlimMy
                 }
             }
         }
+
+        // 로그인 이후 닉네임 가져오기
+        public string NickName(string email)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "select nickname from Users where email = :email";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("email", email));
+
+                        object resultNickName = command.ExecuteScalar();
+
+                        return resultNickName.ToString();
+                    }
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                    return "false";
+                }
+            }
+        }
     }
 }

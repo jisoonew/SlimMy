@@ -28,6 +28,7 @@ namespace SlimMy.ViewModel
 
         public Command InsertCommand { get; set; }
         public Command LoginCommand { get; set; }
+        public Command NickNameCommand { get; set; }
 
         public Login()
         {
@@ -114,11 +115,13 @@ namespace SlimMy.ViewModel
             User.Password = password;
 
             bool isSuccess = _repo.LoginSuccess(User.Email, password);
+            string loggedInUser = _repo.NickName(User.Email);
 
             if (isSuccess)
             {
-                var MainPage = new MainPage();
-                MainPage.Show();
+                var mainPage = new View.MainPage();
+                mainPage.Show();
+                Application.Current.MainWindow.Close();  // 로그인 창 닫기
             }
             else
             {

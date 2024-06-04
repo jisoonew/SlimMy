@@ -5,10 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SlimMy.ViewModel"
         mc:Ignorable="d"
-        Title="Login" Height="350" Width="300">
+        Title="Login" Height="350" Width="300" WindowStartupLocation="CenterScreen">
+    
     <Window.DataContext>
         <local:Login/>
     </Window.DataContext>
+    
     <StackPanel Width="299" Height="300">
         <Label HorizontalAlignment="Center" Margin="0,10,0,10">LOGIN</Label>
         <StackPanel Width="200">

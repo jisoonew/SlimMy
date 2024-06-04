@@ -3,44 +3,58 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SlimMy.View"
+        xmlns:local="clr-namespace:SlimMy.ViewModel"
         xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         mc:Ignorable="d"
-        Title="DashBoard" Height="850" Width="1300" ResizeMode="NoResize">
+        Title="DashBoard" Height="850" Width="1300" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
     
-    
+    <Window.DataContext>
+        <local:MainPage/>
+    </Window.DataContext>
+
     <StackPanel Orientation="Horizontal">
-        <StackPanel Width="190" HorizontalAlignment="Left" Orientation="Vertical" Height="995" VerticalAlignment="Top">
+        <StackPanel Width="190" HorizontalAlignment="Left" Orientation="Vertical" Height="850" VerticalAlignment="Top">
             <!-- 로고 -->
             <Image Source="/Resources/Logo.png" Width="120"/>
 
+            <Label Margin="0,5,0,5" x:Name="nickNameLabel" Content="{Binding User.NickName}" Height="50"></Label>
+
             <!-- 대시보드 -->
-            <Button Content="DashBoard" FontSize="20" Click="DashBoard_Click">
+            <Button Content="DashBoard" FontSize="25" Click="DashBoard_Click" Padding="1,5,1,5">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>
             </Button>
 
             <!-- 플래너 -->
-            <Button Content="Planner" FontSize="20" Click="Planner_Click">
+            <Button Content="Planner" FontSize="25" Click="Planner_Click" Padding="1,5,1,5">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>
             </Button>
 
             <!-- 커뮤니티 -->
-            <Button Content="Community" FontSize="20">
+            <Button Content="Community" FontSize="25" Padding="1,5,1,5">
+                <Button.Background>
+                    <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
+                </Button.Background>
+            </Button>
+
+            <!-- My Page -->
+            <Button Content="My Page" FontSize="25" Padding="1,5,1,5">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>
             </Button>
 
             <!-- 로그아웃 -->
-            <Button Content="Logout" FontSize="20">
+            <Grid Height="585">
+            <Button Content="Logout" FontSize="25" VerticalAlignment="Bottom" Padding="1,5,1,5">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>
             </Button>
+            </Grid>
         </StackPanel>
 
         <Grid>

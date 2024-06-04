@@ -1,0 +1,79 @@
+﻿<Window x:Class="SlimMy.View.DietGoal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SlimMy.View"
+        mc:Ignorable="d"
+        Title="DietGoal" Height="420" Width="500" WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid HorizontalAlignment="Center" Height="50" VerticalAlignment="Top" Margin="30,10,0,0">
+            <Label FontWeight="Bold" FontSize="15">운동 목표 설정</Label>
+        </Grid>
+
+        <Grid Width="100" HorizontalAlignment="Left" Margin="90,50,0,0">
+            <StackPanel>
+                <Label>
+                    운동 각오
+                </Label>
+
+                <Label Margin="0,19,0,0">
+                    목표 기간
+                </Label>
+
+                <Label Margin="0,18,0,0">
+                    현재 체중
+                </Label>
+
+                <Label Margin="0,20,0,0">
+                    키
+                </Label>
+
+                <Label Margin="0,20,0,0">
+                    목표 체중
+                </Label>
+
+                <Label Margin="0,20,0,0">
+                    BMI 계산
+                </Label>
+            </StackPanel>
+        </Grid>
+
+        <Grid Width="190" Margin="50,50,0,0" HorizontalAlignment="Stretch">
+            <StackPanel>
+                <!-- 각오 -->
+                <TextBox Height="25.96"></TextBox>
+
+                <!-- 목표 기간 -->
+                <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                <DatePicker></DatePicker>
+                <Label>~</Label>
+                <DatePicker></DatePicker>
+                </StackPanel>
+
+                <!-- 현재 체중 -->
+                <StackPanel Orientation="Horizontal">
+                <TextBox Margin="0,20,0,0" Width="50" HorizontalAlignment="Left"></TextBox>
+                    <Label Margin="0,20,0,0">kg</Label>
+                </StackPanel>
+
+                <!-- 키 -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Margin="0,20,0,0" Width="50" HorizontalAlignment="Left"></TextBox>
+                    <Label Margin="0,20,0,0">cm</Label>
+                </StackPanel>
+                
+                <!-- 목표 체중 -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Margin="0,20,0,0" Width="50" HorizontalAlignment="Left"></TextBox>
+                    <Label Margin="0,20,0,0">kg</Label>
+                </StackPanel>
+
+                <!-- BMI 계산 -->
+                <Label Margin="0,20,0,0">weight / (height * height) = 결과</Label>
+
+                <Button Margin="0,20,0,0" FontSize="15" Padding="1,5,1,5">목표 설정</Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

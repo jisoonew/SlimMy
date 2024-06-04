@@ -5,10 +5,69 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:SlimMy.View"
       mc:Ignorable="d" 
-      d:DesignHeight="450" d:DesignWidth="800"
+      Height="830" Width="1100"
       Title="Planner" Background="White">
 
-    <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
-        <Label Content="여기는 플래너"></Label>
+    <Grid>
+        <StackPanel Margin="30,20,0,0">
+        <Label Content="Planner" FontSize="25" Margin="30,0,0,0"></Label>
+        </StackPanel>
+        
+        <Border BorderBrush="Black" BorderThickness="1" Margin="0,20,0,0" Width="970" Height="700">
+            <StackPanel Background="LightGray">
+                <StackPanel Orientation="Horizontal">
+                    <DatePicker Text="운동 날짜" Width="220" Height="40" FontSize="20" Margin="20,10,10,10" Padding="2,5,2,5" Background="White"></DatePicker>
+                    <Grid Width="710">
+                        <Button Width="130" Margin="10" HorizontalAlignment="Right" FontSize="20" Padding="1,5,1,5" Height="40" Background="White">목표 설정</Button>
+                    </Grid>
+                </StackPanel>
+
+                <!-- 해당 날짜의 몸무게를 입력하세요! -->
+                <StackPanel Background="White" Margin="20,0,20,0">
+                    <Grid>
+                        <Label FontSize="20" Margin="5,10,0,0">몸무게</Label>
+                        
+                        <TextBox Name="searchTextBox" Margin="80,10,10,10"  Text="" Width="120" Height="40" HorizontalAlignment="Left" VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="20"/>
+                        <TextBlock Text="몸무게 입력" IsHitTestVisible="False" VerticalAlignment="Center" Margin="85,10,10,10" HorizontalAlignment="Left" FontSize="20" Height="40" Width="110" Padding="0,6,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Hidden"/>
+                                    <Setter Property="Foreground" Value="#FF858585"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=searchTextBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <Label FontSize="25" Margin="210,10,0,0">kg</Label>
+                    </Grid>
+                </StackPanel>
+
+                <!-- 운동 리스트 -->
+                <StackPanel Background="White" Height="520" Width="927" Margin="0,20,0,0">
+                    <DockPanel>
+                        <Label FontSize="20" Margin="20,10,0,0">운동 리스트</Label>
+                        <StackPanel>
+                        <Button Width="35" Height="35" Background="White" HorizontalAlignment="Right" Margin="0,10,20,0" BorderBrush="White" HorizontalContentAlignment="Right" Click="AddExerciseBtn_Click">
+                            <Image Source="/Resources/plus.png" Width="33"/>
+                        </Button>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="auto">
+                        <WrapPanel>
+                            <DockPanel Background="LightGray" Margin="20,10,20,0" Height="40" Width="891">
+                        <Label FontSize="20">풀랫다운 40kg X 10개 4SET</Label>
+                        <Label FontSize="20" HorizontalAlignment="Right" Margin="0,0,10,0">250cal</Label>
+                        </DockPanel>
+                        </WrapPanel>
+                    </ScrollViewer>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+        
     </Grid>
 </Page>

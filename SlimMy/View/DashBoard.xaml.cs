@@ -53,5 +53,12 @@ namespace SlimMy.View
             DataContext = this; // Data binding 할때 필요함
 
         }
+
+        // 다이어트 목표 설정
+        private void DietGoalBtn_Click(object sender, RoutedEventArgs e)
+        {
+            DietGoal dietGoalView = new DietGoal();
+            dietGoalView.Show();
+        }
     }
 }
