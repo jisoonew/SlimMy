@@ -9,7 +9,7 @@
         Title="DashBoard" Height="850" Width="1300" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
 
     <Window.DataContext>
-        <local:Login/>
+        <local:MainPage/>
     </Window.DataContext>
     
     <StackPanel Orientation="Horizontal">
@@ -37,7 +37,7 @@
             </Button>
 
             <!-- 커뮤니티 -->
-            <Button Content="Community" FontSize="25" Padding="1,5,1,5">
+            <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Click="Community_Click">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>

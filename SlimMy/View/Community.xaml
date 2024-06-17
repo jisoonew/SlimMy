@@ -3,12 +3,32 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:SlimMy.View"
-      mc:Ignorable="d" 
-      d:DesignHeight="450" d:DesignWidth="800"
-      Title="Community">
+      xmlns:local="clr-namespace:SlimMy.View" xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
+      mc:Ignorable="d"  Background="White"
+      Height="830" Width="1100"      Title="Community">
+    
+    <Page.DataContext>
+        <ViewModel:CreateChatRoom/>
+    </Page.DataContext>
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="채팅방 목록" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
+
+        <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
         
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" SelectionChanged="ChatRoomListView_SelectionChanged">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="채팅방 이름" Width="300" DisplayMemberBinding="{Binding ChatRoomName}"/>
+                    <GridViewColumn Header="채팅방 설명" Width="300" DisplayMemberBinding="{Binding ChatRoomName}"/>
+                    <GridViewColumn Header="참여자 수" Width="100" DisplayMemberBinding="{Binding ParticipantCount}"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
     </Grid>
 </Page>

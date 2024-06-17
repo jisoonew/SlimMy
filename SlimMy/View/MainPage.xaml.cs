@@ -33,5 +33,10 @@ namespace SlimMy.View
         {
             MainFrame.Source = new Uri("Planner.xaml", UriKind.Relative);
         }
+
+        private void Community_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Source = new Uri("Community.xaml", UriKind.Relative);
+        }
     }
 }

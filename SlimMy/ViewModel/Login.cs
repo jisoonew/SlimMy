@@ -108,7 +108,7 @@ namespace SlimMy.ViewModel
         }
 
         // 로그인
-        private void LoginSuccess(object parameter)
+        public void LoginSuccess(object parameter)
         {
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
             string password = passwordBox.Password;
@@ -124,6 +124,9 @@ namespace SlimMy.ViewModel
 
                 // MainPage 실행
                 var mainPage = new View.MainPage();
+
+                var mainPageViewModel = new MainPage { User = this.User };
+
                 mainPage.DataContext = this;
 
                 mainPage.Show();

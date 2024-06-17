@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SlimMy.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +24,12 @@ namespace SlimMy.View
         public Community()
         {
             InitializeComponent();
+        }
+
+        private void CommunityChat_Click(object sender, RoutedEventArgs e)
+        {
+            CreateChatRoom createChatRoom = new CreateChatRoom();
+            createChatRoom.Show();
         }
     }
 }

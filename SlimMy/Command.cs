@@ -13,28 +13,37 @@ namespace SlimMy
         Action<object> ExecuteMethod;
         Func<object, bool> CanexecuteMethod;
         private Action<User> nickNamePrint;
+        private Action<Chat> chatData;
 
         public Command(Action<User> nickNamePrint)
         {
             this.nickNamePrint = nickNamePrint;
         }
 
-        public Command(Action<object> execute_Method, Func<object, bool> canexecute_Method = null)
+        private readonly Action<object> execute;
+        private readonly Func<object, bool> canExecute;
+
+        public Command(Action<object> execute, Func<object, bool> canExecute = null)
         {
-            this.ExecuteMethod = execute_Method; // 커맨드가 실제로 실행할 함수
-            this.CanexecuteMethod = canexecute_Method; // 수행되기 전에 필요한 조건을 검사하는 메소드
+            this.execute = execute;
+            this.canExecute = canExecute;
         }
 
         public event EventHandler CanExecuteChanged;
 
         public bool CanExecute(object parameter)
         {
-            return true;
+            return this.canExecute == null || this.canExecute(parameter);
         }
 
         public void Execute(object parameter)
         {
-            ExecuteMethod(parameter);
+            this.execute(parameter);
+        }
+
+        public void RaiseCanExecuteChanged()
+        {
+            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

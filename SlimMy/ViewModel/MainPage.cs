@@ -19,6 +19,7 @@ namespace SlimMy.ViewModel
         private User _user;
         private string _username;
         private Repo _repo;
+        private string nickName;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
 
         public Command InsertCommand { get; set; }
@@ -27,16 +28,6 @@ namespace SlimMy.ViewModel
         {
             get { return _user; }
             set { _user = value; OnPropertyChanged(nameof(User)); }
-        }
-
-        public string Username
-        {
-            get { return _username; }
-            set
-            {
-                _username = value;
-                OnPropertyChanged(nameof(Username));
-            }
         }
 
         public MainPage()
