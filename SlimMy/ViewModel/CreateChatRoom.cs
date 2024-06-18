@@ -2,6 +2,7 @@
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -16,6 +17,17 @@ namespace SlimMy.ViewModel
     public class CreateChatRoom : INotifyPropertyChanged
     {
         private Chat _chat;
+        private Repo _repo;
+        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
+        public event EventHandler ChatRoomCreated;
+
+        private ObservableCollection<Chat> _chatRooms;
+
+        public ObservableCollection<Chat> ChatRooms
+        {
+            get { return _chatRooms; }
+            set { _chatRooms = value; OnPropertyChanged(); }
+        }
 
         public Chat Chat
         {
@@ -43,12 +55,20 @@ namespace SlimMy.ViewModel
         public CreateChatRoom()
         {
             _chat = new Chat();
+            _repo = new Repo(_connstring);
             OpenCreateChatRoomCommand = new Command(CreateChat);
         }
 
+        // 채팅방 생성
         private void CreateChat(object parameter)
         {
-            Chat = new Chat { ChatName = ChatName };
+            // 생성 시간
+            DateTime now = DateTime.Now;
+
+            _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
+
+            // 이벤트 발생
+            ChatRoomCreated?.Invoke(this, EventArgs.Empty);
 
             CloseWindow();
         }

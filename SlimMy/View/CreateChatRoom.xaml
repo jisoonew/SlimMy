@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SlimMy" xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
         mc:Ignorable="d"
-        Title="CreateChatRoom" Height="270" Width="350">
+        Title="CreateChatRoom" Height="300" Width="350">
     
     <Window.DataContext>
         <ViewModel:CreateChatRoom/>
@@ -19,19 +19,19 @@
         <!-- 채팅방 제목 -->
             <StackPanel HorizontalAlignment="Center" Margin="0,50,0,0" Orientation="Horizontal" Width="250">
                 <Label Content="제목"></Label>
-                <TextBox x:Name="ChatNameText" Text="{Binding Chat.ChatName}" Height="25" VerticalAlignment="Top" Width="200" />
+                <TextBox x:Name="ChatNameText" Text="{Binding Chat.ChatRoomName}" Height="25" VerticalAlignment="Top" Width="200" />
             </StackPanel>
 
         <!-- 채팅방 설명 -->
         <StackPanel HorizontalAlignment="Center" Margin="0,90,0,0" Orientation="Horizontal" Width="250">
             <Label Content="설명"></Label>
-            <TextBox Height="50" VerticalAlignment="Top" Width="200" MinLines="3" IsUndoEnabled="False"/>
+            <TextBox Text="{Binding Chat.Description}" Height="50" VerticalAlignment="Top" Width="200" MinLines="3" IsUndoEnabled="False"/>
         </StackPanel>
 
         <!-- 채팅방 카테고리 -->
         <StackPanel HorizontalAlignment="Center" Margin="0,155,0,0" Orientation="Horizontal" Width="300">
             <Label Content="카테고리"></Label>
-            <ComboBox Height="25" VerticalAlignment="Top" Width="200" >
+            <ComboBox Height="25" VerticalAlignment="Top" Width="200" Text="{Binding Chat.Category}">
             <ComboBoxItem IsSelected="True" Content="식단"></ComboBoxItem>
                 <ComboBoxItem Content="운동"></ComboBoxItem>
                 <ComboBoxItem Content="대회"></ComboBoxItem>

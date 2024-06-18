@@ -14,14 +14,20 @@ namespace SlimMy
         Func<object, bool> CanexecuteMethod;
         private Action<User> nickNamePrint;
         private Action<Chat> chatData;
+        private readonly Action<object> _execute;
+        private readonly Func<object, bool> _canExecute;
+        private readonly Action<object> execute;
+        private readonly Func<object, bool> canExecute;
+
+        public Command(Action<object> execute)
+            : this(execute, null)
+        {
+        }
 
         public Command(Action<User> nickNamePrint)
         {
             this.nickNamePrint = nickNamePrint;
         }
-
-        private readonly Action<object> execute;
-        private readonly Func<object, bool> canExecute;
 
         public Command(Action<object> execute, Func<object, bool> canExecute = null)
         {

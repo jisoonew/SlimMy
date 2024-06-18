@@ -8,7 +8,7 @@
       Height="830" Width="1100"      Title="Community">
     
     <Page.DataContext>
-        <ViewModel:CreateChatRoom/>
+        <ViewModel:Community/>
     </Page.DataContext>
 
     <Grid>
@@ -20,13 +20,13 @@
         <TextBlock Text="채팅방 목록" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
 
         <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
-        
-        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" SelectionChanged="ChatRoomListView_SelectionChanged">
+
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="채팅방 이름" Width="300" DisplayMemberBinding="{Binding ChatRoomName}"/>
-                    <GridViewColumn Header="채팅방 설명" Width="300" DisplayMemberBinding="{Binding ChatRoomName}"/>
-                    <GridViewColumn Header="참여자 수" Width="100" DisplayMemberBinding="{Binding ParticipantCount}"/>
+                    <GridViewColumn Header="채팅방 설명" Width="300" DisplayMemberBinding="{Binding Description}"/>
+                    <GridViewColumn Header="카테고리" Width="100" DisplayMemberBinding="{Binding Category}"/>
                 </GridView>
             </ListView.View>
         </ListView>

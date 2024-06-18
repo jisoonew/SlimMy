@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using Oracle.ManagedDataAccess.Client;
+using SlimMy.Model;
 using SlimMy.View;
 
 namespace SlimMy
@@ -200,6 +201,74 @@ namespace SlimMy
                     return "false";
                 }
             }
+        }
+
+        // 채팅방 생성
+        public void InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    Guid chatRoomId = Guid.NewGuid(); // 새로운 GUID 생성
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "insert into ChatRooms(ChatRoomId, ChatRoomName, Description, Category, CreatedAt) values(:ChatRoomId, :ChatRoomName, :Description, :Category, :CreatedAt)";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("ChatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("ChatRoomName", chatRoomName));
+                        command.Parameters.Add(new OracleParameter("Description", description));
+                        command.Parameters.Add(new OracleParameter("Category", category));
+                        command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
+
+                        command.ExecuteNonQuery();
+
+                        MessageBox.Show("채팅방이 생성되었습니다.");
+                    }
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        // 채팅방 출력
+        public List<Chat> SelectChatRoom()
+        {
+            List<Chat> chatRooms = new List<Chat>();
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = "select ChatRoomName, Description, Category from ChatRooms";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while(reader.Read())
+                            {
+                                Chat chatRoom = new Chat();
+                                chatRoom.ChatRoomName = reader.GetString(0);
+                                chatRoom.Description = reader.GetString(1);
+                                chatRoom.Category = reader.GetString(2);
+                                chatRooms.Add(chatRoom);
+                            }
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            return chatRooms;
         }
     }
 }
