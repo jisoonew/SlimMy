@@ -247,7 +247,7 @@ namespace SlimMy
                 {
                     connection.Open();
 
-                    string sql = "select ChatRoomName, Description, Category from ChatRooms";
+                    string sql = "select ChatRoomID, ChatRoomName, Description, Category from ChatRooms";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
                         using (OracleDataReader reader = command.ExecuteReader())
@@ -255,9 +255,10 @@ namespace SlimMy
                             while(reader.Read())
                             {
                                 Chat chatRoom = new Chat();
-                                chatRoom.ChatRoomName = reader.GetString(0);
-                                chatRoom.Description = reader.GetString(1);
-                                chatRoom.Category = reader.GetString(2);
+                                chatRoom.ChatRoomId = reader.GetGuid(0);
+                                chatRoom.ChatRoomName = reader.GetString(1);
+                                chatRoom.Description = reader.GetString(2);
+                                chatRoom.Category = reader.GetString(3);
                                 chatRooms.Add(chatRoom);
                             }
                         }

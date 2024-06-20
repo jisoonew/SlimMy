@@ -1,10 +1,12 @@
 ﻿using SlimMy.Model;
+using SlimMy.View;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,6 +22,10 @@ namespace SlimMy.ViewModel
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private CreateChatRoom _createChatRoomViewModel;
+
+        public static string myName = null;
+        TcpClient client = null;
+        private ChattingWindow chattingWindow;
 
         private ObservableCollection<Chat> _chatRooms;
 
@@ -42,27 +48,35 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private Chat _selectedChatRoom;
+        public Chat SelectedChatRoom
+        {
+            get { return _selectedChatRoom; }
+            set { _selectedChatRoom = value; OnPropertyChanged(); }
+        }
+
         public ICommand OpenCreateChatRoomCommand { get; private set; }
+        public Command InsertCommand { get; set; }
 
         public Community()
         {
             _chat = new Chat();
             _repo = new Repo(_connstring);
 
-            _createChatRoomViewModel = new CreateChatRoom();
-            _createChatRoomViewModel.ChatRoomCreated += async (sender, args) => await RefreshChatRoomsAsync();
+            InsertCommand = new Command(Print);
 
             RefreshChatRooms();
         }
 
-        private async Task RefreshChatRoomsAsync()
-        {
-            await Task.Run(() =>
-            {
-                ChatRooms = new ObservableCollection<Chat>(_repo.SelectChatRoom());
-            });
-        }
 
+        private void Print(object parameter)
+        {
+            if (parameter is Chat selectedChatRoom)
+            {
+                // 선택된 채팅방 정보 처리
+                MessageBox.Show($"선택된 채팅방: {selectedChatRoom.ChatRoomId}");
+            }
+        }
 
         // 채팅방 목록 생성
         private void RefreshChatRooms()

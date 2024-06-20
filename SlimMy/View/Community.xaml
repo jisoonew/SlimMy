@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:local="clr-namespace:SlimMy.View" xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
       mc:Ignorable="d"  Background="White"
       Height="830" Width="1100"      Title="Community">
@@ -21,7 +22,12 @@
 
         <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
 
-        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}">
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
+            <i:Interaction.Triggers>
+                <i:EventTrigger EventName="SelectionChanged">
+                    <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
+                </i:EventTrigger>
+            </i:Interaction.Triggers>
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="채팅방 이름" Width="300" DisplayMemberBinding="{Binding ChatRoomName}"/>
