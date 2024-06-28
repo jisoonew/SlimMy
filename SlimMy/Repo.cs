@@ -271,5 +271,14 @@ namespace SlimMy
             }
             return chatRooms;
         }
+
+        public User GetUserData(string email)
+        {
+            // 데이터베이스에서 사용자 데이터 로드
+            return new User
+            {
+                Email = email
+            };
+        }
     }
 }

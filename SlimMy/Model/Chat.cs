@@ -15,6 +15,8 @@ namespace SlimMy.Model
         private string category;
         private DateTime createdAt;
 
+        public string CreatorEmail { get; set; }
+
         public Guid ChatRoomId
         {
             get { return chatRoomId; }

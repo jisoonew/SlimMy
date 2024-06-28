@@ -1,4 +1,5 @@
-﻿using SlimMy.Model;
+﻿using SlimMy.Interface;
+using SlimMy.Model;
 using SlimMy.ViewModel;
 using System;
 using System.Collections.Generic;

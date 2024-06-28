@@ -7,7 +7,10 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
+using GalaSoft.MvvmLight.Messaging;
 using SlimMy.Validator;
+using SlimMy.ViewModel;
 
 namespace SlimMy.Model
 {
@@ -24,6 +27,18 @@ namespace SlimMy.Model
         private int height; // 키
         private int weight; // 몸무게
         private string dietGoal;
+
+        private string ipTextBox;
+
+        public string IpTextBox
+        {
+            get { return ipTextBox; }
+            set
+            {
+                ipTextBox = value;
+                OnPropertyChanged(nameof(ipTextBox));
+            }
+        }
 
         public string Name
         {
@@ -87,12 +102,6 @@ namespace SlimMy.Model
         {
             get { return dietGoal; }
             set { dietGoal = value; OnPropertyChanged(nameof(dietGoal)); }
-        }
-
-        public string Dv_1
-        {
-            get { return name; }
-            set { name = value; OnPropertyChanged(nameof(name)); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

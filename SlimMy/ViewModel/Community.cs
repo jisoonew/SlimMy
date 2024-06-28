@@ -1,4 +1,5 @@
-﻿using SlimMy.Model;
+﻿using SlimMy.Interface;
+using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -21,11 +22,9 @@ namespace SlimMy.ViewModel
         private Chat _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-        private CreateChatRoom _createChatRoomViewModel;
+        private User _user; // Private field to store the constructor parameter value
 
         public static string myName = null;
-        TcpClient client = null;
-        private ChattingWindow chattingWindow;
 
         private ObservableCollection<Chat> _chatRooms;
 
@@ -33,6 +32,14 @@ namespace SlimMy.ViewModel
         {
             get { return _chatRooms; }
             set { _chatRooms = value; OnPropertyChanged(); }
+        }
+
+        private ObservableCollection<User> _chatUser;
+
+        public ObservableCollection<User> ChatUser
+        {
+            get { return _chatUser; }
+            set { _chatUser = value; OnPropertyChanged(); }
         }
 
         public Chat Chat
@@ -55,30 +62,74 @@ namespace SlimMy.ViewModel
             set { _selectedChatRoom = value; OnPropertyChanged(); }
         }
 
-        public ICommand OpenCreateChatRoomCommand { get; private set; }
-        public Command InsertCommand { get; set; }
-
-        public Community()
+        private string _userEmail;
+        public string UserEmail
         {
-            _chat = new Chat();
-            _repo = new Repo(_connstring);
-
-            InsertCommand = new Command(Print);
-
-            RefreshChatRooms();
+            get { return _userEmail; }
+            set { _userEmail = value; OnPropertyChanged(_userEmail); }
         }
 
-
-        private void Print(object parameter)
+        private ObservableCollection<User> userList = new ObservableCollection<User>();
+        public ObservableCollection<User> UserList
         {
-            if (parameter is Chat selectedChatRoom)
+            get
             {
-                // 선택된 채팅방 정보 처리
-                MessageBox.Show($"선택된 채팅방: {selectedChatRoom.ChatRoomId}");
+                return userList;
             }
         }
 
-        // 채팅방 목록 생성
+
+        public User User
+        {
+            get
+            {
+                return userList.LastOrDefault();
+            }
+            set
+            {
+                userList.Add(value);
+                OnPropertyChanged("UserAdded");
+                OnPropertyChanged("UserList");
+            }
+        }
+
+        public ICommand OpenCreateChatRoomCommand { get; private set; }
+        public ICommand InsertCommand { get; set; }
+
+        public Community(string userEmail)
+        {
+            _user = new User { Email = userEmail };
+            ChatUser = new ObservableCollection<User> { _user }; // 현재 사용자를 ChatUser에 추가
+        }
+
+        public Community()
+        {
+            _repo = new Repo(_connstring);
+            RefreshChatRooms();
+
+            InsertCommand = new Command(Print);
+        }
+
+        public Chat LoginSuccessCom(string userEmail)
+        {
+            // 여기서 사용자 정보를 설정하고 필요한 데이터를 가져올 수 있습니다.
+            Chat = new Chat
+            {
+                CreatorEmail = userEmail
+            };
+
+            return Chat;
+        }
+
+        private void Print(object parameter)
+        {
+            User currentUser = Application.Current.Properties["CurrentUser"] as User;
+
+            MessageBox.Show($"추출된 사용자 정보: {currentUser.Email}");
+        }
+
+
+        // Refresh chat rooms list
         private void RefreshChatRooms()
         {
             ChatRooms = new ObservableCollection<Chat>(_repo.SelectChatRoom());

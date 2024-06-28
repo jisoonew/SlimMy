@@ -57,17 +57,31 @@ namespace SlimMy.ViewModel
             set { _user = value; OnPropertyChanged(nameof(User)); }
         }
 
+        public ICommand NavigateToCommunityCommand { get; }
+
         public MainPage()
         {
             _user = User;
 
-            // 서버 시작
-            ServerStart();
 
-            ClientManager.messageParsingAction += MessageParsing;
-            ClientManager.ChangeListViewAction += ChangeListView;
-            conntectCheckThread = new Task(ConnectCheckLoop);
-            conntectCheckThread.Start();
+            // 서버 시작
+            //ServerStart();
+
+            //ClientManager.messageParsingAction += MessageParsing;
+            //ClientManager.ChangeListViewAction += ChangeListView;
+            //conntectCheckThread = new Task(ConnectCheckLoop);
+            //conntectCheckThread.Start();
+        }
+
+        // 로그인 성공 시 호출되는 메서드 예시
+        public void LoginSuccessfulPage(string userEmail)
+        {
+            // 여기서 사용자 정보를 설정하고 필요한 데이터를 가져올 수 있습니다.
+            User = new User
+            {
+                Email = userEmail
+            };
+
         }
 
         // 공인 IP 주소 가져오기

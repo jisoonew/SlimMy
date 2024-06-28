@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SlimMy.Interface;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,6 +20,7 @@ namespace SlimMy.View
     /// </summary>
     public partial class Login : Window
     {
+
         public Login()
         {
             InitializeComponent();
@@ -29,7 +31,7 @@ namespace SlimMy.View
         // 회원가입
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var signUp = new View.SignUp();
+            var signUp = new SignUp();
             signUp.Show();
         }
     }

@@ -15,9 +15,15 @@
         <Label HorizontalAlignment="Center" Margin="0,10,0,10">LOGIN</Label>
         <StackPanel Width="200">
             <Label>User Email</Label>
-            <TextBox Text="{Binding User.Email}"/>
+            <TextBox Text="{Binding User.Email, Mode=TwoWay}"/>
             <Label Margin="0,20,0,0">Password</Label>
             <PasswordBox x:Name="passwordBox"/>
+
+            <TextBlock Text="서버ip" Foreground="Gray" FontWeight="Bold"></TextBlock>
+            <Border BorderThickness="1.3" BorderBrush="Gray" Height="40" CornerRadius="13" Padding="5,10,5,5">
+                <TextBox x:Name="IpTextBox" Text="{Binding User.IpTextBox}" BorderThickness="0" TextAlignment="Center" FontSize="15"></TextBox>
+            </Border>
+            
             <Button Content="회원가입" Margin="0,10,0,0" Click="Button_Click"/>
             <Button x:Name="login" Width="200" Margin="0,20,0,0" Command="{Binding LoginCommand}">로그인</Button>
         </StackPanel>

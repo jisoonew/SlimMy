@@ -1,4 +1,7 @@
-﻿using SlimMy.Model;
+﻿using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.Messaging;
+using MVVM2.ViewModel;
+using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -14,7 +17,8 @@ using System.Windows.Input;
 
 namespace SlimMy.ViewModel
 {
-    class Login : INotifyPropertyChanged
+
+    public class Login : ViewModelBase
     {
         private User _user;
         private Repo _repo;
@@ -24,27 +28,83 @@ namespace SlimMy.ViewModel
         private bool _isMaleChecked;
         private bool _isFemaleChecked;
 
+        // 이벤트 정의: 로그인 성공 시 발생하는 이벤트
+        public event EventHandler<User> DataPassed; // 데이터 전달을 위한 이벤트 정의
+
         private SignUp _signUp;
+
+        List<User> UserList = new List<User>();
+
+        private ICommand saveCommand;
+        public ICommand SaveCommand
+        {
+            get
+            {
+                return saveCommand ?? (this.saveCommand = new DelegateCommand(SaveUser));
+            }
+        }
 
         public Command InsertCommand { get; set; }
         public Command LoginCommand { get; set; }
         public Command NickNameCommand { get; set; }
+
+        private Community _communityViewModel; // Community ViewModel 인스턴스 추가
+
+        private void SaveUser()
+        {
+            User user = new User
+            {
+                Email = User.Email
+            };
+
+            UserList.Add(user);
+
+            OnPropertyChanged("UserAdded");
+        }
 
         public Login()
         {
             InsertCommand = new Command(InsertUser);
             LoginCommand = new Command(LoginSuccess);
 
-            _user = new User();
             _repo = new Repo(_connstring);
 
+            _user = new User();
+
             User.BirthDate = new DateTime(1990, 1, 1);
+
+            // Community ViewModel 인스턴스 생성
+            _communityViewModel = new Community();
         }
 
         public User User
         {
             get { return _user; }
             set { _user = value; OnPropertyChanged(nameof(User)); }
+        }
+
+        private string _textData;
+
+        public string TextData
+        {
+            get { return _textData; }
+            set
+            {
+                _textData = value;
+                OnPropertyChanged(nameof(TextData));
+            }
+        }
+
+        public string userIp
+        {
+            get
+            {
+                return User.IpTextBox;
+            }
+            private set
+            {
+                User.IpTextBox = value;
+            }
         }
 
         public bool IsMaleChecked
@@ -122,14 +182,16 @@ namespace SlimMy.ViewModel
                 string loggedInNickName = _repo.NickName(User.Email);
                 User.NickName = loggedInNickName;
 
+                Application.Current.Properties["CurrentUser"] = User;
+
                 // MainPage 실행
                 var mainPage = new View.MainPage();
-
-                var mainPageViewModel = new MainPage { User = this.User };
-
                 mainPage.DataContext = this;
 
+                // 새로운 창을 보여줍니다.
                 mainPage.Show();
+
+                // 현재 창을 닫습니다.
                 Application.Current.MainWindow.Close();  // 로그인 창 닫기
 
             }
@@ -139,15 +201,22 @@ namespace SlimMy.ViewModel
             }
         }
 
+        public class LoggedInEventArgs : EventArgs
+        {
+            public string UserEmail { get; }
+
+            public LoggedInEventArgs(string userEmail)
+            {
+                UserEmail = userEmail;
+            }
+        }
+
+        // INotifyPropertyChanged 구현
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged(string name)
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(name));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
