@@ -28,15 +28,16 @@ namespace SlimMy.Model
         private int weight; // 몸무게
         private string dietGoal;
 
-        private string ipTextBox;
+        // 아이피
+        private string ipNum;
 
-        public string IpTextBox
+        public string IpNum
         {
-            get { return ipTextBox; }
+            get { return ipNum; }
             set
             {
-                ipTextBox = value;
-                OnPropertyChanged(nameof(ipTextBox));
+                ipNum = value;
+                OnPropertyChanged(nameof(ipNum));
             }
         }
 

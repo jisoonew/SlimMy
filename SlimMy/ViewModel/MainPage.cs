@@ -1,4 +1,5 @@
-﻿using SlimMy.Model;
+﻿using GalaSoft.MvvmLight.Messaging;
+using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -59,10 +60,23 @@ namespace SlimMy.ViewModel
 
         public ICommand NavigateToCommunityCommand { get; }
 
+        private string _receivedUserName;
+        public string ReceivedUserName
+        {
+            get { return _receivedUserName; }
+            set
+            {
+                if (_receivedUserName != value)
+                {
+                    _receivedUserName = value;
+                    OnPropertyChanged(nameof(ReceivedUserName));
+                }
+            }
+        }
+
         public MainPage()
         {
             _user = User;
-
 
             // 서버 시작
             //ServerStart();
@@ -81,7 +95,6 @@ namespace SlimMy.ViewModel
             {
                 Email = userEmail
             };
-
         }
 
         // 공인 IP 주소 가져오기

@@ -95,18 +95,6 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public string userIp
-        {
-            get
-            {
-                return User.IpTextBox;
-            }
-            private set
-            {
-                User.IpTextBox = value;
-            }
-        }
-
         public bool IsMaleChecked
         {
             get { return _isMaleChecked; }
@@ -171,10 +159,13 @@ namespace SlimMy.ViewModel
         public void LoginSuccess(object parameter)
         {
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
+            var ipText = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
             string password = passwordBox.Password;
             User.Password = password;
 
             bool isSuccess = _repo.LoginSuccess(User.Email, password);
+
+            View.Login login = new View.Login();
 
             if (isSuccess)
             {
@@ -182,7 +173,15 @@ namespace SlimMy.ViewModel
                 string loggedInNickName = _repo.NickName(User.Email);
                 User.NickName = loggedInNickName;
 
-                Application.Current.Properties["CurrentUser"] = User;
+                MessageBox.Show("아이피 값 출력 : " + ipText.Text);
+
+                // 싱글톤에 저장
+                UserSession.Instance.CurrentUser = new User
+                {
+                    Email = User.Email,
+                    NickName = User.NickName,
+                    IpNum = User.IpNum
+                };
 
                 // MainPage 실행
                 var mainPage = new View.MainPage();

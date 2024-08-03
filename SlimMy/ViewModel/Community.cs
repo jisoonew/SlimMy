@@ -25,6 +25,7 @@ namespace SlimMy.ViewModel
         private User _user; // Private field to store the constructor parameter value
 
         public static string myName = null;
+        TcpClient client = null;
 
         private ObservableCollection<Chat> _chatRooms;
 
@@ -32,6 +33,20 @@ namespace SlimMy.ViewModel
         {
             get { return _chatRooms; }
             set { _chatRooms = value; OnPropertyChanged(); }
+        }
+
+        // 그룹 채팅의 참가자 목록을 저장
+        private List<User> groupChattingReceivers { get; set; }
+        public List<User> GroupChattingReceivers
+        {
+            get
+            {
+                return groupChattingReceivers;
+            }
+            set
+            {
+                groupChattingReceivers = value;
+            }
         }
 
         private ObservableCollection<User> _chatUser;
@@ -121,15 +136,26 @@ namespace SlimMy.ViewModel
             return Chat;
         }
 
+        // 로그인 사용자 이메일 출력
         private void Print(object parameter)
         {
-            User currentUser = Application.Current.Properties["CurrentUser"] as User;
+            // User currentUser = Application.Current.Properties["CurrentUser"] as User;
 
-            MessageBox.Show($"추출된 사용자 정보: {currentUser.Email}");
+            User currentUser = UserSession.Instance.CurrentUser;
+            if (currentUser != null)
+            {
+                MessageBox.Show($"여기는 싱글톤: {currentUser.Email}");
+            }
+
+            //Application.Current.Properties["CurrentUser"] = null; // 요거는 로그아웃할 때 필요
         }
 
+        // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
+        public Community(int chattingType)
+        {
+        }
 
-        // Refresh chat rooms list
+        // 채팅 목록
         private void RefreshChatRooms()
         {
             ChatRooms = new ObservableCollection<Chat>(_repo.SelectChatRoom());
