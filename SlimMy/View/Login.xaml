@@ -8,7 +8,7 @@
         Title="Login" Height="350" Width="300" WindowStartupLocation="CenterScreen">
     
     <Window.DataContext>
-        <local:Login/>
+        <local:MainPage/>
     </Window.DataContext>
     
     <StackPanel Width="299" Height="300">

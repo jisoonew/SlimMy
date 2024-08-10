@@ -26,10 +26,8 @@ namespace SlimMy.Model
         private DateTime birthDate; // 생년월일
         private int height; // 키
         private int weight; // 몸무게
-        private string dietGoal;
-
-        // 아이피
-        private string ipNum;
+        private string dietGoal; // 다이어트 목표
+        private string ipNum; // 아이피
 
         public string IpNum
         {

@@ -5,11 +5,14 @@ using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,10 +31,16 @@ namespace SlimMy.ViewModel
         private bool _isMaleChecked;
         private bool _isFemaleChecked;
 
+        public static string myName = null;
         // 이벤트 정의: 로그인 성공 시 발생하는 이벤트
-        public event EventHandler<User> DataPassed; // 데이터 전달을 위한 이벤트 정의
+        public event EventHandler<ChatUserList> DataPassed; // 데이터 전달을 위한 이벤트 정의
+        ChattingWindow chattingWindow = null;
+        Dictionary<string, ChattingThreadData> chattingThreadDic = new Dictionary<string, ChattingThreadData>();
+        Dictionary<int, ChattingThreadData> groupChattingThreadDic = new Dictionary<int, ChattingThreadData>();
 
         private SignUp _signUp;
+        TcpClient client = null;
+        Thread ReceiveThread = null;
 
         List<User> UserList = new List<User>();
 
@@ -73,8 +82,15 @@ namespace SlimMy.ViewModel
 
             User.BirthDate = new DateTime(1990, 1, 1);
 
+            MainServerStart();
+
             // Community ViewModel 인스턴스 생성
             _communityViewModel = new Community();
+        }
+
+        private void MainServerStart()
+        {
+            MainServer a = new MainServer();
         }
 
         public User User
@@ -159,8 +175,11 @@ namespace SlimMy.ViewModel
         public void LoginSuccess(object parameter)
         {
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
-            var ipText = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
+            var ipTextBox = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
             string password = passwordBox.Password;
+            string ip = ipTextBox.Text;
+            string parsedName = "%^&";
+
             User.Password = password;
 
             bool isSuccess = _repo.LoginSuccess(User.Email, password);
@@ -171,9 +190,9 @@ namespace SlimMy.ViewModel
             {
                 // 로그인 이후 사용자의 닉네임 가져오기
                 string loggedInNickName = _repo.NickName(User.Email);
+                parsedName += loggedInNickName;
                 User.NickName = loggedInNickName;
-
-                MessageBox.Show("아이피 값 출력 : " + ipText.Text);
+                User.IpNum = ip;
 
                 // 싱글톤에 저장
                 UserSession.Instance.CurrentUser = new User
@@ -182,6 +201,15 @@ namespace SlimMy.ViewModel
                     NickName = User.NickName,
                     IpNum = User.IpNum
                 };
+
+                client = new TcpClient();
+                client.Connect(ip, 9999);
+
+                byte[] byteData = new byte[parsedName.Length];
+                byteData = Encoding.Default.GetBytes(parsedName);
+                client.GetStream().Write(byteData, 0, byteData.Length);
+
+                myName = User.NickName;
 
                 // MainPage 실행
                 var mainPage = new View.MainPage();
@@ -193,12 +221,16 @@ namespace SlimMy.ViewModel
                 // 현재 창을 닫습니다.
                 Application.Current.MainWindow.Close();  // 로그인 창 닫기
 
+                //ReceiveThread = new Thread(RecieveMessage);
+                //ReceiveThread.Start();
+
             }
             else
             {
                 MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
             }
         }
+        
 
         public class LoggedInEventArgs : EventArgs
         {

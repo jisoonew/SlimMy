@@ -6,6 +6,11 @@
         xmlns:local="clr-namespace:SlimMy.View"
         mc:Ignorable="d"
         Title="ChattingWindow" Height="500" Width="500" Background="#BCBCBC">
+
+    <Window.DataContext>
+        <local:ChattingWindow/>
+    </Window.DataContext>
+    
     <Grid Margin="8">
         <Grid.RowDefinitions>
             <RowDefinition Height="6*"/>
