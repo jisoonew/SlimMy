@@ -564,23 +564,26 @@ namespace SlimMy.ViewModel
             //MessageBox.Show("내가 방장 : " + getUserProtocol);
 
             // 여기서부터 문제가 생김
-            Community community = new Community();
+            Community community = new Community(StaticDefine.GROUP_CHATTING);
 
-            string groupChattingUserStrData = myName;
-            foreach (var item in community.GroupChattingReceivers)
-            {
-                groupChattingUserStrData += "#";
-                groupChattingUserStrData += item.UsersName;
-            }
+            string groupChattingUserStrData = MainPage.myName;
 
-            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-            byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+                foreach (var item in community.GroupChattingReceivers)
+                {
+                    groupChattingUserStrData += "#";
+                    groupChattingUserStrData += item.UsersName;
+                }
+
+                string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+                byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
 
             //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            MessageBox.Show("Sending to server: " + chattingStartMessage);
+            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
 
-            client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+                client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+            
         }
+
 
         // 사용자 채팅
         public void RecieveMessage(object parameter)

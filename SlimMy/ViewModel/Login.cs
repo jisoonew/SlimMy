@@ -82,7 +82,7 @@ namespace SlimMy.ViewModel
 
             User.BirthDate = new DateTime(1990, 1, 1);
 
-            MainServerStart();
+            //MainServerStart();
 
             // Community ViewModel 인스턴스 생성
             _communityViewModel = new Community();

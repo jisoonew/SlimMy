@@ -18,7 +18,7 @@ using System.Windows.Threading;
 
 namespace SlimMy.ViewModel
 {
-    public class Community : INotifyPropertyChanged
+    public partial class Community : INotifyPropertyChanged
     {
         private Chat _chat;
         private Repo _repo;
@@ -156,8 +156,21 @@ namespace SlimMy.ViewModel
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
         public Community(int chattingType)
         {
-            View.Community community = new View.Community();
-            community.UserListView.ItemsSource = currentUserList;
+            // XAML에 정의된 UserListView에 currentUserList를 바인딩합니다.
+            // UserListView.ItemsSource = currentUserList;
+
+            groupChattingReceivers = new List<ChatUserList>();
+
+            View.Community viewCommunity = new View.Community();
+
+            // Set the ItemsSource for the ListView
+            viewCommunity.UserListView.ItemsSource = currentUserList;
+
+            // Convert currentUserList to a string
+            var userListString = string.Join(Environment.NewLine, currentUserList.Select(user => user.ToString()));
+
+            // Show the list in a message box
+            MessageBox.Show(userListString, "현재 사용자 목록");
         }
 
         // 채팅 목록
