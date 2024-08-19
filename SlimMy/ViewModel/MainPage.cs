@@ -548,6 +548,7 @@ namespace SlimMy.ViewModel
             else
             {
                 MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
+                client = null;
             }
         }
 
@@ -566,7 +567,7 @@ namespace SlimMy.ViewModel
             // 여기서부터 문제가 생김
             Community community = new Community(StaticDefine.GROUP_CHATTING);
 
-            string groupChattingUserStrData = MainPage.myName;
+            string groupChattingUserStrData = myName;
 
                 foreach (var item in community.GroupChattingReceivers)
                 {
@@ -574,14 +575,13 @@ namespace SlimMy.ViewModel
                     groupChattingUserStrData += item.UsersName;
                 }
 
-                string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-                byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+            byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
 
             //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+            //MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
 
-                client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-            
+            client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
         }
 
 
@@ -600,15 +600,22 @@ namespace SlimMy.ViewModel
                     receiveMessage = Encoding.Default.GetString(receiveByte);
 
                     string[] receiveMessageArray = receiveMessage.Split('>');
+
+                    // 배열의 각 요소를 로그로 출력
+                    // 정상 출력되고 있음
+                    //foreach (string message in receiveMessageArray)
+                    //{
+                    //    MessageBox.Show("Received Message: " + message);
+                    //}
+
                     foreach (var item in receiveMessageArray)
                     {
-                        if (!item.Contains('<'))
-                            continue;
-                        if (item.Contains("관리자<TEST"))
-                            continue;
+                        //MessageBox.Show("Added Item: [" + item + "]");
 
                         receiveMessageList.Add(item);
+
                     }
+
                     ParsingReceiveMessage(receiveMessageList);
                 }
                 catch (Exception e)
@@ -639,6 +646,13 @@ namespace SlimMy.ViewModel
                     chattingPartner = splitedMsg[0];
                     message = splitedMsg[1];
 
+                    // Dispatcher를 사용하여 UI 스레드에서 MessageBox.Show 실행
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        MessageBox.Show("chattingPartner : " + chattingPartner);
+                    });
+
+
                     // 관리자가 보낸 하트비트 메시지인 경우
                     if (chattingPartner == "관리자")
                     {
@@ -649,9 +663,11 @@ namespace SlimMy.ViewModel
                         {
                             if (string.IsNullOrEmpty(el))
                                 continue;
+
                             tempUserList.Add(new ChatUserList(el));
                         }
-                        Community.ChangeUserListView(tempUserList);
+
+                        Community.ChangeUserListView(tempUserList); // 여기서 호출
 
                         // 처리한 메시지 리스트를 비우기
                         messageList.Clear();

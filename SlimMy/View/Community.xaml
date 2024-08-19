@@ -38,11 +38,12 @@
             </ListView.View>
         </ListView> -->
 
-        <ListView x:Name="UserListView" Grid.Row="0" BorderBrush="White" Margin="0,156,0,0" Height="150">
+        <ListView x:Name="UserListView" Grid.Row="0" BorderBrush="White" Margin="0,156,0,0" Height="150"
+          ItemsSource="{Binding CurrentUserList}">
             <ListView.Resources>
                 <DataTemplate x:Key="UserCellTemplate">
                     <Grid Width="190">
-                        <TextBlock  HorizontalAlignment="Center" Text="{Binding userName}"/>
+                        <TextBlock HorizontalAlignment="Center" Text="{Binding UsersName}"/>
                     </Grid>
                 </DataTemplate>
 
@@ -52,7 +53,6 @@
                     </Grid>
                 </DataTemplate>
             </ListView.Resources>
-
             <ListView.View>
                 <GridView>
                     <GridViewColumn HeaderTemplate="{StaticResource UserHeaderTemplate}" CellTemplate="{StaticResource UserCellTemplate}"/>
