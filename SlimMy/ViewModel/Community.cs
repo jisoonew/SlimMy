@@ -27,7 +27,18 @@ namespace SlimMy.ViewModel
         private ChatUserList _chatUserList;
 
         // 현재 사용자 목록을 저장하는 ObservableCollection입니다. 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
-        private static ObservableCollection<ChatUserList> currentUserList = new ObservableCollection<ChatUserList>();
+        private static ObservableCollection<ChatUserList> _currentUserList = new ObservableCollection<ChatUserList>();
+
+        public static ObservableCollection<ChatUserList> CurrentUserList
+        {
+            get { return _currentUserList; }
+            set
+            {
+                _currentUserList = value;
+                // static 속성에서는 OnPropertyChanged를 호출할 수 없습니다.
+                // 속성이 static이 아닌 경우 UI 바인딩이 필요하다면, static 메서드를 사용하는 것이 적절하지 않을 수 있습니다.
+            }
+        }
 
         public static string myName = null;
 
@@ -163,24 +174,19 @@ namespace SlimMy.ViewModel
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
         public Community(int chattingType)
         {
-            // XAML에 정의된 UserListView에 currentUserList를 바인딩합니다.
-            // UserListView.ItemsSource = currentUserList;
-
-            //groupChattingReceivers = new List<ChatUserList>();
-
-            //View.Community viewCommunity = new View.Community();
-
-            //viewCommunity.UserListView.ItemsSource = currentUserList;
-
-            if(chattingType == 2)
-            {
                 // 그룹 채팅 참여자 리스트 초기화
                 groupChattingReceivers = new List<ChatUserList>();
 
-                // View 초기화 및 바인딩
-                View.Community viewCommunity = new View.Community();
-                viewCommunity.UserListView.ItemsSource = currentUserList; // currentUserList를 ListView의 ItemsSource에 바인딩
-            }
+            //foreach (var item in _currentUserList) // 새로운 목록으로 채운다
+            //{
+            //    // 각 항목이 추가될 때마다 디버그 콘솔로 출력
+            //    MessageBox.Show("Current 시발: " + item.UsersName); // ChatUserList의 UserName을 예시로 출력
+            //}
+
+            // View 초기화 및 바인딩
+            View.Community viewCommunity = new View.Community();
+            viewCommunity.UserListView.ItemsSource = CurrentUserList;
+
         }
 
         // 채팅 목록
@@ -192,14 +198,13 @@ namespace SlimMy.ViewModel
         // 사용자 목록이 변경될 때마다 호출되는 메서드로, 현재 사용자 목록을 업데이트
         public static void ChangeUserListView(IEnumerable<ChatUserList> tempUserList)
         {
-            MessageBox.Show("Inside ChangeUserListView"); // 디버깅용 메시지 박스
             Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
             {
-                currentUserList.Clear(); // 기존 목록을 비우고
+                CurrentUserList.Clear(); // 기존 목록을 비우고
 
                 foreach (var item in tempUserList) // 새로운 목록으로 채운다
                 {
-                    currentUserList.Add(item);
+                    CurrentUserList.Add(item);
                 }
             }));
         }

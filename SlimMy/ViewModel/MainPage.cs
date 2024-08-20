@@ -564,7 +564,6 @@ namespace SlimMy.ViewModel
 
             //MessageBox.Show("내가 방장 : " + getUserProtocol);
 
-            // 여기서부터 문제가 생김
             Community community = new Community(StaticDefine.GROUP_CHATTING);
 
             string groupChattingUserStrData = myName;
@@ -646,11 +645,11 @@ namespace SlimMy.ViewModel
                     chattingPartner = splitedMsg[0];
                     message = splitedMsg[1];
 
-                    // Dispatcher를 사용하여 UI 스레드에서 MessageBox.Show 실행
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        MessageBox.Show("chattingPartner : " + chattingPartner);
-                    });
+                    // Dispatcher를 사용하여 UI 스레드에서 MessageBox.Show 실행 => "관리자"
+                    //Application.Current.Dispatcher.Invoke(() =>
+                    //{
+                    //    MessageBox.Show("chattingPartner : " + chattingPartner);
+                    //});
 
 
                     // 관리자가 보낸 하트비트 메시지인 경우
