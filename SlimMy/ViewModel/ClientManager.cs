@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace SlimMy.ViewModel
 {
@@ -63,13 +64,20 @@ namespace SlimMy.ViewModel
                     }
                 }
 
-                if(messageParsingAction != null)
+                if (messageParsingAction != null)
                 {
-                    messageParsingAction.BeginInvoke(client.clientName, strData, null, null);
+                    // Task.Run(() => {});를 사용함으로써 비동기 호출로 실행
+                    Task.Run(() =>
+                    {
+                        messageParsingAction(client.clientName, strData);
+                    });
+                    //messageParsingAction(client.clientName, strData); -> 동기 호출
                 }
+
             }
             catch(Exception ex)
             {
+                MessageBox.Show($"Exception in DataReceived: {ex.Message}");
                 //RemoveClient(client);
             }
         }

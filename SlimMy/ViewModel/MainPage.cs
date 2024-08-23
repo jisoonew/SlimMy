@@ -269,8 +269,13 @@ namespace SlimMy.ViewModel
                     // String.IsNullOrEmpty(String) : 지정된 문자열이 null이거나 빈 문자열("")인지를 나타냅니다.
                     if (string.IsNullOrEmpty(item))
                         continue;
+
+                    MessageBox.Show("item!! : " + item);
+
                     msgList.Add(item);
+
                 }
+
                 SendMsgToClient(msgList, sender);
             }
         }
@@ -287,7 +292,8 @@ namespace SlimMy.ViewModel
 
             // 메시지 리스트를 반복하며 처리
             foreach (var item in msgList)
-            {
+            { 
+
                 // 메시지를 '<' 기준으로 분리
                 string[] splitedMsg = item.Split('<');
 
@@ -361,6 +367,8 @@ namespace SlimMy.ViewModel
                 byte[] sendByteData = new byte[parsedMessage.Length];
                 sendByteData = Encoding.Default.GetBytes(parsedMessage);
 
+                MessageBox.Show("출력 테스트 : " + parsedMessage);
+
                 // <GiveMeUserList> 메시지인 경우, 사용자 목록을 전송
                 if (parsedMessage.Contains("<GiveMeUserList>"))
                 {
@@ -395,6 +403,8 @@ namespace SlimMy.ViewModel
 
                     return;
                 }
+
+
 
                 if (parsedMessage.Contains(""))
                     // 메시지를 수신자에게 전송
@@ -600,19 +610,17 @@ namespace SlimMy.ViewModel
 
                     string[] receiveMessageArray = receiveMessage.Split('>');
 
-                    // 배열의 각 요소를 로그로 출력
-                    // 정상 출력되고 있음
-                    //foreach (string message in receiveMessageArray)
-                    //{
-                    //    MessageBox.Show("Received Message: " + message);
-                    //}
-
+                    // receiveMessageArray => "관리자<TEST"
                     foreach (var item in receiveMessageArray)
                     {
-                        //MessageBox.Show("Added Item: [" + item + "]");
+                        if (!item.Contains('<'))
+                            continue;
+                        if (item.Contains("관리자<TEST"))
+                            continue;
 
                         receiveMessageList.Add(item);
 
+                        MessageBox.Show("과연 : " + item);
                     }
 
                     ParsingReceiveMessage(receiveMessageList);
@@ -658,15 +666,19 @@ namespace SlimMy.ViewModel
                         // 사용자 목록을 업데이트
                         ObservableCollection<ChatUserList> tempUserList = new ObservableCollection<ChatUserList>();
                         string[] splitedUser = message.Split('$');
+
                         foreach (var el in splitedUser)
                         {
                             if (string.IsNullOrEmpty(el))
                                 continue;
 
+                            //MessageBox.Show("el : " + el); // TEST
+
                             tempUserList.Add(new ChatUserList(el));
                         }
 
-                        Community.ChangeUserListView(tempUserList); // 여기서 호출
+                        // 사용자 목록을 출력하기 위한 ChangeUserListView에 데이터 전송
+                        Community.ChangeUserListView(tempUserList);
 
                         // 처리한 메시지 리스트를 비우기
                         messageList.Clear();

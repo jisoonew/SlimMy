@@ -177,12 +177,6 @@ namespace SlimMy.ViewModel
                 // 그룹 채팅 참여자 리스트 초기화
                 groupChattingReceivers = new List<ChatUserList>();
 
-            //foreach (var item in _currentUserList) // 새로운 목록으로 채운다
-            //{
-            //    // 각 항목이 추가될 때마다 디버그 콘솔로 출력
-            //    MessageBox.Show("Current 시발: " + item.UsersName); // ChatUserList의 UserName을 예시로 출력
-            //}
-
             // View 초기화 및 바인딩
             View.Community viewCommunity = new View.Community();
             viewCommunity.UserListView.ItemsSource = CurrentUserList;
