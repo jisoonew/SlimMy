@@ -270,8 +270,6 @@ namespace SlimMy.ViewModel
                     if (string.IsNullOrEmpty(item))
                         continue;
 
-                    MessageBox.Show("item!! : " + item);
-
                     msgList.Add(item);
 
                 }
@@ -366,8 +364,6 @@ namespace SlimMy.ViewModel
                 // 메시지를 바이트 데이터로 변환
                 byte[] sendByteData = new byte[parsedMessage.Length];
                 sendByteData = Encoding.Default.GetBytes(parsedMessage);
-
-                MessageBox.Show("출력 테스트 : " + parsedMessage);
 
                 // <GiveMeUserList> 메시지인 경우, 사용자 목록을 전송
                 if (parsedMessage.Contains("<GiveMeUserList>"))
@@ -619,8 +615,6 @@ namespace SlimMy.ViewModel
                             continue;
 
                         receiveMessageList.Add(item);
-
-                        MessageBox.Show("과연 : " + item);
                     }
 
                     ParsingReceiveMessage(receiveMessageList);

@@ -238,9 +238,9 @@ namespace SlimMy
         }
 
         // 채팅방 출력
-        public List<Chat> SelectChatRoom()
+        public List<ChatRooms> SelectChatRoom()
         {
-            List<Chat> chatRooms = new List<Chat>();
+            List<ChatRooms> chatRooms = new List<ChatRooms>();
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
@@ -254,7 +254,7 @@ namespace SlimMy
                         {
                             while(reader.Read())
                             {
-                                Chat chatRoom = new Chat();
+                                ChatRooms chatRoom = new ChatRooms();
                                 chatRoom.ChatRoomId = reader.GetGuid(0);
                                 chatRoom.ChatRoomName = reader.GetString(1);
                                 chatRoom.Description = reader.GetString(2);

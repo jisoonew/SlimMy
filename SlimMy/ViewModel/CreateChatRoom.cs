@@ -17,7 +17,7 @@ namespace SlimMy.ViewModel
 {
     public class CreateChatRoom : INotifyPropertyChanged
     {
-        private Chat _chat;
+        private ChatRooms _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         public event EventHandler ChatRoomCreated;
@@ -25,15 +25,15 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         TcpClient client = null;
 
-        private ObservableCollection<Chat> _chatRooms;
+        private ObservableCollection<ChatRooms> _chatRooms;
 
-        public ObservableCollection<Chat> ChatRooms
+        public ObservableCollection<ChatRooms> ChatRooms
         {
             get { return _chatRooms; }
             set { _chatRooms = value; OnPropertyChanged(); }
         }
 
-        public Chat Chat
+        public ChatRooms Chat
         {
             get { return _chat; }
             set { _chat = value; OnPropertyChanged(nameof(Chat)); }
@@ -58,7 +58,7 @@ namespace SlimMy.ViewModel
 
         public CreateChatRoom()
         {
-            _chat = new Chat();
+            _chat = new ChatRooms();
             _repo = new Repo(_connstring);
             OpenCreateChatRoomCommand = new Command(CreateChat);
         }

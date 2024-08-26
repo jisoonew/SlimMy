@@ -7,7 +7,9 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Model
 {
-    public class Chat : INotifyPropertyChanged
+    // 채팅방 상세 설정
+    // 채팅방 아이디, 채팅방 이름, 설명, 카테고리, 생성 시간
+    public class ChatRooms : INotifyPropertyChanged
     {
         private Guid chatRoomId;
         private string chatRoomName;

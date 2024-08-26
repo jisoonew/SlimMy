@@ -20,7 +20,7 @@ namespace SlimMy.ViewModel
 {
     public class Community : INotifyPropertyChanged
     {
-        private Chat _chat;
+        private ChatRooms _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private User _user;
@@ -42,9 +42,9 @@ namespace SlimMy.ViewModel
 
         public static string myName = null;
 
-        private ObservableCollection<Chat> _chatRooms;
+        private ObservableCollection<ChatRooms> _chatRooms;
 
-        public ObservableCollection<Chat> ChatRooms
+        public ObservableCollection<ChatRooms> ChatRooms
         {
             get { return _chatRooms; }
             set { _chatRooms = value; OnPropertyChanged(); }
@@ -72,7 +72,7 @@ namespace SlimMy.ViewModel
             set { _chatUser = value; OnPropertyChanged(); }
         }
 
-        public Chat Chat
+        public ChatRooms Chat
         {
             get => _chat;
             set
@@ -85,8 +85,8 @@ namespace SlimMy.ViewModel
             }
         }
 
-        private Chat _selectedChatRoom;
-        public Chat SelectedChatRoom
+        private ChatRooms _selectedChatRoom;
+        public ChatRooms SelectedChatRoom
         {
             get { return _selectedChatRoom; }
             set { _selectedChatRoom = value; OnPropertyChanged(); }
@@ -146,10 +146,10 @@ namespace SlimMy.ViewModel
             InsertCommand = new Command(Print);
         }
 
-        public Chat LoginSuccessCom(string userEmail)
+        public ChatRooms LoginSuccessCom(string userEmail)
         {
             // 여기서 사용자 정보를 설정하고 필요한 데이터를 가져올 수 있습니다.
-            Chat = new Chat
+            Chat = new ChatRooms
             {
                 CreatorEmail = userEmail
             };
@@ -186,7 +186,7 @@ namespace SlimMy.ViewModel
         // 채팅 목록
         private void RefreshChatRooms()
         {
-            ChatRooms = new ObservableCollection<Chat>(_repo.SelectChatRoom());
+            ChatRooms = new ObservableCollection<ChatRooms>(_repo.SelectChatRoom());
         }
 
         // 사용자 목록이 변경될 때마다 호출되는 메서드로, 현재 사용자 목록을 업데이트
