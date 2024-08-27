@@ -34,13 +34,6 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         // 이벤트 정의: 로그인 성공 시 발생하는 이벤트
         public event EventHandler<ChatUserList> DataPassed; // 데이터 전달을 위한 이벤트 정의
-        ChattingWindow chattingWindow = null;
-        Dictionary<string, ChattingThreadData> chattingThreadDic = new Dictionary<string, ChattingThreadData>();
-        Dictionary<int, ChattingThreadData> groupChattingThreadDic = new Dictionary<int, ChattingThreadData>();
-
-        private SignUp _signUp;
-        TcpClient client = null;
-        Thread ReceiveThread = null;
 
         List<User> UserList = new List<User>();
 
@@ -53,7 +46,31 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private string _password;
+        private string _passwordCheck;
+
+        public string Password
+        {
+            get => _password;
+            set
+            {
+                _password = value;
+                RaisePropertyChanged(nameof(Password));
+            }
+        }
+
+        public string PasswordCheck
+        {
+            get => _passwordCheck;
+            set
+            {
+                _passwordCheck = value;
+                RaisePropertyChanged(nameof(PasswordCheck));
+            }
+        }
+
         public Command InsertCommand { get; set; }
+        public Command TestCommand { get; set; }
         public Command LoginCommand { get; set; }
         public Command NickNameCommand { get; set; }
 
@@ -74,7 +91,7 @@ namespace SlimMy.ViewModel
         public Login()
         {
             InsertCommand = new Command(InsertUser);
-            LoginCommand = new Command(LoginSuccess);
+            //TestCommand = new Command(TestUser);
 
             _repo = new Repo(_connstring);
 
@@ -86,11 +103,6 @@ namespace SlimMy.ViewModel
 
             // Community ViewModel 인스턴스 생성
             _communityViewModel = new Community();
-        }
-
-        private void MainServerStart()
-        {
-            MainServer a = new MainServer();
         }
 
         public User User
@@ -135,22 +147,35 @@ namespace SlimMy.ViewModel
             }
         }
 
+        public void TestUser(object parameter)
+        {
+            // WPF 애플리케이션에서 현재 활성화된 메인 윈도우에서 이름이 "passwordBox"인 컨트롤을 찾기 위해 사용되는 메서드
+            var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
+
+            string password = passwordBox.Password;
+
+            User.Password = password;
+
+            MessageBox.Show("User.Password : " + User.Password);
+        }
+
         // 회원가입
         public void InsertUser(object parameter)
         {
-            _user.Gender = User.Gender == "남성" ? "남성" : "여성";
-
             // WPF 애플리케이션에서 현재 활성화된 메인 윈도우에서 이름이 "passwordBox"인 컨트롤을 찾기 위해 사용되는 메서드
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
-            var passwordCheckBox = Application.Current.MainWindow.FindName("passwordCheckBox") as PasswordBox;
+            var passwordChackBox = Application.Current.MainWindow.FindName("passwordChackBox") as PasswordBox;
 
             string password = passwordBox.Password;
-            string passwordCheck = passwordCheckBox.Password;
+            string passwordChack = passwordChackBox.Password;
 
             User.Password = password;
-            User.PasswordCheck = passwordCheck;
+            User.PasswordCheck = passwordChack;
 
-            _signUp = new SignUp();
+            MessageBox.Show("여기는 User.Password : " + User.Password + "\n User.PasswordChack : " + User.PasswordCheck);
+
+
+            _user.Gender = User.Gender == "남성" ? "남성" : "여성";
 
             // 유효성 검사
             if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName)
@@ -170,67 +195,6 @@ namespace SlimMy.ViewModel
                 MessageBox.Show("인증 번호가 일치하지 않습니다.");
             }
         }
-
-        // 로그인
-        public void LoginSuccess(object parameter)
-        {
-            var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
-            var ipTextBox = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
-            string password = passwordBox.Password;
-            string ip = ipTextBox.Text;
-            string parsedName = "%^&";
-
-            User.Password = password;
-
-            bool isSuccess = _repo.LoginSuccess(User.Email, password);
-
-            View.Login login = new View.Login();
-
-            if (isSuccess)
-            {
-                // 로그인 이후 사용자의 닉네임 가져오기
-                string loggedInNickName = _repo.NickName(User.Email);
-                parsedName += loggedInNickName;
-                User.NickName = loggedInNickName;
-                User.IpNum = ip;
-
-                // 싱글톤에 저장
-                UserSession.Instance.CurrentUser = new User
-                {
-                    Email = User.Email,
-                    NickName = User.NickName,
-                    IpNum = User.IpNum
-                };
-
-                client = new TcpClient();
-                client.Connect(ip, 9999);
-
-                byte[] byteData = new byte[parsedName.Length];
-                byteData = Encoding.Default.GetBytes(parsedName);
-                client.GetStream().Write(byteData, 0, byteData.Length);
-
-                myName = User.NickName;
-
-                // MainPage 실행
-                var mainPage = new View.MainPage();
-                mainPage.DataContext = this;
-
-                // 새로운 창을 보여줍니다.
-                mainPage.Show();
-
-                // 현재 창을 닫습니다.
-                Application.Current.MainWindow.Close();  // 로그인 창 닫기
-
-                //ReceiveThread = new Thread(RecieveMessage);
-                //ReceiveThread.Start();
-
-            }
-            else
-            {
-                MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
-            }
-        }
-        
 
         public class LoggedInEventArgs : EventArgs
         {

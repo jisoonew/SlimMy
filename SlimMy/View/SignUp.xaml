@@ -3,22 +3,21 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
-    x:Class="SlimMy.View.SignUp"
-        mc:Ignorable="d"
-        Title="SignUp" Height="650" Width="320"
+    xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+    xmlns:local="clr-namespace:SlimMy.Model"
+    xmlns:ViewModel="clr-namespace:SlimMy.ViewModel" x:Class="SlimMy.View.SignUp"
+    mc:Ignorable="d"
+    Title="SignUp" Height="650" Width="320"
     WindowStartupLocation="CenterScreen">
-    
+
     <Window.DataContext>
         <ViewModel:Login/>
     </Window.DataContext>
 
     <StackPanel Width="280" HorizontalAlignment="Stretch" Margin="0,10,0,0" VerticalAlignment="Top" Height="600">
-
         <Label Width="200" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="15" Content="회원가입"/>
 
         <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Width="280">
-
             <StackPanel Width="85" Margin="5,0,0,0" HorizontalAlignment="Stretch">
                 <Label Content="이름"/>
                 <Label Margin="0,15,0,0" Content="성별"/>
@@ -35,7 +34,7 @@
 
             <StackPanel Width="170" Margin="10,0,0,0">
                 <!-- 이름 -->
-                <TextBox FontSize="15" Text="{Binding User.Name,UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBox FontSize="15" Text="{Binding User.Name, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <!-- 성별 -->
                 <StackPanel Orientation="Horizontal" Margin="0,23,0,0">
@@ -46,21 +45,19 @@
                 <!-- 닉네임 -->
                 <TextBox Margin="0,21,0,0" FontSize="15" Text="{Binding User.NickName}"/>
 
-                <StackPanel Orientation="Horizontal">
                 <!-- 이메일 -->
-                <TextBox Margin="0,19,0,0" x:Name="email" FontSize="15" Text="{Binding User.Email}" Width="125" HorizontalAlignment="Left"/>
-                
-                <!-- 인증 발송 -->
-                    <Button Width="40" Content="발송"  Margin="5,19,0,0" HorizontalAlignment="Right" Click="Button_Click_1" />
-                </StackPanel>
-
                 <StackPanel Orientation="Horizontal">
-                    <!-- 이메일 인증 -->
-                    <TextBox Margin="0,10,0,0" x:Name="txt_emailchecknum" FontSize="15" Width="125" HorizontalAlignment="Left" Height="22" />
-                    <!-- 인증 확인 -->
-                    <Button Width="40" Content="확인"  Margin="5,10,0,0" HorizontalAlignment="Right" Height="22" Click="Button_Click_2"/>
+                    <TextBox Margin="0,19,0,0" x:Name="email" FontSize="15" Text="{Binding User.Email}" Width="125" HorizontalAlignment="Left"/>
+                    <Button Width="40" Content="발송" Margin="5,19,0,0" HorizontalAlignment="Right" Click="Button_Click_1"/>
                 </StackPanel>
 
+                <!-- 인증 확인 -->
+                <StackPanel Orientation="Horizontal">
+                    <TextBox Margin="0,10,0,0" x:Name="txt_emailchecknum" FontSize="15" Width="125" HorizontalAlignment="Left" Height="22"/>
+                    <Button Width="40" Content="확인" Margin="5,10,0,0" HorizontalAlignment="Right" Height="22" Click="Button_Click_2"/>
+                </StackPanel>
+
+                <!-- 인증 결과 -->
                 <Label Content="인증 완료되었습니다." x:Name="emailCheck" Margin="0,5,0,0" Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="Collapsed"/>
                 <Label Content="인증 실패했습니다." x:Name="emailNoCheck" Margin="0,5,0,0" Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="Collapsed"/>
 
@@ -68,7 +65,8 @@
                 <PasswordBox x:Name="passwordBox" Margin="0,19,0,0" FontSize="15" />
 
                 <!-- 비밀번호 확인 -->
-                <PasswordBox x:Name="passwordCheckBox" Margin="0,19,0,0" FontSize="15"/>
+                <PasswordBox x:Name="passwordChackBox" Margin="0,19,0,0" FontSize="15" />
+
 
                 <!-- 생년월일 -->
                 <DatePicker Margin="0,18,0,0" SelectedDate="{Binding User.BirthDate}" />
@@ -86,14 +84,15 @@
                 </StackPanel>
 
                 <!-- 다이어트 목표 -->
-                <ComboBox FontSize="15" Margin="0,16,0,0" Text="{Binding User.DietGoal}">
-                    <ComboBoxItem Content="체중 감량"/>
-                    <ComboBoxItem Content="체중 유지"/>
-                    <ComboBoxItem Content="체중 증가"/>
+                <ComboBox FontSize="15" Margin="0,16,0,0" SelectedValue="{Binding User.DietGoal}">
+                    <ComboBoxItem Content="체중 감량" />
+                    <ComboBoxItem Content="체중 유지" />
+                    <ComboBoxItem Content="체중 증가" />
                 </ComboBox>
             </StackPanel>
         </StackPanel>
 
+        <!-- 회원가입 버튼 -->
         <Button Margin="0,25,0,0" FontSize="15" Padding="1,3,1,3" Content="회원가입" Command="{Binding InsertCommand}" />
     </StackPanel>
 </Window>

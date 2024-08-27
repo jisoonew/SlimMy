@@ -83,6 +83,7 @@ namespace SlimMy.Validator
         // 비밀번호
         public static bool ValidatePassword(string password, string passwordCheck)
         {
+
             // 비밀번호는 최소 8자 최대 100자이면서, 숫자와 특수문자는 최소 1자 이상 포함
             if (!Regex.IsMatch(password, @"^(?=.*[0-9])(?=.*[!@#$%^&*()-_=+{};:,<.>]).{8,100}$"))
             {

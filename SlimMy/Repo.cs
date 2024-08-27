@@ -122,12 +122,15 @@ namespace SlimMy
                 try
                 {
                     connection.Open();
-                    string sql = "insert into Users (email, name, gender, nickname, password, birth_date, height, weight, diet_goal) " +
-            "values(:email, :name, :gender, :nickName, :password, :birthDate, :height, :weight, :dietGoal)";
+                    string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, weight, diet_goal) " +
+            "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :weight, :dietGoal)";
 
+                    Guid userId = Guid.NewGuid(); // 새로운 GUID 생성
+                    byte[] userIdBytes = userId.ToByteArray(); // GUID를 바이트 배열로 변환
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
+                        command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("email", email));
                         command.Parameters.Add(new OracleParameter("name", name));
                         command.Parameters.Add(new OracleParameter("gender", gender));

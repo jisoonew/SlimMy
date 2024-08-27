@@ -31,8 +31,14 @@ namespace SlimMy.View
         // 회원가입
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            var signUp = new SignUp();
-            signUp.Show();
+            // 새로운 창 생성
+            var newWindow = new SignUp(); // AnotherWindow는 새로 지정할 창의 클래스
+
+            // 새 창을 주 창으로 설정
+            Application.Current.MainWindow = newWindow;
+
+            // 새 창을 열고, 이전 주 창을 닫습니다.
+            newWindow.Show();
         }
     }
 }
