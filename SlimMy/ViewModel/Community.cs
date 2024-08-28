@@ -141,7 +141,7 @@ namespace SlimMy.ViewModel
         public Community()
         {
             _repo = new Repo(_connstring);
-            //RefreshChatRooms();
+            RefreshChatRooms();
 
             InsertCommand = new Command(Print);
         }
@@ -179,7 +179,7 @@ namespace SlimMy.ViewModel
 
             // View 초기화 및 바인딩
             View.Community viewCommunity = new View.Community();
-            viewCommunity.UserListView.ItemsSource = CurrentUserList;
+            //viewCommunity.UserListView.ItemsSource = CurrentUserList;
 
         }
 

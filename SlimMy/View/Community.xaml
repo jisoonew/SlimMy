@@ -23,7 +23,7 @@
         <TextBlock Text="{Binding UserEmail}" FontSize="18"/>
         <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
 
-        <!-- <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="SelectionChanged">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
@@ -36,9 +36,9 @@
                     <GridViewColumn Header="카테고리" Width="100" DisplayMemberBinding="{Binding Category}"/>
                 </GridView>
             </ListView.View>
-        </ListView> -->
+        </ListView>
 
-        <ListView x:Name="UserListView" Grid.Row="0" BorderBrush="White" Margin="0,156,0,0" Height="100"
+        <!--<ListView x:Name="UserListView" Grid.Row="0" BorderBrush="White" Margin="0,156,0,0" Height="100"
           ItemsSource="{Binding CurrentUserList}">
             <ListView.Resources>
                 <DataTemplate x:Key="UserCellTemplate">
@@ -58,7 +58,7 @@
                     <GridViewColumn HeaderTemplate="{StaticResource UserHeaderTemplate}" CellTemplate="{StaticResource UserCellTemplate}"/>
                 </GridView>
             </ListView.View>
-        </ListView>
+        </ListView>-->
 
     </Grid>
 </Page>

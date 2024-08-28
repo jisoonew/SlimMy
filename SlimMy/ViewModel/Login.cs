@@ -147,18 +147,6 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public void TestUser(object parameter)
-        {
-            // WPF 애플리케이션에서 현재 활성화된 메인 윈도우에서 이름이 "passwordBox"인 컨트롤을 찾기 위해 사용되는 메서드
-            var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
-
-            string password = passwordBox.Password;
-
-            User.Password = password;
-
-            MessageBox.Show("User.Password : " + User.Password);
-        }
-
         // 회원가입
         public void InsertUser(object parameter)
         {
@@ -171,9 +159,6 @@ namespace SlimMy.ViewModel
 
             User.Password = password;
             User.PasswordCheck = passwordChack;
-
-            MessageBox.Show("여기는 User.Password : " + User.Password + "\n User.PasswordChack : " + User.PasswordCheck);
-
 
             _user.Gender = User.Gender == "남성" ? "남성" : "여성";
 
