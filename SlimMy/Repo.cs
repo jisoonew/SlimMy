@@ -206,8 +206,75 @@ namespace SlimMy
             }
         }
 
+        // 로그인 이후 닉네임 가져오기
+        public Guid UserID(string email)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "select userid from Users where email = :email";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("email", email));
+
+                        // ExecuteScalar() 메서드는 object 타입을 반환하므로,
+                        // 이를 byte[]로 캐스팅한 후 Guid로 변환합니다.
+                        byte[] userIdBytes = (byte[])command.ExecuteScalar();
+
+                        // byte[]를 Guid로 변환
+                        Guid userId = new Guid(userIdBytes);
+
+                        return userId;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                    return Guid.Empty;
+                }
+            }
+        }
+
+        // 사용자와 채팅방 간의 관계 정보 저장
+        public void InsertUserChatRooms(Guid userId, Guid chatRoomId)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    byte[] userIdBytes = userId.ToByteArray();
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
+
+                    string sql = "insert into UserChatRooms (USERCHATROOMID, USERID, CHATROOMID) values (:USERCHATROOMID, :USERID, :CHATROOMID)";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        Guid userChatRoomId = Guid.NewGuid();
+                        byte[] userChatRoomIdBytes = userChatRoomId.ToByteArray();
+
+                        command.Parameters.Add(new OracleParameter("USERCHATROOMID", OracleDbType.Raw, userChatRoomIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("USERID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+
+                        command.ExecuteNonQuery();
+
+                        MessageBox.Show("사용자와 채팅방 관계가 생성되었습니다.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+                }
+            }
+        }
+
         // 채팅방 생성
-        public void InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
+        public Guid InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
@@ -232,18 +299,23 @@ namespace SlimMy
 
                         MessageBox.Show("채팅방이 생성되었습니다.");
                     }
+
+                    return chatRoomId;
                 }
                 catch(Exception ex)
                 {
                     MessageBox.Show(ex.Message);
+
+                    return Guid.Empty; // 에러 발생 시 빈 GUID 반환
                 }
             }
         }
 
         // 채팅방 출력
-        public List<ChatRooms> SelectChatRoom()
+        public IEnumerable<ChatRooms> SelectChatRoom()
         {
-            List<ChatRooms> chatRooms = new List<ChatRooms>();
+            var chatRooms = new List<ChatRooms>();
+
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try

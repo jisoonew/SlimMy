@@ -517,16 +517,19 @@ namespace SlimMy.ViewModel
             {
                 // 로그인 이후 사용자의 닉네임 가져오기
                 string loggedInNickName = _repo.NickName(User.Email);
+                Guid selectUserID = _repo.UserID(User.Email);
                 parsedName += loggedInNickName;
                 User.NickName = loggedInNickName;
                 User.IpNum = ip;
+                User.UserId = selectUserID;
 
                 // 싱글톤에 저장
                 UserSession.Instance.CurrentUser = new User
                 {
                     Email = User.Email,
                     NickName = User.NickName,
-                    IpNum = User.IpNum
+                    IpNum = User.IpNum,
+                    UserId = User.UserId
                 };
 
                 client = new TcpClient();

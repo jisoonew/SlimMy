@@ -69,10 +69,19 @@ namespace SlimMy.ViewModel
             // 생성 시간
             DateTime now = DateTime.Now;
 
-            _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
+            Guid chatRoomId = _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
 
-            // 이벤트 발생
-            ChatRoomCreated?.Invoke(this, EventArgs.Empty);
+            Guid userId = UserSession.Instance.CurrentUser.UserId;
+
+            // 사용자와 채팅방 간의 관계 생성
+            _repo.InsertUserChatRooms(userId, chatRoomId);
+
+            // 채팅방 목록을 새로 고침
+            var community = Application.Current.MainWindow.DataContext as Community;
+            if (community != null)
+            {
+                community.RefreshChatRooms();
+            }
 
             CloseWindow();
         }
@@ -80,39 +89,10 @@ namespace SlimMy.ViewModel
         private void CloseWindow()
         {
             // 싱글톤
-            User currentUser = UserSession.Instance.CurrentUser;
+            //User currentUser = UserSession.Instance.CurrentUser;
 
             // 정상 출력
             // MessageBox.Show("여기는 크리에이트 챗 : " + currentUser.NickName);
-
-            // 선택된 그룹 채팅 참여자들의 정보를 문자열
-            string getUserProtocol = currentUser.NickName + "<GiveMeUserList>";
-            byte[] byteData = new byte[getUserProtocol.Length];
-            byteData = Encoding.Default.GetBytes(getUserProtocol);
-
-            // 서버 사용자가 서버 접속을 안해서 null 값이 출력되고 있다
-            // 로그인할 때 IP을 입력 받게 한다
-            client.GetStream().Write(byteData, 0, byteData.Length);
-
-            // MessageBox.Show("내가 방장 : " + getUserProtocol);
-
-            //Community userListWindow = new Community(StaticDefine.GROUP_CHATTING);
-
-            //    string groupChattingUserStrData = MainPage.myName;
-            //    foreach (var item in userListWindow.GroupChattingReceivers)
-            //    {
-            //        groupChattingUserStrData += "#";
-            //        groupChattingUserStrData += item.NickName;
-            //    }
-
-            //    string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-            //    byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
-
-            //    // 입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            //    // MessageBox.Show("Sending to server: " + chattingStartMessage);
-
-            //    client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-            
 
             // 현재 윈도우를 찾아서 닫기
             foreach (Window window in Application.Current.Windows)

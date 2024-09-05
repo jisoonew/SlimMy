@@ -28,6 +28,7 @@ namespace SlimMy.Model
         private int weight; // 몸무게
         private string dietGoal; // 다이어트 목표
         private string ipNum; // 아이피
+        private Guid userId;
 
         public string IpNum
         {
@@ -101,6 +102,12 @@ namespace SlimMy.Model
         {
             get { return dietGoal; }
             set { dietGoal = value; OnPropertyChanged(nameof(dietGoal)); }
+        }
+
+        public Guid UserId
+        {
+            get { return userId; }
+            set { userId = value; OnPropertyChanged(nameof(userId)); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

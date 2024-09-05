@@ -47,7 +47,14 @@ namespace SlimMy.ViewModel
         public ObservableCollection<ChatRooms> ChatRooms
         {
             get { return _chatRooms; }
-            set { _chatRooms = value; OnPropertyChanged(); }
+            set
+            {
+                if (_chatRooms != value)
+                {
+                    _chatRooms = value;
+                    OnPropertyChanged(nameof(ChatRooms));
+                }
+            }
         }
 
         // 그룹 채팅의 참가자 목록을 저장
@@ -141,9 +148,15 @@ namespace SlimMy.ViewModel
         public Community()
         {
             _repo = new Repo(_connstring);
-            RefreshChatRooms();
 
-            InsertCommand = new Command(Print);
+
+            ChatRooms = new ObservableCollection<ChatRooms>();
+
+            // 채팅방 목록 선택 시
+            InsertCommand = new Command(ChatRoomSelected);
+
+            // 채팅방 목록 출력
+            RefreshChatRooms();
         }
 
         public ChatRooms LoginSuccessCom(string userEmail)
@@ -157,18 +170,14 @@ namespace SlimMy.ViewModel
             return Chat;
         }
 
-        // 로그인 사용자 이메일 출력
-        private void Print(object parameter)
+        // 채팅 목록 선택
+        private void ChatRoomSelected(object parameter)
         {
-            // User currentUser = Application.Current.Properties["CurrentUser"] as User;
-
             User currentUser = UserSession.Instance.CurrentUser;
             if (currentUser != null)
             {
                 MessageBox.Show($"여기는 싱글톤: {currentUser.Email}");
             }
-
-            //Application.Current.Properties["CurrentUser"] = null; // 요거는 로그아웃할 때 필요
         }
 
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
@@ -184,9 +193,14 @@ namespace SlimMy.ViewModel
         }
 
         // 채팅 목록
-        private void RefreshChatRooms()
+        public void RefreshChatRooms()
         {
-            ChatRooms = new ObservableCollection<ChatRooms>(_repo.SelectChatRoom());
+            var chatRooms = _repo.SelectChatRoom();
+            ChatRooms.Clear(); // 기존 데이터 제거
+            foreach (var chatRoom in chatRooms)
+            {
+                ChatRooms.Add(chatRoom); // 새 데이터 추가
+            }
         }
 
         // 사용자 목록이 변경될 때마다 호출되는 메서드로, 현재 사용자 목록을 업데이트
