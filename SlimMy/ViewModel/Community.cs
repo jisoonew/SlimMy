@@ -183,8 +183,8 @@ namespace SlimMy.ViewModel
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
         public Community(int chattingType)
         {
-                // 그룹 채팅 참여자 리스트 초기화
-                groupChattingReceivers = new List<ChatUserList>();
+            // 그룹 채팅 참여자 리스트 초기화
+            groupChattingReceivers = new List<ChatUserList>();
 
             // View 초기화 및 바인딩
             View.Community viewCommunity = new View.Community();
@@ -196,7 +196,9 @@ namespace SlimMy.ViewModel
         public void RefreshChatRooms()
         {
             var chatRooms = _repo.SelectChatRoom();
+
             ChatRooms.Clear(); // 기존 데이터 제거
+
             foreach (var chatRoom in chatRooms)
             {
                 ChatRooms.Add(chatRoom); // 새 데이터 추가
@@ -214,6 +216,13 @@ namespace SlimMy.ViewModel
                 {
                     CurrentUserList.Add(item);
                 }
+
+                // 현재 서버에 접속한 사용자 닉네임 출력
+                //foreach (var user in CurrentUserList)
+                //{
+                //    // user 객체의 속성 출력 (예: Name과 ID 속성 출력)
+                //    MessageBox.Show($"Name: {user.UsersName}");
+                //}
             }));
         }
 

@@ -26,7 +26,7 @@ namespace SlimMy.ViewModel
 
                 clientDic.TryAdd(currentClient.clientNumber, currentClient);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 //RemoveClient(currentClient);
             }
@@ -46,7 +46,7 @@ namespace SlimMy.ViewModel
 
                 if (string.IsNullOrEmpty(client.clientName))
                 {
-                    if(ChangeListViewAction != null)
+                    if (ChangeListViewAction != null)
                     {
                         if (CheckID(strData))
                         {
@@ -75,7 +75,7 @@ namespace SlimMy.ViewModel
                 }
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 MessageBox.Show($"Exception in DataReceived: {ex.Message}");
                 //RemoveClient(client);
