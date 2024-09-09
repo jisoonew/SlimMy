@@ -173,23 +173,29 @@ namespace SlimMy.ViewModel
         // 채팅 목록 선택
         private void ChatRoomSelected(object parameter)
         {
-            User currentUser = UserSession.Instance.CurrentUser;
-            if (currentUser != null)
+            //User currentUser = UserSession.Instance.CurrentUser;
+            //if (currentUser != null)
+            //{
+            //    MessageBox.Show($"여기는 싱글톤: {currentUser.Email}");
+            //}
+
+            if (parameter is ChatRooms selectedChatRoom)
             {
-                MessageBox.Show($"여기는 싱글톤: {currentUser.Email}");
+                MessageBox.Show($"채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
             }
         }
 
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정
         public Community(int chattingType)
         {
+            // List<User> groupChattingUser = UserListView.SelectedItems.Cast<User>().ToList();
+
             // 그룹 채팅 참여자 리스트 초기화
             groupChattingReceivers = new List<ChatUserList>();
 
             // View 초기화 및 바인딩
             View.Community viewCommunity = new View.Community();
             //viewCommunity.UserListView.ItemsSource = CurrentUserList;
-
         }
 
         // 채팅 목록

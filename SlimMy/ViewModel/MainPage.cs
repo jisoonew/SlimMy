@@ -290,7 +290,7 @@ namespace SlimMy.ViewModel
 
             // 메시지 리스트를 반복하며 처리
             foreach (var item in msgList)
-            { 
+            {
 
                 // 메시지를 '<' 기준으로 분리
                 string[] splitedMsg = item.Split('<');
@@ -577,17 +577,17 @@ namespace SlimMy.ViewModel
 
             string groupChattingUserStrData = myName;
 
-                foreach (var item in community.GroupChattingReceivers)
-                {
-                    groupChattingUserStrData += "#";
-                    groupChattingUserStrData += item.UsersName;
-                }
+            foreach (var item in community.GroupChattingReceivers)
+            {
+                groupChattingUserStrData += "#";
+                groupChattingUserStrData += item.UsersName;
+            }
 
             string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
             byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
 
             //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            //MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
 
             client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
         }
@@ -703,7 +703,7 @@ namespace SlimMy.ViewModel
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
                         // 방 번호 출력해보기
-                        // MessageBox.Show(sender);
+                        MessageBox.Show("방 번호 : " + sender);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         if (chattingRoomNum < 0)
@@ -741,6 +741,7 @@ namespace SlimMy.ViewModel
             foreach (var item in chattingPartners)
             {
                 reqMember += item;
+                MessageBox.Show("채팅방 멤버 구성 : " + reqMember);
             }
 
             // 기존 채팅방 멤버와 비교하여 존재하는 채팅 방 번호를 찾음
