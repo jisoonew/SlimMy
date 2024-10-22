@@ -1,4 +1,6 @@
-﻿using SlimMy.View;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SlimMy.Model;
+using SlimMy.View;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -14,6 +16,5 @@ namespace SlimMy
     /// </summary>
     public partial class App : Application
     {
-        
     }
 }

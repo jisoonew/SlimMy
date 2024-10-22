@@ -20,10 +20,10 @@ namespace SlimMy.ViewModel
 {
     public class Community : INotifyPropertyChanged
     {
+        private User _user;
         private ChatRooms _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-        private User _user;
         private ChatUserList _chatUserList;
 
         // 현재 사용자 목록을 저장하는 ObservableCollection입니다. 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
@@ -115,6 +115,11 @@ namespace SlimMy.ViewModel
             }
         }
 
+        public User UserTest
+        {
+            get { return _user; }
+            set { _user = value; OnPropertyChanged(nameof(UserTest)); }
+        }
 
         public User User
         {
@@ -149,7 +154,6 @@ namespace SlimMy.ViewModel
         {
             _repo = new Repo(_connstring);
 
-
             ChatRooms = new ObservableCollection<ChatRooms>();
 
             // 채팅방 목록 선택 시
@@ -181,8 +185,15 @@ namespace SlimMy.ViewModel
 
             if (parameter is ChatRooms selectedChatRoom)
             {
-                MessageBox.Show($"채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
+                Guid chatRoomId = _repo.ChatRoomUserID(selectedChatRoom.ChatRoomId);
+                // 생성된 채팅방에 인원 추가
+                //MessageBox.Show("제대로 출력 되고 있는거야?" + chatRoomId);
+                //_repo.InsertUserChatRooms(_user.UserId, chatRoomId);
+
+                MessageBox.Show($"채팅방 아이디 : {chatRoomId} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
             }
+
+            // 채팅방 아이디의 데이터를 받아서 방장 아이디 출력하기
         }
 
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정

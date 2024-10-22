@@ -28,6 +28,9 @@ namespace SlimMy
             // 동기 모드 차단에서 들어오는 연결 요청을 수신 대기하고 수락하는 간단한 메서드를 제공
             TcpListener listener = new TcpListener(new IPEndPoint(IPAddress.Any, 9999));
 
+            // SocketOptionName.ReuseAddress를 설정하면 이전에 동일한 포트에서 사용된 소켓이 아직 완전히 닫히지 않았더라도 새 소켓이 해당 포트를 사용할 수 있게 됩니다.
+            listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+
             // 수신 대기 시작
             listener.Start();
 

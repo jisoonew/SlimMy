@@ -28,6 +28,10 @@ namespace SlimMy.View
             InitializeComponent();
         }
 
+        public Community(User userModel)
+        {
+        }
+
         private void CommunityChat_Click(object sender, RoutedEventArgs e)
         {
             CreateChatRoom createChatRoom = new CreateChatRoom();
