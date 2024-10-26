@@ -4,12 +4,12 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:viewmodel="clr-namespace:SlimMy.ViewModel" 
+      xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:Community}"
       mc:Ignorable="d"  Background="White"
       Height="830" Width="1100"      Title="Community">
 
     <Page.DataContext>
-        <viewmodel:Community/>
+        <local:Community/>
     </Page.DataContext>
 
     <Grid>
@@ -23,7 +23,8 @@
         <TextBlock Text="{Binding UserEmail}" FontSize="18"/>
         <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
 
-        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" 
+          ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="SelectionChanged">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>

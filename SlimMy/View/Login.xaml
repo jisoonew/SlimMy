@@ -3,19 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SlimMy.ViewModel"
-        mc:Ignorable="d"
+        xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:MainPage}"
+        mc:Ignorable="d" 
         Title="Login" Height="350" Width="300" WindowStartupLocation="CenterScreen">
-    
-    <Window.DataContext>
-        <local:MainPage/>
-    </Window.DataContext>
-    
+
     <StackPanel Width="299" Height="300">
         <Label HorizontalAlignment="Center" Margin="0,10,0,10">LOGIN</Label>
         <StackPanel Width="200">
             <Label>User Email</Label>
-            <TextBox Text="{Binding User.Email, Mode=TwoWay}"/>
+            <TextBox Text="{Binding UserId, Mode=TwoWay}"/>
             <Label Margin="0,20,0,0">Password</Label>
             <PasswordBox x:Name="passwordBox"/>
 

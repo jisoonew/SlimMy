@@ -1,5 +1,6 @@
 ﻿using SlimMy.Interface;
 using SlimMy.Model;
+using SlimMy.Test;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -42,20 +43,16 @@ namespace SlimMy.ViewModel
 
         public static string myName = null;
 
-        private ObservableCollection<ChatRooms> _chatRooms;
-
-        public ObservableCollection<ChatRooms> ChatRooms
-        {
-            get { return _chatRooms; }
-            set
-            {
-                if (_chatRooms != value)
-                {
-                    _chatRooms = value;
-                    OnPropertyChanged(nameof(ChatRooms));
-                }
-            }
-        }
+        //private ObservableCollection<ChatRooms> _chatRooms;
+        //public ObservableCollection<ChatRooms> ChatRooms
+        //{
+        //    get { return _chatRooms; }
+        //    set
+        //    {
+        //        _chatRooms = value;
+        //        OnPropertyChanged(nameof(ChatRooms));
+        //    }
+        //}
 
         // 그룹 채팅의 참가자 목록을 저장
         private List<ChatUserList> groupChattingReceivers { get; set; }
@@ -142,25 +139,12 @@ namespace SlimMy.ViewModel
         }
 
         public ICommand OpenCreateChatRoomCommand { get; private set; }
-        public ICommand InsertCommand { get; set; }
+        public ICommand InsertCommand { get; private set; }
 
         public Community(string userEmail)
         {
             //_user = new User { Email = userEmail };
             ChatUser = new ObservableCollection<User> { _user }; // 현재 사용자를 ChatUser에 추가
-        }
-
-        public Community()
-        {
-            _repo = new Repo(_connstring);
-
-            ChatRooms = new ObservableCollection<ChatRooms>();
-
-            // 채팅방 목록 선택 시
-            InsertCommand = new Command(ChatRoomSelected);
-
-            // 채팅방 목록 출력
-            RefreshChatRooms();
         }
 
         public ChatRooms LoginSuccessCom(string userEmail)
@@ -174,26 +158,48 @@ namespace SlimMy.ViewModel
             return Chat;
         }
 
-        // 채팅 목록 선택
-        private void ChatRoomSelected(object parameter)
+        public IDataService _dataService;
+
+        public ObservableCollection<ChatRooms> ChatRooms { get; private set; }
+
+        public Community(IDataService dataService)
         {
-            //User currentUser = UserSession.Instance.CurrentUser;
-            //if (currentUser != null)
-            //{
-            //    MessageBox.Show($"여기는 싱글톤: {currentUser.Email}");
-            //}
+            _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService)); // _dataService 필드 초기화
+
+            InsertCommand = new Command(ChatRoomSelected);
+
+            Initialize(); // 필요한 다른 초기화 작업 수행
+        }
+
+        // 기본 생성자 (IDataService의 기본 구현 사용)
+        public Community()
+        {
+            _dataService = new DataService();
+            Initialize(); // 초기화 메서드 호출
+        }
+
+        // 초기화 메서드
+        private void Initialize()
+        {
+            _repo = new Repo(_connstring); // Repo 초기화
+            ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
+            RefreshChatRooms(); // 채팅 방 불러오기
+            InsertCommand = new Command(ChatRoomSelected);
+        }
+
+        // 채팅 목록 선택
+        public void ChatRoomSelected(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
 
             if (parameter is ChatRooms selectedChatRoom)
             {
-                Guid chatRoomId = _repo.ChatRoomUserID(selectedChatRoom.ChatRoomId);
-                // 생성된 채팅방에 인원 추가
-                //MessageBox.Show("제대로 출력 되고 있는거야?" + chatRoomId);
-                //_repo.InsertUserChatRooms(_user.UserId, chatRoomId);
-
-                MessageBox.Show($"채팅방 아이디 : {chatRoomId} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
+                MessageBox.Show($"채팅방 아이디 : {currentUser.Email} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
             }
-
-            // 채팅방 아이디의 데이터를 받아서 방장 아이디 출력하기
+            else
+            {
+                MessageBox.Show("선택된 채팅방이 없습니다.");
+            }
         }
 
         // 생성자에서는 초기화 작업을 수행하고, 채팅 타입에 따라 UI 설정

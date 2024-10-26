@@ -1,6 +1,8 @@
 ﻿using GalaSoft.MvvmLight.Messaging;
 using MVVM2.ViewModel;
 using SlimMy.Model;
+using SlimMy.Service;
+using SlimMy.Test;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -95,7 +97,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public Command LoginCommand { get; set; }
+        //public ICommand LoginCommand { get; }
         public Command NickNameCommand { get; set; }
         public Command CommunityBtnCommand { get; set; }
 
@@ -113,33 +115,33 @@ namespace SlimMy.ViewModel
             OnPropertyChanged("UserAdded");
         }
 
-        // 생성자
-        public MainPage()
-        {
-            _user = User;
+        //생성자
+        //public MainPage()
+        //{
+        //    _user = User;
 
-            ClientData.isdebug = true;
+        //    ClientData.isdebug = true;
 
-            InsertCommand = new Command(InsertUser);
-            LoginCommand = new Command(LoginSuccess);
-            CommunityBtnCommand = new Command(CommunityBtn);
+        //    InsertCommand = new Command(InsertUser);
+        //    //LoginCommand = new Command(LoginSuccess);
+        //    CommunityBtnCommand = new Command(CommunityBtn);
 
-            _repo = new Repo(_connstring);
+        //    _repo = new Repo(_connstring);
 
-            _user = new User();
+        //    _user = new User();
 
-            User.BirthDate = new DateTime(1990, 1, 1);
+        //    User.BirthDate = new DateTime(1990, 1, 1);
 
-            MainServerStart();
+        //    MainServerStart();
 
-            // Community ViewModel 인스턴스 생성
-            _communityViewModel = new Community();
+        //    // Community ViewModel 인스턴스 생성
+        //    _communityViewModel = new Community();
 
-            ClientManager.messageParsingAction += MessageParsing;
-            ClientManager.ChangeListViewAction += ChangeListView;
-            conntectCheckThread = new Task(ConnectCheckLoop);
-            conntectCheckThread.Start();
-        }
+        //    ClientManager.messageParsingAction += MessageParsing;
+        //    ClientManager.ChangeListViewAction += ChangeListView;
+        //    conntectCheckThread = new Task(ConnectCheckLoop);
+        //    conntectCheckThread.Start();
+        //}
 
         // 로그인 성공 시 호출되는 메서드 예시
         public void LoginSuccessfulPage(string userEmail)
@@ -498,8 +500,56 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private readonly IDataService _dataService;
+        private readonly IView _view;
+
+        private string _userId;
+
+        public string UserId
+        {
+            get => _userId;
+            set
+            {
+                _userId = value;
+                OnPropertyChanged(nameof(UserId));
+            }
+        }
+
+        public ICommand LoginCommand { get; }
+
+        public MainPage(IDataService dataService, IView view)
+        {
+            _dataService = dataService;
+            _view = view;
+            LoginCommand = new RelayCommand(LoginSuccess, CanLogin);
+
+            _user = User;
+
+            ClientData.isdebug = true;
+
+            InsertCommand = new Command(InsertUser);
+            //LoginCommand = new Command(LoginSuccess);
+            CommunityBtnCommand = new Command(CommunityBtn);
+
+            _repo = new Repo(_connstring);
+
+            _user = new User();
+
+            User.BirthDate = new DateTime(1990, 1, 1);
+
+            MainServerStart();
+
+            // Community ViewModel 인스턴스 생성
+            //_communityViewModel = new Community();
+
+            ClientManager.messageParsingAction += MessageParsing;
+            ClientManager.ChangeListViewAction += ChangeListView;
+            conntectCheckThread = new Task(ConnectCheckLoop);
+            conntectCheckThread.Start();
+        }
+
         // 로그인
-        public void LoginSuccess(object parameter)
+        private void LoginSuccess(object parameter)
         {
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
             var ipTextBox = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
@@ -509,15 +559,15 @@ namespace SlimMy.ViewModel
 
             User.Password = password;
 
-            bool isSuccess = _repo.LoginSuccess(User.Email, password);
+            bool isSuccess = _repo.LoginSuccess(UserId, password);
 
             View.Login login = new View.Login();
 
             if (isSuccess)
             {
                 // 로그인 이후 사용자의 닉네임 가져오기
-                string loggedInNickName = _repo.NickName(User.Email);
-                Guid selectUserID = _repo.UserID(User.Email);
+                string loggedInNickName = _repo.NickName(UserId);
+                Guid selectUserID = _repo.UserID(UserId);
                 parsedName += loggedInNickName;
                 User.NickName = loggedInNickName;
                 User.IpNum = ip;
@@ -526,7 +576,7 @@ namespace SlimMy.ViewModel
                 // 싱글톤에 저장
                 UserSession.Instance.CurrentUser = new User
                 {
-                    Email = User.Email,
+                    Email = UserId,
                     NickName = User.NickName,
                     IpNum = User.IpNum,
                     UserId = User.UserId
@@ -545,14 +595,24 @@ namespace SlimMy.ViewModel
                 ReceiveThread.Start();
 
                 // MainPage 실행
-                var mainPage = new View.MainPage();
-                mainPage.DataContext = this;
+                //var mainPage = new View.MainHome();
+                //mainPage.DataContext = this;
 
-                // 새로운 창을 보여줍니다.
-                mainPage.Show();
+                //// 새로운 창을 보여줍니다.
+                //mainPage.Show();
 
-                // 현재 창을 닫습니다.
-                Application.Current.MainWindow.Close();  // 로그인 창 닫기
+                //// 현재 창을 닫습니다.
+                //Application.Current.MainWindow.Close();  // 로그인 창 닫기
+
+                _view.Close();
+
+                // MainView 열기
+                var mainView = new MainHome
+                {
+                    DataContext = this
+                };
+
+                mainView.Show();
             }
             else
             {
@@ -561,9 +621,18 @@ namespace SlimMy.ViewModel
             }
         }
 
+            private bool CanLogin(object parameter)
+        {
+            return true;  // 항상 true로 설정하여 버튼이 활성화되도록 함
+        }
+
         // 커뮤니티 버튼 기능
         public void CommunityBtn(object parameter)
         {
+            _dataService.SetUserId(UserId); // UserId 설정
+            var communityViewModel = new Community(_dataService);
+            //Community community1 = new Community();
+
             // 선택된 그룹 채팅 참여자들의 정보를 문자열
             string getUserProtocol = myName + "<GiveMeUserList>";
             byte[] byteData = new byte[getUserProtocol.Length];
@@ -587,7 +656,7 @@ namespace SlimMy.ViewModel
             byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
 
             //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+            //MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
 
             client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
         }
@@ -779,14 +848,9 @@ namespace SlimMy.ViewModel
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged(string name)
+        protected virtual void OnPropertyChanged(string propertyName)
         {
-            PropertyChangedEventHandler handler = PropertyChanged;
-            if (handler != null)
-            {
-                handler(this, new PropertyChangedEventArgs(name));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using SlimMy.Interface;
+﻿using Microsoft.Extensions.DependencyInjection;
+using SlimMy.Interface;
+using SlimMy.Test;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +20,7 @@ namespace SlimMy.View
     /// <summary>
     /// Login.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class Login : Window
+    public partial class Login : Window, IView
     {
 
         public Login()

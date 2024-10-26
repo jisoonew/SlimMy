@@ -102,7 +102,7 @@ namespace SlimMy.ViewModel
             //MainServerStart();
 
             // Community ViewModel 인스턴스 생성
-            _communityViewModel = new Community();
+            //_communityViewModel = new Community();
         }
 
         public User User

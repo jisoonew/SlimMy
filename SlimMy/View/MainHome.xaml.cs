@@ -1,4 +1,4 @@
-﻿using SlimMy.Model;
+﻿using SlimMy.Test;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -17,13 +17,17 @@ using System.Windows.Shapes;
 namespace SlimMy.View
 {
     /// <summary>
-    /// MainPage.xaml에 대한 상호 작용 논리
+    /// MainHome.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class MainPage : Window
+    public partial class MainHome : Window, IView
     {
-        public MainPage()
+        public MainHome()
         {
             InitializeComponent();
+        }
+
+        public MainHome(Community bViewModel)
+        {
         }
 
         private void DashBoard_Click(object sender, RoutedEventArgs e)
