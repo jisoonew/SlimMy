@@ -191,10 +191,48 @@ namespace SlimMy.ViewModel
         public void ChatRoomSelected(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
-
             if (parameter is ChatRooms selectedChatRoom)
             {
                 MessageBox.Show($"채팅방 아이디 : {currentUser.Email} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
+                string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
+                MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (messageBoxResult == MessageBoxResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    myName = currentUser.NickName;
+                    _dataService.SetUserId(currentUser.UserId.ToString()); // UserId 설정
+                    //Community community1 = new Community();
+
+                    // 선택된 그룹 채팅 참여자들의 정보를 문자열
+                    string getUserProtocol = myName + "<GiveMeUserList>";
+                    byte[] byteData = new byte[getUserProtocol.Length];
+                    byteData = Encoding.Default.GetBytes(getUserProtocol);
+
+                    currentUser.Client.GetStream().Write(byteData, 0, byteData.Length);
+
+                    MessageBox.Show("내가 방장 : " + getUserProtocol);
+
+                    string groupChattingUserStrData = currentUser.IpNum;
+
+                    groupChattingReceivers = new List<ChatUserList>();
+
+                    foreach (var item in GroupChattingReceivers)
+                    {
+                        groupChattingUserStrData += "#";
+                        groupChattingUserStrData += item.UsersName;
+                    }
+
+                    string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+                    byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+
+                    //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
+                    MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+
+                    currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+                }
             }
             else
             {

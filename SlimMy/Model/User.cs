@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -29,6 +30,18 @@ namespace SlimMy.Model
         private string dietGoal; // 다이어트 목표
         private string ipNum; // 아이피
         private Guid userId;
+
+        private TcpClient client;
+
+        public TcpClient Client
+        {
+            get { return client; }
+            set
+            {
+                client = value;
+                OnPropertyChanged(nameof(client));
+            }
+        }
 
         public string IpNum
         {
