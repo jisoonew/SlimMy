@@ -9,6 +9,7 @@ using System.Windows;
 using Oracle.ManagedDataAccess.Client;
 using SlimMy.Model;
 using SlimMy.View;
+using Dapper;
 
 namespace SlimMy
 {
@@ -313,6 +314,46 @@ namespace SlimMy
             }
         }
 
+        // UserChatRooms의 사용자와 테이블의 데이터가 존재하는가?
+        public bool CheckUserChatRooms(Guid userId, Guid chatRoomId)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    byte[] userIdBytes = userId.ToByteArray();
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
+
+                    string sql = "select count(*) from UserChatrooms where userid = :USERID and chatroomid = :CHATROOMID";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("USERID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        // 중복이라면 false, 중복이 아니라면 true
+                        if (count >= 1)
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+                    return false;
+                }
+            }
+        }
+
         // 채팅방 생성
         public Guid InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
         {
@@ -349,6 +390,48 @@ namespace SlimMy
                     return Guid.Empty; // 에러 발생 시 빈 GUID 반환
                 }
             }
+        }
+
+        // 특정 채팅방의 클라이언트 아이디 출력
+        public List<string> GetChatRoomUserIds(string chatRoomId)
+        {
+            List<string> userIds = new List<string>();
+
+            // chatRoomId를 byte[]로 변환 (예: GUID로 변환하여 사용)
+            byte[] chatRoomIdBytes = Guid.Parse(chatRoomId).ToByteArray();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                connection.Open();
+
+                using (OracleCommand command = new OracleCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = "SELECT UserId FROM userchatrooms WHERE ChatRoomId = :ChatRoomId";
+                    command.Parameters.Add(new OracleParameter("ChatRoomId", OracleDbType.Raw)).Value = chatRoomIdBytes;
+
+                    try
+                    {
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                // RAW 데이터 타입을 문자열로 변환하여 읽음 (예: GUID로 변환)
+                                byte[] userIdBytes = (byte[])reader["UserId"];
+                                string userId = new Guid(userIdBytes).ToString();
+                                userIds.Add(userId);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error details: {ex.Message}");
+                        throw new ArgumentException("Error fetching user IDs: Value does not fall within the expected range.", ex);
+                    }
+                }
+            }
+
+            return userIds;
         }
 
         // 채팅방 출력

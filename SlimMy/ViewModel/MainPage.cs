@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight.Messaging;
+using GalaSoft.MvvmLight.Messaging;
 using MVVM2.ViewModel;
 using SlimMy.Model;
 using SlimMy.Service;
@@ -307,7 +307,7 @@ namespace SlimMy.ViewModel
                 client.Connect(ip, 9999);
 
                 byte[] byteData = new byte[parsedName.Length];
-                byteData = Encoding.Default.GetBytes(parsedName);
+                byteData = Encoding.UTF8.GetBytes(parsedName);
                 client.GetStream().Write(byteData, 0, byteData.Length);
 
                 // 싱글톤에 저장
@@ -322,6 +322,8 @@ namespace SlimMy.ViewModel
 
                 myName = User.NickName;
 
+                // ReceiveThread는 서버로부터 데이터를 수신하고 처리하는 역할
+                // 이 스레드는 별도의 실행 경로를 가지며, 주 스레드(주로 UI 스레드)의 블로킹을 방지하여 원활한 사용자 경험을 제공
                 ReceiveThread = new Thread(RecieveMessage);
                 ReceiveThread.Start();
 
@@ -357,12 +359,11 @@ namespace SlimMy.ViewModel
             return true;  // 항상 true로 설정하여 버튼이 활성화되도록 함
         }
 
-        // 커뮤니티 버튼 기능
+        //// 커뮤니티 버튼 기능
         public void CommunityBtn(object parameter)
         {
-            _dataService.SetUserId(UserId); // UserId 설정
-            var communityViewModel = new Community(_dataService);
-            //Community community1 = new Community();
+            User currentUser = UserSession.Instance.CurrentUser;
+            string myName = currentUser.NickName;
 
             // 선택된 그룹 채팅 참여자들의 정보를 문자열
             string getUserProtocol = myName + "<GiveMeUserList>";
@@ -370,31 +371,11 @@ namespace SlimMy.ViewModel
             byteData = Encoding.Default.GetBytes(getUserProtocol);
 
             client.GetStream().Write(byteData, 0, byteData.Length);
-
-            //MessageBox.Show("내가 방장 : " + getUserProtocol);
-
-            community = new Community(1);
-
-            string groupChattingUserStrData = myName;
-
-            foreach (var item in community.GroupChattingReceivers)
-            {
-                groupChattingUserStrData += "#";
-                groupChattingUserStrData += item.UsersName;
-            }
-
-            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-            byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
-
-            //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-            //MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
-
-            client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
         }
 
 
         // 사용자 채팅
-        public void RecieveMessage(object parameter)
+        public void RecieveMessage()
         {
             string receiveMessage = "";
             List<string> receiveMessageList = new List<string>();
@@ -405,7 +386,7 @@ namespace SlimMy.ViewModel
                     byte[] receiveByte = new byte[1024];
                     client.GetStream().Read(receiveByte, 0, receiveByte.Length);
 
-                    receiveMessage = Encoding.Default.GetString(receiveByte);
+                    receiveMessage = Encoding.UTF8.GetString(receiveByte);
 
                     string[] receiveMessageArray = receiveMessage.Split('>');
 
@@ -436,6 +417,7 @@ namespace SlimMy.ViewModel
         // 클라이언트가 받은 메시지를 분석하고, 그에따라 처리를 수행
         private void ParsingReceiveMessage(List<string> messageList)
         {
+
             foreach (var item in messageList)
             {
                 string chattingPartner = "";
@@ -447,8 +429,8 @@ namespace SlimMy.ViewModel
                     string[] splitedMsg = item.Split('<');
 
                     // 수신자와 메시지를 추출
-                    chattingPartner = splitedMsg[0];
-                    message = splitedMsg[1];
+                    chattingPartner = splitedMsg[0]; // "관리자"
+                    message = splitedMsg[1]; // "TEST"
 
                     // Dispatcher를 사용하여 UI 스레드에서 MessageBox.Show 실행 => "관리자"
                     //Application.Current.Dispatcher.Invoke(() =>
@@ -483,6 +465,8 @@ namespace SlimMy.ViewModel
                     }
 
                     // 그룹채팅
+                    // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
+                    // 문자열을 # 문자를 기준으로 나누는 메서드
                     if (chattingPartner.Contains("#"))
                     {
                         // '#' 기준으로 수신자들을 분리
@@ -568,25 +552,26 @@ namespace SlimMy.ViewModel
             chattingWindow = new ChattingWindow(client, chattingPartner);
             chattingThreadDic.Add(chattingPartner, new ChattingThreadData(Thread.CurrentThread, chattingWindow));
 
-            if (chattingWindow.ShowDialog() == true)
-            {
-                MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-                chattingThreadDic.Remove(chattingPartner);
-            }
+            //if (chattingWindow.ShowDialog() == true)
+            //{
+            //    MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            //    chattingThreadDic.Remove(chattingPartner);
+            //}
         }
 
         private void ThreadStartingPoint(List<string> chattingPartners)
         {
             chattingPartners.Sort();
+            
             chattingWindow = new ChattingWindow(client, chattingPartners);
             ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
             groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
 
-            if (chattingWindow.ShowDialog() == true)
-            {
-                MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-                groupChattingThreadDic.Remove(tempThreadData.chattingRoomNum);
-            }
+            //if (chattingWindow.ShowDialog() == true)
+            //{
+            //    MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+            //    groupChattingThreadDic.Remove(tempThreadData.chattingRoomNum);
+            //}
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

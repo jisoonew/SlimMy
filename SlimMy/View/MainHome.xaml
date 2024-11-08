@@ -1,4 +1,4 @@
-﻿<Window x:Class="SlimMy.View.MainHome"
+<Window x:Class="SlimMy.View.MainHome"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -32,7 +32,7 @@
             </Button>
 
             <!-- 커뮤니티 -->
-            <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Click="Community_Click">
+            <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Click="Community_Click" Command="{Binding CommunityBtnCommand}">
                 <Button.Background>
                     <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
                 </Button.Background>
