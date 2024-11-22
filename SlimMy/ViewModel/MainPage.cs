@@ -354,7 +354,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-            private bool CanLogin(object parameter)
+        private bool CanLogin(object parameter)
         {
             return true;  // 항상 true로 설정하여 버튼이 활성화되도록 함
         }
@@ -386,7 +386,7 @@ namespace SlimMy.ViewModel
                     byte[] receiveByte = new byte[1024];
                     client.GetStream().Read(receiveByte, 0, receiveByte.Length);
 
-                    receiveMessage = Encoding.UTF8.GetString(receiveByte);
+                    receiveMessage = Encoding.Default.GetString(receiveByte);
 
                     string[] receiveMessageArray = receiveMessage.Split('>');
 
@@ -400,6 +400,12 @@ namespace SlimMy.ViewModel
 
                         receiveMessageList.Add(item);
                     }
+
+                    // 관리자<$닉네임1$닉네임2
+                    //foreach (var item111 in receiveMessageList)
+                    //{
+                    //    MessageBox.Show("item111 : " + item111);
+                    //}
 
                     ParsingReceiveMessage(receiveMessageList);
                 }
@@ -432,12 +438,8 @@ namespace SlimMy.ViewModel
                     chattingPartner = splitedMsg[0]; // "관리자"
                     message = splitedMsg[1]; // "TEST"
 
-                    // Dispatcher를 사용하여 UI 스레드에서 MessageBox.Show 실행 => "관리자"
-                    //Application.Current.Dispatcher.Invoke(() =>
-                    //{
-                    //    MessageBox.Show("chattingPartner : " + chattingPartner);
-                    //});
-
+                    // message -> $닉네임1$닉네임2$닉네임3
+                    // MessageBox.Show("message : " + message);
 
                     // 관리자가 보낸 하트비트 메시지인 경우
                     if (chattingPartner == "관리자")
@@ -450,8 +452,6 @@ namespace SlimMy.ViewModel
                         {
                             if (string.IsNullOrEmpty(el))
                                 continue;
-
-                            //MessageBox.Show("el : " + el); // TEST
 
                             tempUserList.Add(new ChatUserList(el));
                         }
@@ -562,7 +562,7 @@ namespace SlimMy.ViewModel
         private void ThreadStartingPoint(List<string> chattingPartners)
         {
             chattingPartners.Sort();
-            
+
             chattingWindow = new ChattingWindow(client, chattingPartners);
             ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
             groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);

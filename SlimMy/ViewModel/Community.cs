@@ -268,7 +268,7 @@ namespace SlimMy.ViewModel
                     }
                     else
                     {
-                        MessageBox.Show("현재 선택된 방은 : " + selectedChatRoom.ChatRoomId);
+                        // MessageBox.Show("현재 선택된 방은 : " + selectedChatRoom.ChatRoomId);
 
                         string testText = string.Empty;
 
@@ -289,6 +289,32 @@ namespace SlimMy.ViewModel
                             }
 
                             MessageBox.Show(testText, "Group Chatting User Data");
+
+                            // 로그인한 사용자 데이터 JSON 직렬화
+                            // string json = JsonConvert.SerializeObject(serverInfo);
+
+                            // DB에 저장된 특정 채팅방에 대한 사용자 아이디 모음
+                            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", testText);
+                            byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+
+                            // byte형으로 로그인한 사용자 데이터 변환
+                            // byte[] Serverdata = Encoding.Default.GetBytes(json);
+
+                            //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
+                            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+
+                            currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+                            //currentUser.Client.GetStream().Write(Serverdata, 0, Serverdata.Length);
+
+                            // 이미 _chattingWindow가 열려 있으면 새로 열지 않음
+                            if (_chattingWindow == null || !_chattingWindow.IsLoaded)
+                            {
+                                _chattingWindow = new View.ChattingWindow
+                                {
+                                    DataContext = this
+                                };
+                                _chattingWindow.Show();
+                            }
                         }
                         catch (Exception ex)
                         {
