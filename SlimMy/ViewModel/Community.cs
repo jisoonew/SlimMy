@@ -29,6 +29,21 @@ namespace SlimMy.ViewModel
         private ChatUserList _chatUserList;
         private readonly IView _view;
         private View.ChattingWindow _chattingWindow;
+        public static event Action CountChanged;
+
+        private static int _count;
+        public static int Count
+        {
+            get => _count;
+            set
+            {
+                if (_count != value)
+                {
+                    _count = value;
+                    CountChanged?.Invoke(); // 이벤트 발생
+                }
+            }
+        }
 
         // 현재 사용자 목록을 저장하는 ObservableCollection입니다. 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
         private static ObservableCollection<ChatUserList> _currentUserList = new ObservableCollection<ChatUserList>();
@@ -58,8 +73,8 @@ namespace SlimMy.ViewModel
         //}
 
         // 그룹 채팅의 참가자 목록을 저장
-        private List<ChatUserList> groupChattingReceivers { get; set; }
-        public List<ChatUserList> GroupChattingReceivers
+        private static List<ChatUserList> groupChattingReceivers { get; set; }
+        public static List<ChatUserList> GroupChattingReceivers
         {
             get
             {
@@ -212,12 +227,6 @@ namespace SlimMy.ViewModel
                     // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
                     if (_repo.CheckUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId))
                     {
-                        // 선택된 그룹 채팅 참여자들의 정보를 문자열
-                        //string getUserProtocol = myName + "<GiveMeUserList>";
-                        //byte[] byteData = new byte[getUserProtocol.Length];
-                        //byteData = Encoding.Default.GetBytes(getUserProtocol);
-
-                        //currentUser.Client.GetStream().Write(byteData, 0, byteData.Length);
 
                         // 사용자와 채팅방 간의 관계 생성
                         _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId);
@@ -234,24 +243,26 @@ namespace SlimMy.ViewModel
 
                         var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
 
-                        foreach (var item in userIds)
-                        {
-                            testText += "#";
-                            testText += item;
-                        }
+                        //foreach (var item in userIds)
+                        //{
+                        //    testText += "#";
+                        //    testText += item;
+                        //}
+
+                        testText = "127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>";
 
                         // 로그인한 사용자 데이터 JSON 직렬화
                         string json = JsonConvert.SerializeObject(serverInfo);
 
                         // DB에 저장된 특정 채팅방에 대한 사용자 아이디 모음
                         string chattingStartMessage = string.Format("{0}<GroupChattingStart>", testText);
-                        byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+                        byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                         // byte형으로 로그인한 사용자 데이터 변환
-                        byte[] Serverdata = Encoding.Default.GetBytes(json);
+                        // byte[] Serverdata = Encoding.UTF8.GetBytes(json);
 
                         //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-                        //MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+                        MessageBox.Show("나야 클라이언트 UUID: " + chattingStartMessage.ToString());
 
                         currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
                         //currentUser.Client.GetStream().Write(Serverdata, 0, Serverdata.Length);
@@ -270,10 +281,12 @@ namespace SlimMy.ViewModel
                     {
                         // MessageBox.Show("현재 선택된 방은 : " + selectedChatRoom.ChatRoomId);
 
-                        string testText = string.Empty;
+                        string testText = _repo.GetUserUUId(currentUser.Email);
 
                         try
                         {
+
+                            // 특정 채팅방에 참가한 사용자들 아이디 모음
                             var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
 
                             if (userIds == null || userIds.Count == 0)
@@ -282,29 +295,53 @@ namespace SlimMy.ViewModel
                                 return;
                             }
 
-                            foreach (var item in userIds)
-                            {
-                                testText += "#";
-                                testText += item;
-                            }
+                            //foreach (var item in userIds)
+                            //{
+                            //    testText += "#";
+                            //    testText += item;
+                            //}
 
-                            MessageBox.Show(testText, "Group Chatting User Data");
+                            // 문자열을 ChatUserList 객체로 변환
+                            List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id)).ToList();
+
+                            // 데이터 출력
+                            //foreach (var user in userList)
+                            //{
+                            //    // ChatUserList 객체의 속성 값을 출력
+                            //    MessageBox.Show($"UserName: {user.UsersName}");
+                            //}
 
                             // 로그인한 사용자 데이터 JSON 직렬화
                             // string json = JsonConvert.SerializeObject(serverInfo);
 
                             // DB에 저장된 특정 채팅방에 대한 사용자 아이디 모음
-                            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", testText);
-                            byte[] chattingStartByte = Encoding.Default.GetBytes(chattingStartMessage);
+                            // string chattingStartMessage = string.Format("{0}<GroupChattingStart>", testText);
+                            // byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                             // byte형으로 로그인한 사용자 데이터 변환
                             // byte[] Serverdata = Encoding.Default.GetBytes(json);
 
-                            //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-                            MessageBox.Show("Sending to server: " + chattingStartMessage.ToString());
+                            // 입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
+                            // MessageBox.Show("나야 클라이언트 UUID : " + chattingStartMessage.ToString());
+
+                            // currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+                            //currentUser.Client.GetStream().Write(Serverdata, 0, Serverdata.Length);
+
+                            Community.GroupChattingReceivers = userList;
+
+                            string groupChattingUserStrData = myName;
+                            foreach (var item in GroupChattingReceivers)
+                            {
+                                groupChattingUserStrData += "#";
+                                groupChattingUserStrData += item.UsersName;
+                            }
+
+                            string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+                            byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                             currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-                            //currentUser.Client.GetStream().Write(Serverdata, 0, Serverdata.Length);
+
+                            Count = 1;
 
                             // 이미 _chattingWindow가 열려 있으면 새로 열지 않음
                             if (_chattingWindow == null || !_chattingWindow.IsLoaded)

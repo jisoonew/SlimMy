@@ -359,7 +359,7 @@ namespace SlimMy.ViewModel
             return true;  // 항상 true로 설정하여 버튼이 활성화되도록 함
         }
 
-        //// 커뮤니티 버튼 기능
+        // 커뮤니티 버튼 기능
         public void CommunityBtn(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
@@ -368,7 +368,7 @@ namespace SlimMy.ViewModel
             // 선택된 그룹 채팅 참여자들의 정보를 문자열
             string getUserProtocol = myName + "<GiveMeUserList>";
             byte[] byteData = new byte[getUserProtocol.Length];
-            byteData = Encoding.Default.GetBytes(getUserProtocol);
+            byteData = Encoding.UTF8.GetBytes(getUserProtocol);
 
             client.GetStream().Write(byteData, 0, byteData.Length);
         }
@@ -377,7 +377,6 @@ namespace SlimMy.ViewModel
         // 사용자 채팅
         public void RecieveMessage()
         {
-            string receiveMessage = "";
             List<string> receiveMessageList = new List<string>();
             while (true)
             {
@@ -386,7 +385,9 @@ namespace SlimMy.ViewModel
                     byte[] receiveByte = new byte[1024];
                     client.GetStream().Read(receiveByte, 0, receiveByte.Length);
 
-                    receiveMessage = Encoding.Default.GetString(receiveByte);
+                    string receiveMessage = Encoding.UTF8.GetString(receiveByte);
+
+                    // MessageBox.Show($"수신된 메시지: {receiveMessage}");
 
                     string[] receiveMessageArray = receiveMessage.Split('>');
 
@@ -426,6 +427,8 @@ namespace SlimMy.ViewModel
 
             foreach (var item in messageList)
             {
+                // MessageBox.Show("itemTEST : " + item);
+
                 string chattingPartner = "";
                 string message = "";
 
@@ -437,6 +440,9 @@ namespace SlimMy.ViewModel
                     // 수신자와 메시지를 추출
                     chattingPartner = splitedMsg[0]; // "관리자"
                     message = splitedMsg[1]; // "TEST"
+
+                    // 관리자
+                    MessageBox.Show("chattingPartner : " + chattingPartner);
 
                     // message -> $닉네임1$닉네임2$닉네임3
                     // MessageBox.Show("message : " + message);
@@ -467,8 +473,10 @@ namespace SlimMy.ViewModel
                     // 그룹채팅
                     // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
                     // 문자열을 # 문자를 기준으로 나누는 메서드
-                    if (chattingPartner.Contains("#"))
+                    else if (chattingPartner.Contains("#"))
                     {
+                        MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
+
                         // '#' 기준으로 수신자들을 분리
                         string[] splitedChattingPartner = chattingPartner.Split('#');
                         List<string> chattingPartners = new List<string>();
@@ -487,7 +495,7 @@ namespace SlimMy.ViewModel
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
                         // 방 번호 출력해보기
-                        MessageBox.Show("방 번호 : " + sender);
+                        MessageBox.Show("방 번호 : " + chattingRoomNum);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         if (chattingRoomNum < 0)
@@ -525,7 +533,7 @@ namespace SlimMy.ViewModel
             foreach (var item in chattingPartners)
             {
                 reqMember += item;
-                MessageBox.Show("채팅방 멤버 구성 : " + reqMember);
+                // MessageBox.Show("채팅방 멤버 구성 : " + reqMember);
             }
 
             // 기존 채팅방 멤버와 비교하여 존재하는 채팅 방 번호를 찾음

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -388,6 +388,44 @@ namespace SlimMy
                     MessageBox.Show(ex.Message);
 
                     return Guid.Empty; // 에러 발생 시 빈 GUID 반환
+                }
+            }
+        }
+
+        public string GetUserUUId(string getUserEmail)
+        {
+            string userIds = null;
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                connection.Open();
+
+                using (OracleCommand command = new OracleCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = "SELECT UserId FROM users WHERE Email = :getUserEmail";
+                    command.Parameters.Add(new OracleParameter("getUserEmail", getUserEmail));
+
+                    try
+                    {
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                // RAW 데이터 타입을 문자열로 변환하여 읽음 (예: GUID로 변환)
+                                byte[] userIdBytes = (byte[])reader["UserId"];
+                                string userId = new Guid(userIdBytes).ToString();
+                                userIds = userId;
+                            }
+                        }
+
+                        return userIds;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error details: {ex.Message}");
+                        throw new ArgumentException("Error fetching user IDs: Value does not fall within the expected range.", ex);
+                    }
                 }
             }
         }
