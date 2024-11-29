@@ -262,20 +262,10 @@ namespace SlimMy.ViewModel
                         // byte[] Serverdata = Encoding.UTF8.GetBytes(json);
 
                         //입력했던 주소가 차례대로 출력된다 -> 127.0.0.3#127.0.0.1#127.0.0.1<GroupChattingStart>
-                        MessageBox.Show("나야 클라이언트 UUID: " + chattingStartMessage.ToString());
+                        //MessageBox.Show("나야 클라이언트 UUID: " + chattingStartMessage.ToString());
 
                         currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
                         //currentUser.Client.GetStream().Write(Serverdata, 0, Serverdata.Length);
-
-                        // 이미 _chattingWindow가 열려 있으면 새로 열지 않음
-                        if (_chattingWindow == null || !_chattingWindow.IsLoaded)
-                        {
-                            _chattingWindow = new View.ChattingWindow
-                            {
-                                DataContext = this
-                            };
-                            _chattingWindow.Show();
-                        }
                     }
                     else
                     {
@@ -340,32 +330,10 @@ namespace SlimMy.ViewModel
                             byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                             currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-
-                            Count = 1;
-
-                            // 이미 _chattingWindow가 열려 있으면 새로 열지 않음
-                            if (_chattingWindow == null || !_chattingWindow.IsLoaded)
-                            {
-                                _chattingWindow = new View.ChattingWindow
-                                {
-                                    DataContext = this
-                                };
-                                _chattingWindow.Show();
-                            }
                         }
                         catch (Exception ex)
                         {
                             MessageBox.Show($"Error fetching user IDs: {ex.Message}", "Error");
-                        }
-
-                        // 이미 _chattingWindow가 열려 있으면 새로 열지 않음
-                        if (_chattingWindow == null || !_chattingWindow.IsLoaded)
-                        {
-                            _chattingWindow = new View.ChattingWindow
-                            {
-                                DataContext = this
-                            };
-                            _chattingWindow.Show();
                         }
                     }
 

@@ -442,7 +442,7 @@ namespace SlimMy.ViewModel
                     message = splitedMsg[1]; // "TEST"
 
                     // 관리자
-                    MessageBox.Show("chattingPartner : " + chattingPartner);
+                    // MessageBox.Show("chattingPartner : " + chattingPartner);
 
                     // message -> $닉네임1$닉네임2$닉네임3
                     // MessageBox.Show("message : " + message);
@@ -475,7 +475,7 @@ namespace SlimMy.ViewModel
                     // 문자열을 # 문자를 기준으로 나누는 메서드
                     else if (chattingPartner.Contains("#"))
                     {
-                        MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
+                        //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
 
                         // '#' 기준으로 수신자들을 분리
                         string[] splitedChattingPartner = chattingPartner.Split('#');
@@ -495,13 +495,17 @@ namespace SlimMy.ViewModel
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
                         // 방 번호 출력해보기
-                        MessageBox.Show("방 번호 : " + chattingRoomNum);
+                        // MessageBox.Show("방 번호 : " + chattingRoomNum);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
+                        // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
                         if (chattingRoomNum < 0)
                         {
+                            // 람다식을 사용하여 메서드 호출을 스레드의 실행 단위로 전달
                             Thread groupChattingThread = new Thread(() => ThreadStartingPoint(chattingPartners));
+                            // WPF 애플리케이션의 UI 요소는 STA 상태에서 실행
                             groupChattingThread.SetApartmentState(ApartmentState.STA);
+                            // 백그라운드 스레드는 애플리케이션이 종료되면 자동으로 종료
                             groupChattingThread.IsBackground = true;
                             groupChattingThread.Start();
                         }
@@ -567,19 +571,28 @@ namespace SlimMy.ViewModel
             //}
         }
 
+        private View.ChattingWindow _chattingWindow;
+
         private void ThreadStartingPoint(List<string> chattingPartners)
         {
+            // chattingPartners 리스트 값들을 오름차순으로 정렬
             chattingPartners.Sort();
 
             chattingWindow = new ChattingWindow(client, chattingPartners);
-            ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
-            groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
 
-            //if (chattingWindow.ShowDialog() == true)
-            //{
-            //    MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-            //    groupChattingThreadDic.Remove(tempThreadData.chattingRoomNum);
-            //}
+            // UI 스레드에서 창 실행
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _chattingWindow = new View.ChattingWindow
+                {
+                    DataContext = new ChattingWindow(client, chattingPartners)
+                };
+
+                ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
+                groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+
+                _chattingWindow.Show(); // 창 실행
+            });
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
