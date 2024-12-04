@@ -36,6 +36,20 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private string _messageText;
+        public string MessageText
+        {
+            get => _messageText;
+            set
+            {
+                _messageText = value;
+                OnPropertyChanged(nameof(MessageText));
+            }
+        }
+
+        public ICommand SendCommand { get; }
+
+
         public ChattingWindow(TcpClient client, string chattingPartner)
         {
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
@@ -53,7 +67,7 @@ namespace SlimMy.ViewModel
             MessageList.Add(string.Format("{0}님이 입장하였습니다.", chattingPartner));
             //this.Title = chattingPartner + "님과의 채팅방";
 
-            Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+            //Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
         }
 
         public ChattingWindow(TcpClient client, List<string> targetChattingPartners)
@@ -81,16 +95,22 @@ namespace SlimMy.ViewModel
             messageList.Add(string.Format("{0}이 입장하였습니다.", enteredUser));
             //this.Title = enteredUser + "과의 채팅방";
 
+            SendCommand = new Command(Send_btn_Click);
+
             // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
         }
 
         private void Send_btn_Click(object parameter)
         {
-            var Send_Text_Box = Application.Current.MainWindow.FindName("Send_Text_Box") as TextBox;
-            if (string.IsNullOrEmpty(Send_Text_Box.Text))
+
+            // 메시지 처리 로직
+            MessageBox.Show($"전송된 메시지: {MessageText}");
+
+            if (string.IsNullOrEmpty(MessageText))
                 return;
-            string message = Send_Text_Box.Text;
+            string message = MessageText;
             string parsedMessage = "";
+
 
             if (message.Contains('<') || message.Contains('>'))
             {
@@ -122,7 +142,8 @@ namespace SlimMy.ViewModel
                 client.GetStream().Write(byteData, 0, byteData.Length);
             }
             messageList.Add("나: " + message);
-            Send_Text_Box.Clear();
+            // 메시지 전송 후 초기화
+            MessageText = string.Empty;
 
             //ScrollToBot();
         }

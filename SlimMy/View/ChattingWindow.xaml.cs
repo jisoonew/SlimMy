@@ -28,11 +28,5 @@ namespace SlimMy.View
         {
             InitializeComponent();
         }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.DialogResult = true; // `true`로 설정 후 창 닫기
-            this.Close();
-        }
     }
 }

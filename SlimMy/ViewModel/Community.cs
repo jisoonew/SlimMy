@@ -211,7 +211,7 @@ namespace SlimMy.ViewModel
             User currentUser = UserSession.Instance.CurrentUser;
             if (parameter is ChatRooms selectedChatRoom)
             {
-                MessageBox.Show($"채팅방 아이디 : {currentUser.Email} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
+                //MessageBox.Show($"채팅방 아이디 : {currentUser.Email} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
                 string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
                 MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (messageBoxResult == MessageBoxResult.No)
@@ -269,8 +269,6 @@ namespace SlimMy.ViewModel
                     }
                     else
                     {
-                        // MessageBox.Show("현재 선택된 방은 : " + selectedChatRoom.ChatRoomId);
-
                         string testText = _repo.GetUserUUId(currentUser.Email);
 
                         try
@@ -320,13 +318,17 @@ namespace SlimMy.ViewModel
                             Community.GroupChattingReceivers = userList;
 
                             string groupChattingUserStrData = myName;
-                            foreach (var item in GroupChattingReceivers)
+
+                            foreach (var item in Community.GroupChattingReceivers)
                             {
                                 groupChattingUserStrData += "#";
                                 groupChattingUserStrData += item.UsersName;
                             }
 
                             string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+
+                            // MessageBox.Show("chattingStartMessage : " + chattingStartMessage);
+
                             byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                             currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);

@@ -1,4 +1,4 @@
-﻿using SlimMy.Model;
+using SlimMy.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +11,11 @@ namespace SlimMy
     public class Command : ICommand
     {
         private readonly Action<object> _execute;
-        private readonly Predicate<object> _canExecute;
+        private readonly Func<object, bool> _canExecute;
 
-        public Command(Action<object> execute, Predicate<object> canExecute = null)
+        public Command(Action<object> execute, Func<object, bool> canExecute = null)
         {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _execute = execute;
             _canExecute = canExecute;
         }
 
@@ -23,10 +23,7 @@ namespace SlimMy
 
         public void Execute(object parameter) => _execute(parameter);
 
-        public event EventHandler CanExecuteChanged
-        {
-            add => CommandManager.RequerySuggested += value;
-            remove => CommandManager.RequerySuggested -= value;
-        }
+        public event EventHandler CanExecuteChanged;
+        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }

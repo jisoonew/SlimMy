@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
         mc:Ignorable="d"
         Title="ChattingWindow" Height="500" Width="500" Background="#BCBCBC">
+    <!-- d:DataContext="{d:DesignInstance Type=local:ChattingWindow}" -->
 
     <Grid Margin="8">
         <Grid.RowDefinitions>
@@ -21,8 +22,8 @@
                 <ColumnDefinition Width="4*"></ColumnDefinition>
                 <ColumnDefinition Width="1*"></ColumnDefinition>
             </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0" x:Name="Send_Text_Box"></TextBox>
-            <Button Grid.Column="1" x:Name="Send_btn" Margin="10,0,0,0" Content="전송" Command="{Binding Window_PreviewKeyDownCommand}"></Button>
+            <TextBox Grid.Column="0" x:Name="Send_Text_Box" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"></TextBox>
+            <Button Grid.Column="1" x:Name="Send_btn" Margin="10,0,0,0" Content="전송" Command="{Binding SendCommand}"></Button>
         </Grid>
     </Grid>
 </Window>
