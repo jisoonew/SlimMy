@@ -298,7 +298,7 @@ namespace SlimMy.ViewModel
                 // 로그인 이후 사용자의 닉네임 가져오기
                 string loggedInNickName = _repo.NickName(UserId);
                 Guid selectUserID = _repo.UserID(UserId);
-                parsedName += loggedInNickName;
+                parsedName += selectUserID.ToString();
                 User.NickName = loggedInNickName;
                 User.IpNum = ip;
                 User.UserId = selectUserID;
@@ -326,16 +326,6 @@ namespace SlimMy.ViewModel
                 // 이 스레드는 별도의 실행 경로를 가지며, 주 스레드(주로 UI 스레드)의 블로킹을 방지하여 원활한 사용자 경험을 제공
                 ReceiveThread = new Thread(RecieveMessage);
                 ReceiveThread.Start();
-
-                // MainPage 실행
-                //var mainPage = new View.MainHome();
-                //mainPage.DataContext = this;
-
-                //// 새로운 창을 보여줍니다.
-                //mainPage.Show();
-
-                //// 현재 창을 닫습니다.
-                //Application.Current.MainWindow.Close();  // 로그인 창 닫기
 
                 _view.Close();
 
@@ -495,7 +485,7 @@ namespace SlimMy.ViewModel
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
                         // 방 번호 출력해보기
-                        // MessageBox.Show("방 번호 : " + chattingRoomNum);
+                        //MessageBox.Show("방 번호 : " + chattingRoomNum);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
@@ -537,7 +527,6 @@ namespace SlimMy.ViewModel
             foreach (var item in chattingPartners)
             {
                 reqMember += item;
-                // MessageBox.Show("채팅방 멤버 구성 : " + reqMember);
             }
 
             // 기존 채팅방 멤버와 비교하여 존재하는 채팅 방 번호를 찾음
@@ -591,7 +580,8 @@ namespace SlimMy.ViewModel
                 ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
                 groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
 
-                _chattingWindow.Show(); // 창 실행
+                // 창이 실행 중이 아닌 경우 실행
+                _chattingWindow.Show();
             });
         }
 

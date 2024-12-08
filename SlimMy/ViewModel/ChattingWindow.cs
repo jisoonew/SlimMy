@@ -102,10 +102,6 @@ namespace SlimMy.ViewModel
 
         private void Send_btn_Click(object parameter)
         {
-
-            // 메시지 처리 로직
-            MessageBox.Show($"전송된 메시지: {MessageText}");
-
             if (string.IsNullOrEmpty(MessageText))
                 return;
             string message = MessageText;
@@ -129,10 +125,11 @@ namespace SlimMy.ViewModel
             {
                 User currentUser = UserSession.Instance.CurrentUser;
                 string myName = currentUser.NickName;
-                string partners = myName;
+                string myUid = currentUser.UserId.ToString();
+                string partners = myUid;
                 foreach (var item in chattingPartners)
                 {
-                    if (item == myName)
+                    if (item == myUid)
                         continue;
                     partners += "#" + item;
                 }
@@ -218,9 +215,9 @@ namespace SlimMy.ViewModel
             {
                 var messageListView = Application.Current.MainWindow.FindName("messageListView") as ListView;
                 messageList.Add(string.Format("{0}: {1}", sender, message));
-                messageListView.ScrollIntoView(messageListView.Items[messageListView.Items.Count - 1]);
+                //messageListView.ScrollIntoView(messageListView.Items[messageListView.Items.Count - 1]);
 
-                ScrollToBot();
+                // ScrollToBot();
             }));
         }
 
