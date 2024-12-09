@@ -2,6 +2,7 @@ using GalaSoft.MvvmLight.Messaging;
 using MVVM2.ViewModel;
 using SlimMy.Model;
 using SlimMy.Service;
+using SlimMy.Singleton;
 using SlimMy.Test;
 using SlimMy.View;
 using System;
@@ -310,7 +311,7 @@ namespace SlimMy.ViewModel
                 byteData = Encoding.UTF8.GetBytes(parsedName);
                 client.GetStream().Write(byteData, 0, byteData.Length);
 
-                // 싱글톤에 저장
+                // 싱글톤 저장
                 UserSession.Instance.CurrentUser = new User
                 {
                     Email = UserId,
@@ -491,8 +492,11 @@ namespace SlimMy.ViewModel
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
                         if (chattingRoomNum < 0)
                         {
+                            ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
+
                             // 람다식을 사용하여 메서드 호출을 스레드의 실행 단위로 전달
-                            Thread groupChattingThread = new Thread(() => ThreadStartingPoint(chattingPartners));
+                            // Thread groupChattingThread = new Thread(() => ThreadStartingPoint(chattingPartners));
+                            Thread groupChattingThread = new Thread(() => ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), chattingPartners));
                             // WPF 애플리케이션의 UI 요소는 STA 상태에서 실행
                             groupChattingThread.SetApartmentState(ApartmentState.STA);
                             // 백그라운드 스레드는 애플리케이션이 종료되면 자동으로 종료
@@ -562,26 +566,67 @@ namespace SlimMy.ViewModel
 
         private View.ChattingWindow _chattingWindow;
 
-        private void ThreadStartingPoint(List<string> chattingPartners)
+        //private void ThreadStartingPoint(List<string> chattingPartners)
+        //{
+        //    // chattingPartners 리스트 값들을 오름차순으로 정렬
+        //    chattingPartners.Sort();
+
+        //    chattingWindow = new ChattingWindow(client, chattingPartners);
+
+        //    // UI 스레드에서 창 실행
+        //    Application.Current.Dispatcher.Invoke(() =>
+        //    {
+        //        _chattingWindow = new View.ChattingWindow
+        //        {
+        //            DataContext = new ChattingWindow(client, chattingPartners)
+        //        };
+
+        //        ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
+        //        groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+
+        //        // 창이 실행 중이 아닌 경우 실행
+        //        _chattingWindow.Show();
+        //    });
+        //}
+
+        private Dictionary<string, View.ChattingWindow> chattingWindows = new Dictionary<string, View.ChattingWindow>();
+
+        private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
+
+        private void ThreadStartingPointTest(string chattingPartners, List<string> chattingPartnersBundle)
         {
-            // chattingPartners 리스트 값들을 오름차순으로 정렬
-            chattingPartners.Sort();
+            string chatRoomKey = string.Join(",", chattingPartners); // 고유 키 생성
 
-            chattingWindow = new ChattingWindow(client, chattingPartners);
-
-            // UI 스레드에서 창 실행
-            Application.Current.Dispatcher.Invoke(() =>
+            _dispatcher.Invoke(() =>
             {
-                _chattingWindow = new View.ChattingWindow
+                if (!chattingWindows.ContainsKey(chatRoomKey) || !chattingWindows[chatRoomKey].IsLoaded)
                 {
-                    DataContext = new ChattingWindow(client, chattingPartners)
-                };
+                    chattingPartnersBundle.Sort();
 
-                ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
-                groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+                    chattingWindow = new ChattingWindow(client, chattingPartnersBundle);
 
-                // 창이 실행 중이 아닌 경우 실행
-                _chattingWindow.Show();
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        var newChatWindow = new View.ChattingWindow
+                        {
+                            DataContext = new ChattingWindow(client, chattingPartnersBundle)
+                        };
+
+                        chattingWindows[chatRoomKey] = newChatWindow;
+
+                        ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
+                        groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+
+                        newChatWindow.Show();
+                    });
+                }
+                else
+                {
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        chattingWindows[chatRoomKey].Activate();
+                    });
+                }
             });
         }
 

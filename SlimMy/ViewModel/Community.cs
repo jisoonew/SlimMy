@@ -17,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Newtonsoft.Json;
+using SlimMy.Singleton;
 
 namespace SlimMy.ViewModel
 {
@@ -273,6 +274,13 @@ namespace SlimMy.ViewModel
                     else
                     {
                         string testText = _repo.GetUserUUId(currentUser.Email);
+
+                        // 싱글톤에 저장
+                        // 채팅방마다 각각의 고유한 아이디를 부여해서 해당 채팅방의 실행 여부 확인
+                        ChattingSession.Instance.CurrentChattingData = new ChatRooms
+                        {
+                            ChatRoomId = selectedChatRoom.ChatRoomId
+                        };
 
                         try
                         {
