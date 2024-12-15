@@ -194,31 +194,30 @@ namespace SlimMy.ViewModel
 
         public void ReceiveMessage(string sender, string message)
         {
-            //if (message == "ChattingStart")
-            //{
-            //    return;
-            //}
+            if (message == "ChattingStart")
+            {
+                return;
+            }
 
-            //if (message == "상대방이 채팅방을 나갔습니다.")
-            //{
-            //    Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-            //    {
-            //        string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
-            //        messageList.Add(parsedMessage);
+            if (message == "상대방이 채팅방을 나갔습니다.")
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
+                    messageList.Add(parsedMessage);
 
-            //        ScrollToBot();
-            //    }));
-            //    return;
-            //}
+                    ScrollToBot();
+                });
+                return;
+            }
 
-            //Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
-            //{
-            //    var messageListView = Application.Current.MainWindow.FindName("messageListView") as ListView;
-            //    messageList.Add(string.Format("{0}: {1}", sender, message));
-            //    //messageListView.ScrollIntoView(messageListView.Items[messageListView.Items.Count - 1]);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                messageList.Add($"{sender}: {message}");
+                //    messageListView.ScrollIntoView(messageListView.Items[messageListView.Items.Count - 1]);
 
-            //    // ScrollToBot();
-            //}));
+                //    ScrollToBot();
+            });
         }
 
         //protected override void OnClosing(CancelEventArgs e)

@@ -486,7 +486,7 @@ namespace SlimMy.ViewModel
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
                         // 방 번호 출력해보기
-                        //MessageBox.Show("방 번호 : " + chattingRoomNum);
+                        MessageBox.Show("방 번호 : " + chattingRoomNum);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
@@ -564,31 +564,6 @@ namespace SlimMy.ViewModel
             //}
         }
 
-        private View.ChattingWindow _chattingWindow;
-
-        //private void ThreadStartingPoint(List<string> chattingPartners)
-        //{
-        //    // chattingPartners 리스트 값들을 오름차순으로 정렬
-        //    chattingPartners.Sort();
-
-        //    chattingWindow = new ChattingWindow(client, chattingPartners);
-
-        //    // UI 스레드에서 창 실행
-        //    Application.Current.Dispatcher.Invoke(() =>
-        //    {
-        //        _chattingWindow = new View.ChattingWindow
-        //        {
-        //            DataContext = new ChattingWindow(client, chattingPartners)
-        //        };
-
-        //        ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
-        //        groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
-
-        //        // 창이 실행 중이 아닌 경우 실행
-        //        _chattingWindow.Show();
-        //    });
-        //}
-
         private Dictionary<string, View.ChattingWindow> chattingWindows = new Dictionary<string, View.ChattingWindow>();
 
         private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
@@ -603,29 +578,24 @@ namespace SlimMy.ViewModel
                 {
                     chattingPartnersBundle.Sort();
 
-                    chattingWindow = new ChattingWindow(client, chattingPartnersBundle);
-
-                    Application.Current.Dispatcher.Invoke(() =>
+                    // View와 ViewModel 연결
+                    var viewModel = new ChattingWindow(client, chattingPartnersBundle);
+                    var newChatWindow = new View.ChattingWindow
                     {
-                        var newChatWindow = new View.ChattingWindow
-                        {
-                            DataContext = new ChattingWindow(client, chattingPartnersBundle)
-                        };
+                        DataContext = viewModel
+                    };
 
-                        chattingWindows[chatRoomKey] = newChatWindow;
+                    chattingWindows[chatRoomKey] = newChatWindow;
 
-                        ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, chattingWindow);
-                        groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+                    // ChattingThreadData 저장
+                    ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, viewModel);
+                    groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
 
-                        newChatWindow.Show();
-                    });
+                    newChatWindow.Show();
                 }
                 else
                 {
-                    Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        chattingWindows[chatRoomKey].Activate();
-                    });
+                    chattingWindows[chatRoomKey].Activate();
                 }
             });
         }

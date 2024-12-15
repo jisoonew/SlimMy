@@ -1,4 +1,4 @@
-﻿using SlimMy.View;
+using SlimMy.View;
 using System;
 using System.Collections.Generic;
 using System.Linq;
