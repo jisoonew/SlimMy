@@ -302,9 +302,12 @@ namespace SlimMy.ViewModel
                             // 사용자의 Uid 가져오기
                             string groupChattingUserStrData = myUid.ToString();
 
+                            // DB에서 채팅방 참가한 사용자 Uid들을 groupChattingUserStrData 담아서 서버로 전송
                             foreach (var item in Community.GroupChattingReceivers)
                             {
-                                if(groupChattingUserStrData != item.UsersName)
+                                // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
+                                // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
+                                if (!groupChattingUserStrData.Contains(item.UsersName))
                                 {
                                     groupChattingUserStrData += "#";
                                     groupChattingUserStrData += item.UsersName;

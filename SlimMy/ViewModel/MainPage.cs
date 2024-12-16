@@ -117,27 +117,6 @@ namespace SlimMy.ViewModel
             OnPropertyChanged("UserAdded");
         }
 
-        //생성자
-        //public MainPage()
-        //{
-        //    _user = User;
-
-        //    ClientData.isdebug = true;
-
-        //    InsertCommand = new Command(InsertUser);
-        //    //LoginCommand = new Command(LoginSuccess);
-        //    CommunityBtnCommand = new Command(CommunityBtn);
-
-        //    _repo = new Repo(_connstring);
-
-        //    _user = new User();
-
-        //    User.BirthDate = new DateTime(1990, 1, 1);
-
-        //    // Community ViewModel 인스턴스 생성
-        //    _communityViewModel = new Community();
-        //}
-
         // 로그인 성공 시 호출되는 메서드 예시
         public void LoginSuccessfulPage(string userEmail)
         {
@@ -393,12 +372,6 @@ namespace SlimMy.ViewModel
                         receiveMessageList.Add(item);
                     }
 
-                    // 관리자<$닉네임1$닉네임2
-                    //foreach (var item111 in receiveMessageList)
-                    //{
-                    //    MessageBox.Show("item111 : " + item111);
-                    //}
-
                     ParsingReceiveMessage(receiveMessageList);
                 }
                 catch (Exception e)
@@ -485,13 +458,13 @@ namespace SlimMy.ViewModel
                         // 채팅 방 번호 가져오기
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
-                        // 방 번호 출력해보기
-                        MessageBox.Show("방 번호 : " + chattingRoomNum);
+                        MessageBox.Show("chattingRoomNum : " + chattingRoomNum);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
                         if (chattingRoomNum < 0)
                         {
+                            // 현재 채팅방 데이터
                             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
                             // 람다식을 사용하여 메서드 호출을 스레드의 실행 단위로 전달
@@ -552,18 +525,6 @@ namespace SlimMy.ViewModel
             return -1;
         }
 
-        private void ThreadStartingPoint(string chattingPartner)
-        {
-            chattingWindow = new ChattingWindow(client, chattingPartner);
-            chattingThreadDic.Add(chattingPartner, new ChattingThreadData(Thread.CurrentThread, chattingWindow));
-
-            //if (chattingWindow.ShowDialog() == true)
-            //{
-            //    MessageBox.Show("채팅이 종료되었습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-            //    chattingThreadDic.Remove(chattingPartner);
-            //}
-        }
-
         private Dictionary<string, View.ChattingWindow> chattingWindows = new Dictionary<string, View.ChattingWindow>();
 
         private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
@@ -574,6 +535,8 @@ namespace SlimMy.ViewModel
 
             _dispatcher.Invoke(() =>
             {
+
+                //IsLoaded 속성: ChattingWindow 객체의 속성으로, 윈도우가 UI 스레드에서 완전히 로드되었는지 확인, 창이 로드되지 않았거나 닫혀 있는 경우 IsLoaded는 false
                 if (!chattingWindows.ContainsKey(chatRoomKey) || !chattingWindows[chatRoomKey].IsLoaded)
                 {
                     chattingPartnersBundle.Sort();
