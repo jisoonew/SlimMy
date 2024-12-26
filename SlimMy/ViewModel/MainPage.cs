@@ -458,8 +458,6 @@ namespace SlimMy.ViewModel
                         // 채팅 방 번호 가져오기
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
 
-                        MessageBox.Show("chattingRoomNum : " + chattingRoomNum);
-
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
                         if (chattingRoomNum < 0)

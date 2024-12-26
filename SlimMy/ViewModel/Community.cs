@@ -113,7 +113,16 @@ namespace SlimMy.ViewModel
         public ChatRooms SelectedChatRoom
         {
             get { return _selectedChatRoom; }
-            set { _selectedChatRoom = value; OnPropertyChanged(); }
+            set {
+                if (_selectedChatRoom != value)
+                {
+                    _selectedChatRoom = value;
+                    OnPropertyChanged(nameof(SelectedChatRoom));
+
+                    // 명령 실행
+                    InsertCommand?.Execute(_selectedChatRoom);
+                }
+            }
         }
 
         private string _userEmail;
@@ -213,7 +222,6 @@ namespace SlimMy.ViewModel
             User currentUser = UserSession.Instance.CurrentUser;
             if (parameter is ChatRooms selectedChatRoom)
             {
-                //MessageBox.Show($"채팅방 아이디 : {currentUser.Email} \n채팅방 이름: {selectedChatRoom.ChatRoomName}\n설명: {selectedChatRoom.Description}\n카테고리: {selectedChatRoom.Category}");
                 string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
                 MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (messageBoxResult == MessageBoxResult.No)
@@ -222,7 +230,6 @@ namespace SlimMy.ViewModel
                 }
                 else
                 {
-
                     myName = currentUser.NickName;
                     myUid = currentUser.UserId;
                     _dataService.SetUserId(currentUser.UserId.ToString()); // UserId 설정
@@ -284,7 +291,6 @@ namespace SlimMy.ViewModel
 
                         try
                         {
-
                             // 특정 채팅방에 참가한 사용자들 아이디 모음
                             var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
 
@@ -324,8 +330,10 @@ namespace SlimMy.ViewModel
                         {
                             MessageBox.Show($"Error fetching user IDs: {ex.Message}", "Error");
                         }
-                    }
 
+                        // 동일 항목 재선택 가능하도록 초기화
+                        // SelectedChatRoom = null;
+                    }
                 }
             }
             else
@@ -371,13 +379,6 @@ namespace SlimMy.ViewModel
                 {
                     CurrentUserList.Add(item);
                 }
-
-                // 현재 서버에 접속한 사용자 닉네임 출력
-                //foreach (var user in CurrentUserList)
-                //{
-                //    // user 객체의 속성 출력 (예: Name과 ID 속성 출력)
-                //    MessageBox.Show($"Name: {user.UsersName}");
-                //}
             }));
         }
 

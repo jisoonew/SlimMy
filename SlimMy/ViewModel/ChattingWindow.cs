@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Singleton;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -21,6 +22,8 @@ namespace SlimMy.ViewModel
         public List<string> chattingPartners = null;
         private View.ChattingWindow _chattingWindow;
         public static string myName = null;
+        private Repo _repo;
+        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
 
         public ICommand Window_PreviewKeyDownCommand { get; private set; }
 
@@ -100,49 +103,60 @@ namespace SlimMy.ViewModel
             // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
         }
 
+        // 메시지 전송
         private void Send_btn_Click(object parameter)
         {
             if (string.IsNullOrEmpty(MessageText))
                 return;
             string message = MessageText;
             string parsedMessage = "";
+            _repo = new Repo(_connstring); // Repo 초기화
 
-
-            if (message.Contains('<') || message.Contains('>'))
+            try
             {
-                MessageBox.Show("죄송합니다. >,< 기호는 사용하실수 없습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            if (chattingPartner != null)
-            {
-                parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
-                byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                client.GetStream().Write(byteData, 0, byteData.Length);
-            }
-            // 그룹채팅
-            else
-            {
-                User currentUser = UserSession.Instance.CurrentUser;
-                string myName = currentUser.NickName;
-                string myUid = currentUser.UserId.ToString();
-                string partners = myUid;
-                foreach (var item in chattingPartners)
+                if (message.Contains('<') || message.Contains('>'))
                 {
-                    if (item == myUid)
-                        continue;
-                    partners += "#" + item;
+                    MessageBox.Show("죄송합니다. >,< 기호는 사용하실수 없습니다.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
                 }
 
-                parsedMessage = string.Format("{0}<{1}>", partners, message);
-                byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                client.GetStream().Write(byteData, 0, byteData.Length);
-            }
-            messageList.Add("나: " + message);
-            // 메시지 전송 후 초기화
-            MessageText = string.Empty;
+                if (chattingPartner != null)
+                {
+                    parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
+                    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
+                    client.GetStream().Write(byteData, 0, byteData.Length);
+                }
+                // 그룹채팅
+                else
+                {
+                    User currentUser = UserSession.Instance.CurrentUser;
+                    ChatRooms currentChatRooms = ChattingSession.Instance.CurrentChattingData;
+                    string myName = currentUser.NickName;
+                    string myUid = currentUser.UserId.ToString();
+                    string partners = myUid;
+                    foreach (var item in chattingPartners)
+                    {
+                        if (item == myUid)
+                            continue;
+                        partners += "#" + item;
+                    }
 
-            //ScrollToBot();
+                    parsedMessage = string.Format("{0}<{1}>", partners, message);
+                    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
+                    client.GetStream().Write(byteData, 0, byteData.Length);
+
+                    _repo.InsertMessage(currentChatRooms.ChatRoomId, Guid.Parse(myUid), message);
+                }
+                messageList.Add("나: " + message);
+                // 메시지 전송 후 초기화
+                MessageText = string.Empty;
+
+                //ScrollToBot();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("오류 발생 : " + ex);
+            }
         }
 
         private void Window_PreviewKeyDown(object parameter)

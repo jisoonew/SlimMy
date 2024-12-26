@@ -509,6 +509,41 @@ namespace SlimMy
             return chatRooms;
         }
 
+        // 메시지 생성
+        public void InsertMessage(Guid chatRoomId, Guid userId, string content)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    Guid messageId = Guid.NewGuid(); // 새로운 GUID 생성
+                    byte[] messageIdBytes = messageId.ToByteArray(); // GUID를 바이트 배열로 변환
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray(); // GUID를 바이트 배열로 변환
+                    byte[] userIdBytes = userId.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "insert into Message(MessageId, ChatRoomId, UserId, Content) values(:MessageId, :ChatRoomId, :UserId, :Content)";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("MessageId", OracleDbType.Raw, messageIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("ChatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("UserId", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("Content", content));
+                        // command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
+
+                        // SQL 명령문을 데이터베이스에 실행하도록 지시하는 메서드
+                        command.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
         public User GetUserData(string email)
         {
             // 데이터베이스에서 사용자 데이터 로드
