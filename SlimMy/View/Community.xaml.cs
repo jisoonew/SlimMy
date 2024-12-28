@@ -1,4 +1,4 @@
-﻿using SlimMy.Interface;
+using SlimMy.Interface;
 using SlimMy.Model;
 using SlimMy.ViewModel;
 using System;
@@ -27,29 +27,5 @@ namespace SlimMy.View
         {
             InitializeComponent();
         }
-
-        public Community(User userModel)
-        {
-        }
-
-        private void CommunityChat_Click(object sender, RoutedEventArgs e)
-        {
-            CreateChatRoom createChatRoom = new CreateChatRoom();
-            createChatRoom.Show();
-        }
-
-        //private void ChatRoomListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        //{
-        //    var selectedChatRoom = ChatRoomListView.SelectedItem as Chat;
-
-        //    if (selectedChatRoom != null)
-        //    {
-        //        // ViewModel에서 GUID 속성을 사용하여 선택된 항목의 GUID 가져오기
-        //        Guid selectedGuid = selectedChatRoom.ChatRoomId;
-
-        //        // GUID 출력
-        //        // MessageBox.Show(selectedGuid.ToString()); // 예시: GUID를 문자열로 출력
-        //    }
-        //}
     }
 }

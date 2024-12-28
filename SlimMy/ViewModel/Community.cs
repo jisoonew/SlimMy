@@ -21,7 +21,7 @@ using SlimMy.Singleton;
 
 namespace SlimMy.ViewModel
 {
-    public class Community : INotifyPropertyChanged
+    public class Community : BaseViewModel
     {
         private User _user;
         private ChatRooms _chat;
@@ -31,6 +31,50 @@ namespace SlimMy.ViewModel
         private readonly IView _view;
         private View.ChattingWindow _chattingWindow;
         public static event Action CountChanged;
+        public static string myName = null;
+        public static Guid myUid;
+
+        private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션.
+        private int _currentPage; // 현재 페이지 번호.
+        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
+        private int _pageSize = 5; // 페이지당 항목 수
+
+        public ObservableCollection<ChatRooms> CurrentPageData
+        {
+            get => _currentPageData;
+            set
+            {
+                _currentPageData = value;
+                OnPropertyChanged(nameof(CurrentPageData));
+            }
+        }
+
+        // 현재 페이지 번호를 관리
+        public int CurrentPage
+        {
+            get => _currentPage;
+            set
+            {
+                if (_currentPage != value)
+                {
+                    _currentPage = value;
+                    UpdateCurrentPageData();
+                    OnPropertyChanged(nameof(CurrentPage));
+                }
+            }
+        }
+
+        // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산하여 저장.
+        public int TotalPages
+        {
+            get => _totalPages;
+            set { _totalPages = value; OnPropertyChanged(nameof(TotalPages)); }
+        }
+
+        public ObservableCollection<ChatRooms> AllData { get; set; } // 전체 데이터
+
+        public ICommand NextPageCommand { get; }
+        public ICommand PreviousPageCommand { get; }
 
         private static int _count;
         public static int Count
@@ -60,20 +104,6 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public static string myName = null;
-        public static Guid myUid;
-
-        //private ObservableCollection<ChatRooms> _chatRooms;
-        //public ObservableCollection<ChatRooms> ChatRooms
-        //{
-        //    get { return _chatRooms; }
-        //    set
-        //    {
-        //        _chatRooms = value;
-        //        OnPropertyChanged(nameof(ChatRooms));
-        //    }
-        //}
-
         // 그룹 채팅의 참가자 목록을 저장
         private static List<ChatUserList> groupChattingReceivers { get; set; }
         public static List<ChatUserList> GroupChattingReceivers
@@ -93,7 +123,7 @@ namespace SlimMy.ViewModel
         public ObservableCollection<User> ChatUser
         {
             get { return _chatUser; }
-            set { _chatUser = value; OnPropertyChanged(); }
+            set { _chatUser = value; OnPropertyChangedVoid(); }
         }
 
         public ChatRooms Chat
@@ -113,16 +143,7 @@ namespace SlimMy.ViewModel
         public ChatRooms SelectedChatRoom
         {
             get { return _selectedChatRoom; }
-            set {
-                if (_selectedChatRoom != value)
-                {
-                    _selectedChatRoom = value;
-                    OnPropertyChanged(nameof(SelectedChatRoom));
-
-                    // 명령 실행
-                    InsertCommand?.Execute(_selectedChatRoom);
-                }
-            }
+            set { _selectedChatRoom = value; OnPropertyChangedVoid(); }
         }
 
         private string _userEmail;
@@ -169,6 +190,7 @@ namespace SlimMy.ViewModel
 
         public ICommand OpenCreateChatRoomCommand { get; private set; }
         public ICommand InsertCommand { get; private set; }
+        public ICommand ChattingCommand { get; private set; }
 
         public Community(string userEmail)
         {
@@ -205,6 +227,27 @@ namespace SlimMy.ViewModel
         {
             _dataService = new DataService();
             Initialize(); // 초기화 메서드 호출
+
+            // 예제 데이터 생성
+            AllData = ChatRooms;
+
+            // 총 페이지 수 계산
+            TotalPages = (int)Math.Ceiling((double)AllData.Count / _pageSize);
+
+            // 현재 페이지 초기화
+            CurrentPage = 1;
+
+            // 명령 초기화
+            NextPageCommand = new RelayCommand(
+            execute: _ => NextPage(),
+            canExecute: _ => CanGoToNextPage());
+
+            PreviousPageCommand = new RelayCommand(
+                execute: _ => PreviousPage(),
+                canExecute: _ => CanGoToPreviousPage());
+
+            // 현재 페이지 데이터 초기화
+            UpdateCurrentPageData();
         }
 
         // 초기화 메서드
@@ -214,6 +257,7 @@ namespace SlimMy.ViewModel
             ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
             RefreshChatRooms(); // 채팅 방 불러오기
             InsertCommand = new Command(ChatRoomSelected);
+            ChattingCommand = new Command(OpenCreateChatRoomWindow);
         }
 
         // 채팅 목록 선택
@@ -331,8 +375,6 @@ namespace SlimMy.ViewModel
                             MessageBox.Show($"Error fetching user IDs: {ex.Message}", "Error");
                         }
 
-                        // 동일 항목 재선택 가능하도록 초기화
-                        // SelectedChatRoom = null;
                     }
                 }
             }
@@ -366,6 +408,41 @@ namespace SlimMy.ViewModel
             {
                 ChatRooms.Add(chatRoom); // 새 데이터 추가
             }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // ListView에 바인딩된 데이터 업데이트
+                OnPropertyChanged(nameof(ChatRooms));
+            });
+        }
+
+        public void ChattingRefreshChatRooms()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var chatRooms = _repo.SelectChatRoom(); // DB에서 최신 데이터 가져오기
+
+                if (AllData == null)
+                    AllData = new ObservableCollection<ChatRooms>();
+
+                AllData.Clear();
+
+                foreach (var chatRoom in chatRooms)
+                {
+                    AllData.Add(chatRoom);
+                }
+
+                // 총 페이지 수 재계산
+                TotalPages = (int)Math.Ceiling((double)AllData.Count / _pageSize);
+
+                if (CurrentPage > TotalPages)
+                    CurrentPage = TotalPages;
+
+                // 현재 페이지 데이터 업데이트
+                UpdateCurrentPageData();
+
+                MessageBox.Show($"CurrentPageData 갱신됨: {CurrentPageData.Count}개 항목");
+            });
         }
 
         // 사용자 목록이 변경될 때마다 호출되는 메서드로, 현재 사용자 목록을 업데이트
@@ -382,12 +459,60 @@ namespace SlimMy.ViewModel
             }));
         }
 
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        private void UpdateCurrentPageData()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+            // Skip: 현재 페이지 이전의 항목을 건너뜀.
+            // Tack: 페이지 크기만큼 데이터를 가져옴.
+            // PageSize = 10, CurrentPage = 2 → Skip(10).Take(10) → 데이터 11~20번 가져옴.
+            if (AllData == null || AllData.Count == 0)
+                return;
+
+            int totalDataCount = AllData.Count; // 전체 데이터 수
+            int remainingDataCount = totalDataCount - ((CurrentPage - 1) * _pageSize); // 남은 데이터 수
+
+            int dataToTake = Math.Min(_pageSize, remainingDataCount); // 현재 페이지에 가져올 데이터 수
+
+            CurrentPageData = new ObservableCollection<ChatRooms>(
+                AllData.Skip((CurrentPage - 1) * _pageSize).Take(dataToTake));
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                OnPropertyChanged(nameof(CurrentPageData));
+            });
+        }
+
+        private void NextPage()
+        {
+            if (CanGoToNextPage())
+            {
+                CurrentPage++;
+            }
+        }
+
+        private void PreviousPage()
+        {
+            if (CurrentPage > 1)
+                CurrentPage--;
+        }
+
+        private bool CanGoToNextPage() => CurrentPage < TotalPages;
+        private bool CanGoToPreviousPage() => CurrentPage > 1;
+
+        public void OpenCreateChatRoomWindow(object parameter)
+        {
+            var createChatRoomViewModel = new CreateChatRoom();
+            createChatRoomViewModel.ChatRoomCreated += (s, e) =>
+            {
+                // 채팅방 리스트 새로고침
+                ChattingRefreshChatRooms();
+            };
+
+            var createChatRoomWindow = new CreateChatRoomView
+            {
+                DataContext = createChatRoomViewModel
+            };
+
+            createChatRoomWindow.Show();
         }
     }
 }

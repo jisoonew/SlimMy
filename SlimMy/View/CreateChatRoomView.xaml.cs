@@ -1,4 +1,4 @@
-﻿using SlimMy.Model;
+using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -19,10 +19,10 @@ namespace SlimMy
     /// <summary>
     /// CreateChatRoom.xaml에 대한 상호 작용 논리
     /// </summary>
-    public partial class CreateChatRoom : Window
+    public partial class CreateChatRoomView : Window
     {
 
-        public CreateChatRoom()
+        public CreateChatRoomView()
         {
             InitializeComponent();
         }

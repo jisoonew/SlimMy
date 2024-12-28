@@ -215,13 +215,10 @@ namespace SlimMy.ViewModel
 
             if (message == "상대방이 채팅방을 나갔습니다.")
             {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
-                    messageList.Add(parsedMessage);
+                string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
+                messageList.Add(parsedMessage);
 
-                    ScrollToBot();
-                });
+                ScrollToBot();
                 return;
             }
 

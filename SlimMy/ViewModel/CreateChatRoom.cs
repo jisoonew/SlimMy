@@ -1,4 +1,4 @@
-﻿using SlimMy.Model;
+using SlimMy.Model;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ namespace SlimMy.ViewModel
 {
     public class CreateChatRoom : INotifyPropertyChanged
     {
+        private readonly Community _communityViewModel;
         private ChatRooms _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
@@ -76,24 +77,15 @@ namespace SlimMy.ViewModel
             // 사용자와 채팅방 간의 관계 생성
             _repo.InsertUserChatRooms(userId, chatRoomId);
 
-            // 채팅방 목록을 새로 고침
-            var community = Application.Current.MainWindow.DataContext as Community;
-            if (community != null)
-            {
-                community.RefreshChatRooms();
-            }
+            // 이벤트 발생
+            ChatRoomCreated?.Invoke(this, EventArgs.Empty);
 
             CloseWindow();
+
         }
 
         private void CloseWindow()
         {
-            // 싱글톤
-            //User currentUser = UserSession.Instance.CurrentUser;
-
-            // 정상 출력
-            // MessageBox.Show("여기는 크리에이트 챗 : " + currentUser.NickName);
-
             // 현재 윈도우를 찾아서 닫기
             foreach (Window window in Application.Current.Windows)
             {

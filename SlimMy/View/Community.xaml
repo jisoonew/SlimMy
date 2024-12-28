@@ -15,16 +15,22 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <!-- 제목과 상단 -->
             <RowDefinition Height="*"/>
+            <!-- 리스트뷰 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 페이징 버튼 -->
         </Grid.RowDefinitions>
 
+        <!-- 상단 제목 -->
         <TextBlock Text="채팅방 목록" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
+        <TextBlock Text="{Binding UserEmail}" FontSize="18" VerticalAlignment="Top" Margin="10"/>
+        <Button x:Name="CommunityChat" Content="채팅방 생성" Command="{Binding ChattingCommand}" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
 
-        <TextBlock Text="{Binding UserEmail}" FontSize="18"/>
-        <Button x:Name="CommunityChat" Content="채팅방 생성" Click="CommunityChat_Click" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
-
+        <!-- 리스트뷰 -->
         <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" 
-          ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
+          ItemsSource="{Binding CurrentPageData}" 
+          SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="SelectionChanged">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
@@ -38,5 +44,14 @@
                 </GridView>
             </ListView.View>
         </ListView>
+
+        <!-- 페이징 버튼 -->
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="10,10,10,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5" />
+                <TextBlock Text="{Binding CurrentPage}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="5" />
+                <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5" />
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Page>

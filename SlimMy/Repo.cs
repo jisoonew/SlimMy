@@ -303,8 +303,6 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
 
                         command.ExecuteNonQuery();
-
-                        MessageBox.Show("사용자와 채팅방 관계가 생성되었습니다.");
                     }
                 }
                 catch (Exception ex)
