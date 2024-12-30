@@ -531,15 +531,14 @@ namespace SlimMy.ViewModel
         {
             string chatRoomKey = string.Join(",", chattingPartners); // 고유 키 생성
 
+
             _dispatcher.Invoke(() =>
             {
-
-                //IsLoaded 속성: ChattingWindow 객체의 속성으로, 윈도우가 UI 스레드에서 완전히 로드되었는지 확인, 창이 로드되지 않았거나 닫혀 있는 경우 IsLoaded는 false
-                if (!chattingWindows.ContainsKey(chatRoomKey) || !chattingWindows[chatRoomKey].IsLoaded)
+                // IsLoaded 속성: ChattingWindow 객체의 속성으로, 윈도우가 UI 스레드에서 완전히 로드되었는지 확인, 창이 로드되지 않았거나 닫혀 있는 경우 IsLoaded는 false
+                // 창이 없거나 닫혔다면 조건문 내부로 진입하여 새 창을 생성
+                if (!chattingWindows.ContainsKey(chatRoomKey) || chattingWindows[chatRoomKey].IsLoaded == false)
                 {
-                    chattingPartnersBundle.Sort();
-
-                    // View와 ViewModel 연결
+                    // 창이 닫혔거나 존재하지 않으면 새 창 생성
                     var viewModel = new ChattingWindow(client, chattingPartnersBundle);
                     var newChatWindow = new View.ChattingWindow
                     {
@@ -548,14 +547,18 @@ namespace SlimMy.ViewModel
 
                     chattingWindows[chatRoomKey] = newChatWindow;
 
-                    // ChattingThreadData 저장
-                    ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, viewModel);
-                    groupChattingThreadDic.Add(tempThreadData.chattingRoomNum, tempThreadData);
+                    // 창이 닫힐 때(Closed 이벤트 발생) chattingWindows 딕셔너리에서 해당 키를 제거
+                    // 창 닫힘 이벤트 연결
+                    newChatWindow.Closed += (s, e) =>
+                    {
+                        chattingWindows.Remove(chatRoomKey);
+                    };
 
                     newChatWindow.Show();
                 }
                 else
                 {
+                    // 창이 이미 열려 있으면 활성화
                     chattingWindows[chatRoomKey].Activate();
                 }
             });

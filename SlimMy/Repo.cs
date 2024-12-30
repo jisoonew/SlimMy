@@ -429,7 +429,7 @@ namespace SlimMy
         }
 
 
-        // 특정 채팅방의 클라이언트 아이디 출력
+        // 특정 채팅방의 클라이언트 모든 아이디 출력
         public List<string> GetChatRoomUserIds(string chatRoomId)
         {
             List<string> userIds = new List<string>();

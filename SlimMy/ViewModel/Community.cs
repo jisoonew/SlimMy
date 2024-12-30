@@ -139,11 +139,34 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private int _selectedChatRoomIndex;
+        public int SelectedChatRoomIndex
+        {
+            get => _selectedChatRoomIndex;
+            set
+            {
+                _selectedChatRoomIndex = value;
+                OnPropertyChanged(nameof(SelectedChatRoomIndex)); // UI에 변경 알림
+            }
+        }
+
         private ChatRooms _selectedChatRoom;
         public ChatRooms SelectedChatRoom
         {
             get { return _selectedChatRoom; }
-            set { _selectedChatRoom = value; OnPropertyChangedVoid(); }
+            set
+            {
+                if (_selectedChatRoom != value)
+                {
+                    _selectedChatRoom = value;
+                    OnPropertyChanged(nameof(SelectedChatRoom));
+                }
+                else
+                {
+                    // 동일한 항목을 선택해도 동작하도록 처리
+                    OnPropertyChanged(nameof(SelectedChatRoom));
+                }
+            }
         }
 
         private string _userEmail;
@@ -369,6 +392,8 @@ namespace SlimMy.ViewModel
                             byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
                             currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+
+
                         }
                         catch (Exception ex)
                         {
@@ -440,8 +465,6 @@ namespace SlimMy.ViewModel
 
                 // 현재 페이지 데이터 업데이트
                 UpdateCurrentPageData();
-
-                MessageBox.Show($"CurrentPageData 갱신됨: {CurrentPageData.Count}개 항목");
             });
         }
 

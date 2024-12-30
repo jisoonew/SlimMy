@@ -29,7 +29,7 @@
 
         <!-- 리스트뷰 -->
         <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" 
-          ItemsSource="{Binding CurrentPageData}" 
+          ItemsSource="{Binding CurrentPageData}" SelectedIndex="{Binding SelectedChatRoomIndex}"
           SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="SelectionChanged">
