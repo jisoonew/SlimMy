@@ -38,6 +38,13 @@
                 </Button.Background>
             </Button>
 
+            <!-- MyChats -->
+            <Button x:Name="MyChats" Content="Community" FontSize="25" Padding="1,5,1,5" Click="MyChats_Click">
+                <Button.Background>
+                    <SolidColorBrush Color="#FFDDDDDD" Opacity="0"/>
+                </Button.Background>
+            </Button>
+
             <!-- My Page -->
             <Button Content="My Page" FontSize="25" Padding="1,5,1,5">
                 <Button.Background>

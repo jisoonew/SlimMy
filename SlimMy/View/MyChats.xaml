@@ -9,13 +9,17 @@
       Height="830" Width="1100"
       Title="MyChats">
 
+    <Page.DataContext>
+        <local:MyChats/>
+    </Page.DataContext>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="채팅방 목록" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
+        <TextBlock Text="My Chats" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
 
         <TextBlock Text="{Binding UserEmail}" FontSize="18"/>
 

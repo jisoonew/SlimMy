@@ -1,4 +1,4 @@
-﻿using SlimMy.Test;
+using SlimMy.Test;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -43,6 +43,11 @@ namespace SlimMy.View
         private void Community_Click(object sender, RoutedEventArgs e)
         {
             MainFrame.Source = new Uri("Community.xaml", UriKind.Relative);
+        }
+
+        private void MyChats_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Source = new Uri("MyChats.xaml", UriKind.Relative);
         }
 
         protected override void OnClosing(CancelEventArgs e)

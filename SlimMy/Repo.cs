@@ -507,6 +507,46 @@ namespace SlimMy
             return chatRooms;
         }
 
+        // 내가 참여한 채팅방 출력
+        public IEnumerable<ChatRooms> MyChatRooms(Guid userID)
+        {
+            var chatRooms = new List<ChatRooms>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    byte[] userIdBytes = userID.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE c.ChatRoomID in ( SELECT uc_inner.ChatRoomID FROM userChatrooms uc_inner WHERE uc_inner.UserID = :userIdBytes)";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        // 바인드 변수 추가
+                        command.Parameters.Add(new OracleParameter("userIdBytes", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
+
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                ChatRooms chatRoom = new ChatRooms();
+                                chatRoom.ChatRoomId = reader.GetGuid(0);
+                                chatRoom.ChatRoomName = reader.GetString(1);
+                                chatRoom.Description = reader.GetString(2);
+                                chatRoom.Category = reader.GetString(3);
+                                chatRooms.Add(chatRoom);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            return chatRooms;
+        }
+
         // 메시지 생성
         public void InsertMessage(Guid chatRoomId, Guid userId, string content)
         {
