@@ -1,6 +1,5 @@
 using SlimMy.Interface;
 using SlimMy.Model;
-using SlimMy.Test;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -18,6 +17,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using Newtonsoft.Json;
 using SlimMy.Singleton;
+using SlimMy.Service;
 
 namespace SlimMy.ViewModel
 {

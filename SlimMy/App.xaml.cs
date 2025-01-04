@@ -1,7 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SlimMy.Model;
 using SlimMy.Service;
-using SlimMy.Test;
 using SlimMy.View;
 using SlimMy.ViewModel;
 using System;

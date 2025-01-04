@@ -1,6 +1,6 @@
 using SlimMy.Model;
+using SlimMy.Service;
 using SlimMy.Singleton;
-using SlimMy.Test;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -24,6 +24,7 @@ namespace SlimMy.ViewModel
         public static event Action CountChanged;
         public static string myName = null;
         public static Guid myUid;
+        private User currentUser;
 
         private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션.
         private int _currentPage; // 현재 페이지 번호.
@@ -66,6 +67,20 @@ namespace SlimMy.ViewModel
 
         public ICommand NextPageCommand { get; }
         public ICommand PreviousPageCommand { get; }
+
+        private static String _searchword;
+        public static String SearchWord
+        {
+            get => _searchword;
+            set
+            {
+                if (_searchword != value)
+                {
+                    _searchword = value;
+                    CountChanged?.Invoke(); // 이벤트 발생
+                }
+            }
+        }
 
         private static int _count;
         public static int Count
@@ -204,6 +219,7 @@ namespace SlimMy.ViewModel
 
         public ICommand OpenCreateChatRoomCommand { get; private set; }
         public ICommand InsertCommand { get; private set; }
+        public ICommand SearchCommand { get; private set; }
 
         public MyChats(string userEmail)
         {
@@ -243,6 +259,7 @@ namespace SlimMy.ViewModel
 
             // 예제 데이터 생성
             AllData = ChatRooms;
+            currentUser = UserSession.Instance.CurrentUser;
 
             // 총 페이지 수 계산
             TotalPages = (int)Math.Ceiling((double)AllData.Count / _pageSize);
@@ -269,13 +286,14 @@ namespace SlimMy.ViewModel
             _repo = new Repo(_connstring); // Repo 초기화
             ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
             RefreshChatRooms(); // 채팅 방 불러오기
-            //InsertCommand = new Command(ChatRoomSelected);
+            InsertCommand = new Command(ChatRoomSelected);
+
+            SearchCommand = new Command(Search);
         }
 
         // 채팅 목록 선택
         public void ChatRoomSelected(object parameter)
         {
-            User currentUser = UserSession.Instance.CurrentUser;
             if (parameter is ChatRooms selectedChatRoom)
             {
                 string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
@@ -290,8 +308,6 @@ namespace SlimMy.ViewModel
                     myUid = currentUser.UserId;
                     _dataService.SetUserId(currentUser.UserId.ToString()); // UserId 설정
 
-                    string testText = _repo.GetUserUUId(currentUser.Email);
-
                     // 싱글톤에 저장
                     // 채팅방마다 각각의 고유한 아이디를 부여해서 해당 채팅방의 실행 여부 확인
                     ChattingSession.Instance.CurrentChattingData = new ChatRooms
@@ -299,55 +315,62 @@ namespace SlimMy.ViewModel
                         ChatRoomId = selectedChatRoom.ChatRoomId
                     };
 
-                    try
-                    {
-                        // 특정 채팅방에 참가한 사용자들 아이디 모음
-                        var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
-
-                        if (userIds == null || userIds.Count == 0)
-                        {
-                            MessageBox.Show("No user IDs found for the selected chat room.", "Debug Info");
-                            return;
-                        }
-
-                        // 문자열을 ChatUserList 객체로 변환
-                        List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id)).ToList();
-
-                        Community.GroupChattingReceivers = userList;
-
-                        // 사용자의 Uid 가져오기
-                        string groupChattingUserStrData = myUid.ToString();
-
-                        // DB에서 채팅방 참가한 사용자 Uid들을 groupChattingUserStrData 담아서 서버로 전송
-                        foreach (var item in Community.GroupChattingReceivers)
-                        {
-                            // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
-                            // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
-                            if (!groupChattingUserStrData.Contains(item.UsersName))
-                            {
-                                groupChattingUserStrData += "#";
-                                groupChattingUserStrData += item.UsersName;
-                            }
-                        }
-
-                        string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-
-                        byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
-
-                        currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-
-
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Error fetching user IDs: {ex.Message}", "Error");
-                    }
-
+                    // 채팅방에 참여한 사용자 아이디들을 서버로 전송
+                    SendRoomUserIds(selectedChatRoom, currentUser);
                 }
             }
             else
             {
                 MessageBox.Show("선택된 채팅방이 없습니다.");
+            }
+        }
+
+        // 채팅방에 참여한 사용자 아이디들을 서버로 전송
+        public void SendRoomUserIds(ChatRooms selectedChatRoom, User currentUser)
+        {
+            
+            try
+            {
+                // 특정 채팅방에 참가한 사용자들 아이디 모음
+                var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
+
+                if (userIds == null || userIds.Count == 0)
+                {
+                    MessageBox.Show("No user IDs found for the selected chat room.", "Debug Info");
+                    return;
+                }
+
+                // 문자열을 ChatUserList 객체로 변환
+                List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id)).ToList();
+
+                Community.GroupChattingReceivers = userList;
+
+                // 사용자의 Uid 가져오기
+                string groupChattingUserStrData = myUid.ToString();
+
+                // DB에서 채팅방 참가한 사용자 Uid들을 groupChattingUserStrData 담아서 서버로 전송
+                foreach (var item in Community.GroupChattingReceivers)
+                {
+                    // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
+                    // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
+                    if (!groupChattingUserStrData.Contains(item.UsersName))
+                    {
+                        groupChattingUserStrData += "#";
+                        groupChattingUserStrData += item.UsersName;
+                    }
+                }
+
+                string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+
+                byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
+
+                currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
+
+
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error fetching user IDs: {ex.Message}", "Error");
             }
         }
 
@@ -385,6 +408,26 @@ namespace SlimMy.ViewModel
             });
         }
 
+        // 채팅방 검색
+        public void Search(object parameter)
+        {
+            var chatRommsSearch = _repo.MyChatRoomsSearch(SearchWord);
+
+            CurrentPageData.Clear(); // 기존 데이터 제거
+
+            foreach (var chatRoom in chatRommsSearch)
+            {
+                CurrentPageData.Add(chatRoom); // 새 데이터 추가
+            }
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // ListView에 바인딩된 데이터 업데이트
+                OnPropertyChanged(nameof(CurrentPageData));
+            });
+        }
+
+        // 페이징에 따른 채팅 목록
         public void ChattingRefreshChatRooms()
         {
             Application.Current.Dispatcher.Invoke(() =>

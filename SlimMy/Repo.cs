@@ -547,6 +547,44 @@ namespace SlimMy
             return chatRooms;
         }
 
+        // 내가 참여한 채팅방 출력
+        public IEnumerable<ChatRooms> MyChatRoomsSearch(String searchWord)
+        {
+            var chatRooms = new List<ChatRooms>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE c.ChatRoomName = :searchWord or c.Description = :searchWord or c.Category = :searchWord";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("searchWord", searchWord));
+
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                ChatRooms chatRoom = new ChatRooms();
+                                chatRoom.ChatRoomId = reader.GetGuid(0);
+                                chatRoom.ChatRoomName = reader.GetString(1);
+                                chatRoom.Description = reader.GetString(2);
+                                chatRoom.Category = reader.GetString(3);
+                                chatRooms.Add(chatRoom);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            return chatRooms;
+        }
+
         // 메시지 생성
         public void InsertMessage(Guid chatRoomId, Guid userId, string content)
         {
@@ -580,6 +618,44 @@ namespace SlimMy
                     MessageBox.Show(ex.Message);
                 }
             }
+        }
+
+        // 내가 참여한 채팅방 메시지 내역 출력
+        public IEnumerable<Message> MessagePrint(Guid ChatRoomID)
+        {
+            var messageList = new List<Message>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    byte[] chatroomIDBytes = ChatRoomID.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "select u.name, m.content from message m inner join users u on m.userid = u.userid where chatroomid = :userIdBytes order by sentat";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        // 바인드 변수 추가
+                        command.Parameters.Add(new OracleParameter("userIdBytes", OracleDbType.Raw, chatroomIDBytes, ParameterDirection.Input));
+
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                Message messageData = new Message();
+                                messageData.SendUser = reader.GetString(0);
+                                messageData.SendMessage = reader.GetString(1);
+                                messageList.Add(messageData);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            return messageList;
         }
 
         public User GetUserData(string email)

@@ -33,7 +33,7 @@
                 Background="White"
                 Margin="10,15,10,10"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Center">
+                VerticalAlignment="Center" Height="45">
             <!-- 검색창과 버튼을 포함한 패널 -->
             <StackPanel Orientation="Horizontal"
                     HorizontalAlignment="Right"
@@ -56,8 +56,8 @@
                 </Border>
 
                 <!-- 검색 버튼 -->
-                <Button Width="50"
-                    Height="50"
+                <Button Width="45"
+                    Height="45"
                     Background="#4CAF50"
                     BorderThickness="0"
                     HorizontalAlignment="Right"

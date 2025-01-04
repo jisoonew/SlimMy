@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SlimMy.Interface;
-using SlimMy.Test;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;

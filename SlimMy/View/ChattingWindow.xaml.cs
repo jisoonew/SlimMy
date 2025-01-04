@@ -1,4 +1,4 @@
-using SlimMy.Test;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;

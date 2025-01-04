@@ -27,9 +27,9 @@ namespace SlimMy.ViewModel
 
         public ICommand Window_PreviewKeyDownCommand { get; private set; }
 
-        private ObservableCollection<string> messageList = new ObservableCollection<string>();
+        private ObservableCollection<object> messageList = new ObservableCollection<object>();
 
-        public ObservableCollection<string> MessageList
+        public ObservableCollection<object> MessageList
         {
             get => messageList;
             set
@@ -52,7 +52,7 @@ namespace SlimMy.ViewModel
 
         public ICommand SendCommand { get; }
 
-
+        // 1명 채팅방 입장
         public ChattingWindow(TcpClient client, string chattingPartner)
         {
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
@@ -65,6 +65,14 @@ namespace SlimMy.ViewModel
                 }
             });
 
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+            var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId);
+
+            foreach (var messageList in messagePrint)
+            {
+                MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+            }
+
             this.chattingPartner = chattingPartner;
             this.client = client;
             MessageList.Add(string.Format("{0}님이 입장하였습니다.", chattingPartner));
@@ -73,34 +81,55 @@ namespace SlimMy.ViewModel
             //Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
         }
 
+        // 다수 채팅방 입장
         public ChattingWindow(TcpClient client, List<string> targetChattingPartners)
         {
-            this.client = client;
-            this.chattingPartners = targetChattingPartners;
-
-            // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
-            Application.Current.Dispatcher.Invoke(() =>
+            try
             {
-                var listView = Application.Current.MainWindow.FindName("messageListView") as ListView;
-                if (listView != null)
+                this.client = client;
+                this.chattingPartners = targetChattingPartners;
+
+                _repo = new Repo(_connstring); // Repo 초기화
+
+                // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    listView.ItemsSource = MessageList;
+                    var listView = Application.Current.MainWindow.FindName("messageListView") as ListView;
+                    if (listView != null)
+                    {
+                        listView.ItemsSource = MessageList;
+                    }
+                });
+
+                string enteredUser = "";
+                foreach (var item in targetChattingPartners)
+                {
+                    enteredUser += item;
+                    enteredUser += "님, ";
                 }
-            });
 
-            string enteredUser = "";
-            foreach (var item in targetChattingPartners)
+                ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId);
+
+                if(messagePrint != null)
+                {
+                    foreach (var messageDataList in messagePrint)
+                    {
+                        //MessageBox.Show(string.Format("{0}: {1}", messageDataList.SendUser, messageDataList.SendMessage));
+                        messageList.Add(string.Format("{0}: {1}", messageDataList.SendUser, messageDataList.SendMessage));
+                    }
+                }
+
+                messageList.Add(string.Format("{0}이 입장하였습니다.", enteredUser));
+                //this.Title = enteredUser + "과의 채팅방";
+
+                SendCommand = new Command(Send_btn_Click);
+
+                // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+            } catch (Exception ex)
             {
-                enteredUser += item;
-                enteredUser += "님, ";
+                MessageBox.Show("Error : " + ex);
             }
-
-            messageList.Add(string.Format("{0}이 입장하였습니다.", enteredUser));
-            //this.Title = enteredUser + "과의 채팅방";
-
-            SendCommand = new Command(Send_btn_Click);
-
-            // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
         }
 
         // 메시지 전송

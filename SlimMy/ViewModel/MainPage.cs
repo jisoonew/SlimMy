@@ -3,7 +3,6 @@ using MVVM2.ViewModel;
 using SlimMy.Model;
 using SlimMy.Service;
 using SlimMy.Singleton;
-using SlimMy.Test;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
