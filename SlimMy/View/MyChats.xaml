@@ -16,15 +16,67 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <!-- 제목과 상단 -->
             <RowDefinition Height="*"/>
+            <!-- 리스트뷰 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 페이징 버튼 -->
         </Grid.RowDefinitions>
 
-        <TextBlock Text="My Chats" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
+        <!-- 상단 제목 -->
+        <TextBlock Text="MyChats" FontSize="24" FontWeight="Bold" Margin="10,20,10,10" HorizontalAlignment="Center"/>
+        <TextBlock Text="{Binding UserEmail}" FontSize="18" VerticalAlignment="Top" Margin="10"/>
 
-        <TextBlock Text="{Binding UserEmail}" FontSize="18"/>
+        <Border BorderThickness="2"
+                BorderBrush="#4CAF50"
+                CornerRadius="10"
+                Background="White"
+                Margin="10,15,10,10"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center">
+            <!-- 검색창과 버튼을 포함한 패널 -->
+            <StackPanel Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Background="Transparent"
+                    Height="50">
+                <!-- 검색창 -->
+                <Border CornerRadius="25"
+                    Background="White"
+                    Width="350"
+                    Height="40"
+                    Margin="0,0,10,0"
+                    Padding="10">
+                    <TextBox x:Name="SearchTextBox"
+                         VerticalAlignment="Center"
+                         BorderThickness="0"
+                         Background="Transparent"
+                         FontSize="16"
+                         Text="{Binding SearchWord, UpdateSourceTrigger=PropertyChanged}" />
+                </Border>
 
+                <!-- 검색 버튼 -->
+                <Button Width="50"
+                    Height="50"
+                    Background="#4CAF50"
+                    BorderThickness="0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Content="🔍"
+                    FontSize="18"
+                    Foreground="White"
+                    Command="{Binding SearchCommand}">
+                    <Button.Effect>
+                        <DropShadowEffect BlurRadius="4" ShadowDepth="2" Opacity="0.3" />
+                    </Button.Effect>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- 리스트뷰 -->
         <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" 
-          ItemsSource="{Binding ChatRooms}" SelectedItem="{Binding SelectedChatRoom}">
+          ItemsSource="{Binding CurrentPageData}" SelectedIndex="{Binding SelectedChatRoomIndex}"
+          SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="SelectionChanged">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
@@ -38,5 +90,14 @@
                 </GridView>
             </ListView.View>
         </ListView>
+
+        <!-- 페이징 버튼 -->
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="10,10,10,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5" />
+                <TextBlock Text="{Binding CurrentPage}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="5" />
+                <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5" />
+            </StackPanel>
+        </StackPanel>
     </Grid>
 </Page>
