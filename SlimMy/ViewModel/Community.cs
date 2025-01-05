@@ -305,8 +305,10 @@ namespace SlimMy.ViewModel
                     // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
                     if (_repo.CheckUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId))
                     {
+                        DateTime now = DateTime.Now;
+
                         // 사용자와 채팅방 간의 관계 생성
-                        _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId);
+                        _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now);
 
                         ServerInfo serverInfo = new ServerInfo
                         {
@@ -365,10 +367,15 @@ namespace SlimMy.ViewModel
                 {
                     // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
                     // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
+                    // 두명 이상일 때 "#"가 포함되기 때문에 #가 포함된 채팅방만 창이 실행되는거였음
                     if (!groupChattingUserStrData.Contains(item.UsersName))
                     {
                         groupChattingUserStrData += "#";
                         groupChattingUserStrData += item.UsersName;
+                    }
+                    else
+                    {
+                        groupChattingUserStrData += "#";
                     }
                 }
 

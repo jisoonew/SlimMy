@@ -66,13 +66,19 @@ namespace SlimMy.ViewModel
             });
 
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+            
+            // 내가 참가한 순간부터의 메시지를 가져온다
             var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId);
 
-            foreach (var messageList in messagePrint)
+            // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
+            if(messagePrint != null)
             {
-                MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+                foreach (var messageList in messagePrint)
+                {
+                    MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+                }
             }
-
+            
             this.chattingPartner = chattingPartner;
             this.client = client;
             MessageList.Add(string.Format("{0}님이 입장하였습니다.", chattingPartner));

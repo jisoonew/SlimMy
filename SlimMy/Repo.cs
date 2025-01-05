@@ -280,7 +280,7 @@ namespace SlimMy
         }
 
         // 사용자와 채팅방 간의 관계 정보 저장
-        public void InsertUserChatRooms(Guid userId, Guid chatRoomId)
+        public void InsertUserChatRooms(Guid userId, Guid chatRoomId, DateTime createdAt)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
@@ -291,7 +291,7 @@ namespace SlimMy
                     byte[] userIdBytes = userId.ToByteArray();
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
 
-                    string sql = "insert into UserChatRooms (USERCHATROOMID, USERID, CHATROOMID) values (:USERCHATROOMID, :USERID, :CHATROOMID)";
+                    string sql = "insert into UserChatRooms (USERCHATROOMID, USERID, CHATROOMID, CREATEDAT) values (:USERCHATROOMID, :USERID, :CHATROOMID, :CreatedAt)";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
@@ -301,6 +301,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("USERCHATROOMID", OracleDbType.Raw, userChatRoomIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("USERID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
 
                         command.ExecuteNonQuery();
                     }
