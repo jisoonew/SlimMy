@@ -9,8 +9,15 @@ namespace SlimMy.Model
 {
     public class Message : INotifyPropertyChanged
     {
+        private Guid sendUserID;
         private String sendUser;
         private String sendMessage;
+
+        public Guid SendUserID
+        {
+            get { return sendUserID; }
+            set { sendUserID = value; OnPropertyChanged(nameof(sendUserID)); }
+        }
 
         public String SendUser
         {

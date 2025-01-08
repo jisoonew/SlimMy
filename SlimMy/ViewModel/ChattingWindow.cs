@@ -65,17 +65,25 @@ namespace SlimMy.ViewModel
                 }
             });
 
+            User currentUser = UserSession.Instance.CurrentUser;
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             
             // 내가 참가한 순간부터의 메시지를 가져온다
-            var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId);
+            var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
 
             // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-            if(messagePrint != null)
+            if (messagePrint != null)
             {
                 foreach (var messageList in messagePrint)
                 {
-                    MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+                    if(currentUser.UserId == messageList.SendUserID)
+                    {
+                        MessageList.Add(string.Format("나: {0}", messageList.SendMessage));
+                    }
+                    else
+                    {
+                        MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+                    }
                 }
             }
             
@@ -115,14 +123,23 @@ namespace SlimMy.ViewModel
                 }
 
                 ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
-                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId);
+                User currentUser = UserSession.Instance.CurrentUser;
 
-                if(messagePrint != null)
+                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
+
+                // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
+                if (messagePrint != null)
                 {
-                    foreach (var messageDataList in messagePrint)
+                    foreach (var messageList in messagePrint)
                     {
-                        //MessageBox.Show(string.Format("{0}: {1}", messageDataList.SendUser, messageDataList.SendMessage));
-                        messageList.Add(string.Format("{0}: {1}", messageDataList.SendUser, messageDataList.SendMessage));
+                        if (currentUser.UserId == messageList.SendUserID)
+                        {
+                            MessageList.Add(string.Format("나: {0}", messageList.SendMessage));
+                        }
+                        else
+                        {
+                            MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
+                        }
                     }
                 }
 
@@ -134,7 +151,7 @@ namespace SlimMy.ViewModel
                 // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
             } catch (Exception ex)
             {
-                MessageBox.Show("Error : " + ex);
+                MessageBox.Show("채팅방 Error : " + ex);
             }
         }
 

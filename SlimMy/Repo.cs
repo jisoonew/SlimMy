@@ -70,7 +70,8 @@ namespace SlimMy
                             return true;
                         }
                     }
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     MessageBox.Show("Error : " + ex.Message);
 
@@ -96,7 +97,7 @@ namespace SlimMy
                         int count = Convert.ToInt32(command.ExecuteScalar());
 
                         // 중복이라면 false, 중복이 아니라면 true
-                        if(count >= 1)
+                        if (count >= 1)
                         {
                             MessageBox.Show("닉네임이 이미 존재합니다.");
                             return false;
@@ -106,7 +107,8 @@ namespace SlimMy
                             return true;
                         }
                     }
-                } catch (Exception ex)
+                }
+                catch (Exception ex)
                 {
                     MessageBox.Show("Error : " + ex.Message);
 
@@ -171,8 +173,8 @@ namespace SlimMy
 
                         return (decimal)command.ExecuteScalar() > 0;
                     }
-                } 
-                catch(Exception ex)
+                }
+                catch (Exception ex)
                 {
                     MessageBox.Show("Error : " + ex.Message);
                     return false;
@@ -199,7 +201,7 @@ namespace SlimMy
                         return resultNickName.ToString();
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show("오류 : " + ex);
                     return "false";
@@ -382,7 +384,7 @@ namespace SlimMy
 
                     return chatRoomId;
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
 
@@ -488,7 +490,7 @@ namespace SlimMy
                     {
                         using (OracleDataReader reader = command.ExecuteReader())
                         {
-                            while(reader.Read())
+                            while (reader.Read())
                             {
                                 ChatRooms chatRoom = new ChatRooms();
                                 chatRoom.ChatRoomId = reader.GetGuid(0);
@@ -500,7 +502,7 @@ namespace SlimMy
                         }
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show(ex.Message);
                 }
@@ -622,7 +624,7 @@ namespace SlimMy
         }
 
         // 내가 참여한 채팅방 메시지 내역 출력
-        public IEnumerable<Message> MessagePrint(Guid ChatRoomID)
+        public IEnumerable<Message> MessagePrint(Guid chatRoomID, Guid userID)
         {
             var messageList = new List<Message>();
 
@@ -631,31 +633,47 @@ namespace SlimMy
                 try
                 {
                     connection.Open();
-                    byte[] chatroomIDBytes = ChatRoomID.ToByteArray(); // GUID를 바이트 배열로 변환
 
-                    string sql = "select u.name, m.content from message m inner join users u on m.userid = u.userid where chatroomid = :userIdBytes order by sentat";
+                    string sql = @"
+                SELECT u.userid, u.name, m.content 
+                FROM message m 
+                INNER JOIN users u ON m.userid = u.userid 
+                INNER JOIN userchatrooms ucr 
+                    ON ucr.userid = :userID AND ucr.chatroomid = m.chatroomid 
+                WHERE m.chatroomid = :chatRoomID 
+                  AND m.sentat >= ucr.createdat 
+                ORDER BY m.sentat";
+
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
-                        // 바인드 변수 추가
-                        command.Parameters.Add(new OracleParameter("userIdBytes", OracleDbType.Raw, chatroomIDBytes, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("userID", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("chatRoomID", OracleDbType.Raw, chatRoomID.ToByteArray(), ParameterDirection.Input));
 
                         using (OracleDataReader reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                Message messageData = new Message();
-                                messageData.SendUser = reader.GetString(0);
-                                messageData.SendMessage = reader.GetString(1);
+                                var messageData = new Message
+                                {
+                                    SendUserID = new Guid(reader.GetFieldValue<byte[]>(0)),
+                                    SendUser = reader.GetString(1),
+                                    SendMessage = reader.GetString(2)
+                                };
                                 messageList.Add(messageData);
                             }
                         }
                     }
                 }
+                catch (OracleException ex)
+                {
+                    Console.WriteLine($"Oracle Error: {ex.Message}");
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    Console.WriteLine($"Unexpected Error: {ex.Message}");
                 }
             }
+
             return messageList;
         }
 
