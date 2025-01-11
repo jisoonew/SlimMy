@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
         mc:Ignorable="d"
         Title="ChattingWindow" Height="500" Width="500" Background="#BCBCBC">
-    <!-- d:DataContext="{d:DesignInstance Type=local:ChattingWindow}" -->
 
     <Grid Margin="8">
         <Grid.RowDefinitions>
@@ -14,7 +13,15 @@
             <RowDefinition Height="1*"/>
         </Grid.RowDefinitions>
 
-        <ListView x:Name="messageListView" ItemsSource="{Binding MessageList}" Grid.Row="0" Margin="0,0,0,10">
+        <ListView x:Name="messageListView" VirtualizingStackPanel.IsVirtualizing="False"
+          VirtualizingStackPanel.ScrollUnit="Pixel" Grid.Row="0" Margin="0,0,0,10">
+            <ItemsControl x:Name="MessageList" ItemsSource="{Binding MessageList}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock x:Name="MessageSenderText" Text="{Binding Message}" Margin="5" TextAlignment="{Binding Alignment}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </ListView>
 
         <Grid Grid.Row="1">

@@ -7,6 +7,7 @@ using System.ComponentModel;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -27,9 +28,9 @@ namespace SlimMy.ViewModel
 
         public ICommand Window_PreviewKeyDownCommand { get; private set; }
 
-        private ObservableCollection<object> messageList = new ObservableCollection<object>();
+        private ObservableCollection<ChatMessage> messageList = new ObservableCollection<ChatMessage>();
 
-        public ObservableCollection<object> MessageList
+        public ObservableCollection<ChatMessage> MessageList
         {
             get => messageList;
             set
@@ -58,16 +59,16 @@ namespace SlimMy.ViewModel
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
             Application.Current.Dispatcher.Invoke(() =>
             {
-                var listView = Application.Current.MainWindow.FindName("messageListView") as ListView;
+                var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
                 if (listView != null)
                 {
-                    listView.ItemsSource = messageList;
+                    listView.ItemsSource = MessageList;
                 }
-            });
+            
 
             User currentUser = UserSession.Instance.CurrentUser;
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
-            
+
             // 내가 참가한 순간부터의 메시지를 가져온다
             var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
 
@@ -76,23 +77,40 @@ namespace SlimMy.ViewModel
             {
                 foreach (var messageList in messagePrint)
                 {
-                    if(currentUser.UserId == messageList.SendUserID)
+                    if (currentUser.UserId == messageList.SendUserID)
                     {
-                        MessageList.Add(string.Format("나: {0}", messageList.SendMessage));
-                    }
+                            MessageList.Add(new ChatMessage
+                            {
+                                Message = $"나: {messageList.SendMessage}",
+                                Alignment = TextAlignment.Right
+                            });
+                        }
                     else
                     {
-                        MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
-                    }
+                            MessageList.Add(new ChatMessage
+                            {
+                                Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
+                                Alignment = TextAlignment.Left
+                            });
+                        }
                 }
             }
-            
+
             this.chattingPartner = chattingPartner;
             this.client = client;
-            MessageList.Add(string.Format("{0}님이 입장하였습니다.", chattingPartner));
-            //this.Title = chattingPartner + "님과의 채팅방";
 
-            //Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+                MessageList.Add(new ChatMessage
+                {
+                    Message = $"{chattingPartner}님이 입장하였습니다.",
+                    Alignment = TextAlignment.Left
+                });
+                //this.Title = chattingPartner + "님과의 채팅방";
+            });
+
+            Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+            // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
+            ScrollToBot();
         }
 
         // 다수 채팅방 입장
@@ -108,12 +126,12 @@ namespace SlimMy.ViewModel
                 // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
                 Application.Current.Dispatcher.Invoke(() =>
                 {
-                    var listView = Application.Current.MainWindow.FindName("messageListView") as ListView;
+                    var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
                     if (listView != null)
                     {
                         listView.ItemsSource = MessageList;
                     }
-                });
+                
 
                 string enteredUser = "";
                 foreach (var item in targetChattingPartners)
@@ -134,22 +152,39 @@ namespace SlimMy.ViewModel
                     {
                         if (currentUser.UserId == messageList.SendUserID)
                         {
-                            MessageList.Add(string.Format("나: {0}", messageList.SendMessage));
-                        }
+                                MessageList.Add(new ChatMessage
+                                {
+                                    Message = $"나: {messageList.SendMessage}",
+                                    Alignment = TextAlignment.Right
+                                });
+                            }
                         else
                         {
-                            MessageList.Add(string.Format("{0}: {1}", messageList.SendUser, messageList.SendMessage));
-                        }
+                                MessageList.Add(new ChatMessage
+                                {
+                                    Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
+                                    Alignment = TextAlignment.Left
+                                });
+                            }
                     }
                 }
 
-                messageList.Add(string.Format("{0}이 입장하였습니다.", enteredUser));
-                //this.Title = enteredUser + "과의 채팅방";
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{enteredUser}이 입장하였습니다.",
+                        Alignment = TextAlignment.Left
+                    });
+                    //this.Title = enteredUser + "과의 채팅방";
+
+                });
 
                 SendCommand = new Command(Send_btn_Click);
 
-                // Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
-            } catch (Exception ex)
+                Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+                ScrollToBot();
+            }
+            catch (Exception ex)
             {
                 MessageBox.Show("채팅방 Error : " + ex);
             }
@@ -199,11 +234,17 @@ namespace SlimMy.ViewModel
 
                     _repo.InsertMessage(currentChatRooms.ChatRoomId, Guid.Parse(myUid), message);
                 }
-                messageList.Add("나: " + message);
+
+                MessageList.Add(new ChatMessage
+                {
+                    Message = $"나: {message}",
+                    Alignment = TextAlignment.Right
+                });
+
                 // 메시지 전송 후 초기화
                 MessageText = string.Empty;
 
-                //ScrollToBot();
+                ScrollToBot();
             }
             catch (Exception ex)
             {
@@ -213,11 +254,11 @@ namespace SlimMy.ViewModel
 
         private void Window_PreviewKeyDown(object parameter)
         {
-            var Send_Text_Box = Application.Current.MainWindow.FindName("Send_Text_Box") as TextBox;
+            // var Send_Text_Box = Application.Current.MainWindow.FindName("Send_Text_Box") as TextBox;
 
-            if (string.IsNullOrEmpty(Send_Text_Box.Text))
+            if (string.IsNullOrEmpty(MessageText))
                 return;
-            string message = Send_Text_Box.Text;
+            string message = MessageText;
             string parsedMessage = "";
 
             if (message.Contains('<') || message.Contains('>'))
@@ -251,8 +292,14 @@ namespace SlimMy.ViewModel
                 client.GetStream().Write(byteData, 0, byteData.Length);
             }
 
-            messageList.Add("나: " + message);
-            Send_Text_Box.Clear();
+            MessageList.Add(new ChatMessage
+            {
+                Message = $"나: {message}",
+                Alignment = TextAlignment.Right
+            });
+
+            // 메시지 전송 후 초기화
+            MessageText = string.Empty;
 
             ScrollToBot();
         }
@@ -268,18 +315,29 @@ namespace SlimMy.ViewModel
             if (message == "상대방이 채팅방을 나갔습니다.")
             {
                 string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
-                messageList.Add(parsedMessage);
+
+                MessageList.Add(new ChatMessage
+                {
+                    Message = $"{sender}님이 채팅방을 나갔습니다.",
+                    Alignment = TextAlignment.Left
+                });
 
                 ScrollToBot();
                 return;
             }
 
+            string senderNickName = _repo.SendNickName(sender);
+
             Application.Current.Dispatcher.Invoke(() =>
             {
-                messageList.Add($"{sender}: {message}");
-                //    messageListView.ScrollIntoView(messageListView.Items[messageListView.Items.Count - 1]);
 
-                //    ScrollToBot();
+                MessageList.Add(new ChatMessage
+                {
+                    Message = $"{senderNickName}: {message}",
+                    Alignment = TextAlignment.Left
+                });
+
+                ScrollToBot();
             });
         }
 
@@ -304,13 +362,30 @@ namespace SlimMy.ViewModel
 
         private void ScrollToBot()
         {
-            var messageListView = Application.Current.MainWindow.FindName("messageListView") as ListView;
-            if (VisualTreeHelper.GetChildrenCount(messageListView) > 0)
+            Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
             {
-                Border border = (Border)VisualTreeHelper.GetChild(messageListView, 0);
-                ScrollViewer scrollViewer = (ScrollViewer)VisualTreeHelper.GetChild(border, 0);
-                scrollViewer.ScrollToBottom();
+                var messageListView = GetMessageListView();
+                if (messageListView != null && messageListView.Items.Count > 0)
+                {
+                    // 마지막 항목 선택
+                    messageListView.SelectedIndex = messageListView.Items.Count - 1;
+
+                    // UI 강제 갱신
+                    messageListView.UpdateLayout();
+
+                    // 선택 항목으로 스크롤
+                    messageListView.ScrollIntoView(messageListView.SelectedItem);
+                }
+            }));
+        }
+
+        private ListView GetMessageListView()
+        {
+            if (Application.Current.MainWindow is FrameworkElement mainWindow)
+            {
+                return mainWindow.FindName("messageListView") as ListView;
             }
+            return null;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

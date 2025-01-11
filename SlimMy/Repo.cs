@@ -209,7 +209,7 @@ namespace SlimMy
             }
         }
 
-        // 로그인 이후 닉네임 가져오기
+        // 로그인 이후 사용자 아이디 가져오기
         public Guid UserID(string email)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
@@ -635,7 +635,7 @@ namespace SlimMy
                     connection.Open();
 
                     string sql = @"
-                SELECT u.userid, u.name, m.content 
+                SELECT u.userid, u.nickname, m.content 
                 FROM message m 
                 INNER JOIN users u ON m.userid = u.userid 
                 INNER JOIN userchatrooms ucr 
@@ -656,7 +656,7 @@ namespace SlimMy
                                 var messageData = new Message
                                 {
                                     SendUserID = new Guid(reader.GetFieldValue<byte[]>(0)),
-                                    SendUser = reader.GetString(1),
+                                    SendUserNickName = reader.GetString(1),
                                     SendMessage = reader.GetString(2)
                                 };
                                 messageList.Add(messageData);
@@ -675,6 +675,37 @@ namespace SlimMy
             }
 
             return messageList;
+        }
+
+        // 사용자 아이디로 닉네임 출력
+        public string SendNickName(string senderID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    Guid senderIDGuid = Guid.Parse(senderID);
+                    byte[] senderIDBytes = senderIDGuid.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "select nickname from Users where userid = :senderID";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("senderID", OracleDbType.Raw, senderIDBytes, ParameterDirection.Input));
+
+                        object resultNickName = command.ExecuteScalar();
+
+                        return resultNickName.ToString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                    return "false";
+                }
+            }
         }
 
         public User GetUserData(string email)

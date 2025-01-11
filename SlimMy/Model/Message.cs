@@ -10,7 +10,7 @@ namespace SlimMy.Model
     public class Message : INotifyPropertyChanged
     {
         private Guid sendUserID;
-        private String sendUser;
+        private String sendUserNickName;
         private String sendMessage;
 
         public Guid SendUserID
@@ -19,10 +19,10 @@ namespace SlimMy.Model
             set { sendUserID = value; OnPropertyChanged(nameof(sendUserID)); }
         }
 
-        public String SendUser
+        public String SendUserNickName
         {
-            get { return sendUser; }
-            set { sendUser = value; OnPropertyChanged(nameof(sendUser)); }
+            get { return sendUserNickName; }
+            set { sendUserNickName = value; OnPropertyChanged(nameof(sendUserNickName)); }
         }
 
         public String SendMessage
