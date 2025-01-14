@@ -27,6 +27,7 @@ namespace SlimMy.ViewModel
         private User currentUser;
 
         private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션.
+        public ObservableCollection<ChatMessageStatus> ChatMessageStatus { get; set; } // 메시지를 읽지 않았을 때 아이콘으로 표시하는 기능
         private int _currentPage; // 현재 페이지 번호.
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
         private int _pageSize = 5; // 페이지당 항목 수
@@ -285,6 +286,7 @@ namespace SlimMy.ViewModel
         {
             _repo = new Repo(_connstring); // Repo 초기화
             ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
+            ChatMessageStatus = new ObservableCollection<ChatMessageStatus>();
             RefreshChatRooms(); // 채팅 방 불러오기
             InsertCommand = new Command(ChatRoomSelected);
 

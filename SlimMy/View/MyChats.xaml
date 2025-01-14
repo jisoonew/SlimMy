@@ -9,6 +9,10 @@
       Height="830" Width="1100"
       Title="MyChats">
 
+    <Page.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Page.Resources>
+
     <Page.DataContext>
         <local:MyChats/>
     </Page.DataContext>
@@ -89,6 +93,25 @@
                     <GridViewColumn Header="카테고리" Width="100" DisplayMemberBinding="{Binding Category}"/>
                 </GridView>
             </ListView.View>
+            
+            <ListView.ItemTemplate>
+        <DataTemplate>
+            <Grid Margin="5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="40" /> <!-- 아이콘 -->
+                    <ColumnDefinition Width="*" /> <!-- 채팅 정보 -->
+                </Grid.ColumnDefinitions>
+                <!-- 읽지 않은 메시지 아이콘 -->
+                <Image Grid.Column="0" Width="20" Height="20"
+                       Source="unread_icon.png" Visibility="{Binding HasUnreadMessages, Converter={StaticResource BoolToVisibilityConverter}}" />
+                <!-- 채팅방 이름 및 마지막 메시지 -->
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding ChatName}" FontWeight="Bold" />
+                    <TextBlock Text="{Binding LastMessage}" FontStyle="Italic" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </ListView.ItemTemplate>
         </ListView>
 
         <!-- 페이징 버튼 -->

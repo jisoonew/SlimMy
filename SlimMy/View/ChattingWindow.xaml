@@ -3,18 +3,46 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
+        xmlns:local="clr-namespace:SlimMy.ViewModel" xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" xmlns:b="http://schemas.microsoft.com/xaml/behaviors" d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
         mc:Ignorable="d"
-        Title="ChattingWindow" Height="500" Width="500" Background="#BCBCBC">
+        Title="ChattingWindow" Height="550" Width="550"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        TextElement.FontWeight="Regular"
+        TextElement.FontSize="13"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="{DynamicResource MaterialDesignFont}">
 
     <Grid Margin="8">
         <Grid.RowDefinitions>
-            <RowDefinition Height="6*"/>
-            <RowDefinition Height="1*"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="6*" />
+            <RowDefinition Height="1*" />
         </Grid.RowDefinitions>
 
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="0" Margin="0,0,0,10">
+            <Button Content="=" Width="50" Height="30">
+                <b:Interaction.Triggers>
+                    <b:EventTrigger EventName="Click">
+                        <b:ChangePropertyAction TargetName="contextMenu"
+                                            PropertyName="IsOpen"
+                                            Value="True"/>
+                    </b:EventTrigger>
+                </b:Interaction.Triggers>
+                <Button.ContextMenu>
+                    <ContextMenu x:Name="contextMenu">
+                        <MenuItem Header="Menu1"/>
+                        <MenuItem Header="Menu2"/>
+                        <Separator/>
+                        <MenuItem Header="Menu3"/>
+                    </ContextMenu>
+                </Button.ContextMenu>
+            </Button>
+        </StackPanel>
+
         <ListView x:Name="messageListView" VirtualizingStackPanel.IsVirtualizing="False"
-          VirtualizingStackPanel.ScrollUnit="Pixel" Grid.Row="0" Margin="0,0,0,10">
+          VirtualizingStackPanel.ScrollUnit="Pixel" Grid.Row="1" Margin="0,0,0,10">
             <ItemsControl x:Name="MessageList" ItemsSource="{Binding MessageList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -24,13 +52,13 @@
             </ItemsControl>
         </ListView>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="4*"></ColumnDefinition>
-                <ColumnDefinition Width="1*"></ColumnDefinition>
+                <ColumnDefinition Width="4*" />
+                <ColumnDefinition Width="1*" />
             </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0" x:Name="Send_Text_Box" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}"></TextBox>
-            <Button Grid.Column="1" x:Name="Send_btn" Margin="10,0,0,0" Content="전송" Command="{Binding SendCommand}"></Button>
+            <TextBox Grid.Column="0" x:Name="Send_Text_Box" Text="{Binding MessageText, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Grid.Column="1" x:Name="Send_btn" Margin="10,0,0,0" Content="전송" Command="{Binding SendCommand}" />
         </Grid>
     </Grid>
 </Window>

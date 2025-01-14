@@ -21,7 +21,6 @@ namespace SlimMy.ViewModel
         private string chattingPartner = null;
         private TcpClient client = null;
         public List<string> chattingPartners = null;
-        private View.ChattingWindow _chattingWindow;
         public static string myName = null;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
