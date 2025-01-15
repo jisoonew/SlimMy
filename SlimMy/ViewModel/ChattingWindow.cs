@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -52,9 +53,55 @@ namespace SlimMy.ViewModel
 
         public ICommand SendCommand { get; }
 
+        // 사용자 권한
+        private bool _isHost; // 사용자 권한 정보
+
+        public bool IsHost
+        {
+            get => _isHost;
+            set
+            {
+                _isHost = value;
+                OnPropertyChanged(nameof(IsHost));
+            }
+        }
+
+        private bool _isPopupOpen;
+
+        // Popup 열림 상태 관리
+        public bool IsPopupOpen
+        {
+            get => _isPopupOpen;
+            set
+            {
+                _isPopupOpen = value;
+                OnPropertyChanged(nameof(IsPopupOpen));
+            }
+        }
+
+        public ICommand UpdateHostCommand { get; }
+        public ICommand KickMemberCommand { get; }
+        public ICommand LeaveRoomCommand { get; }
+
+        // Commands
+        public ICommand TogglePopupCommand { get; }
+        public ICommand Option1Command { get; }
+        public ICommand Option2Command { get; }
+        public ICommand Option3Command { get; }
+
+
+        private void ExecuteOption(string option)
+        {
+            MessageBox.Show($"{option} Selected");
+            IsPopupOpen = false; // 선택 후 Popup 닫기
+        }
+
         // 1명 채팅방 입장
         public ChattingWindow(TcpClient client, string chattingPartner)
         {
+            User currentUser = UserSession.Instance.CurrentUser;
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
             Application.Current.Dispatcher.Invoke(() =>
             {
@@ -63,40 +110,36 @@ namespace SlimMy.ViewModel
                 {
                     listView.ItemsSource = MessageList;
                 }
-            
 
-            User currentUser = UserSession.Instance.CurrentUser;
-            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+                // 내가 참가한 순간부터의 메시지를 가져온다
+                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
 
-            // 내가 참가한 순간부터의 메시지를 가져온다
-            var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
-
-            // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-            if (messagePrint != null)
-            {
-                foreach (var messageList in messagePrint)
+                // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
+                if (messagePrint != null)
                 {
-                    if (currentUser.UserId == messageList.SendUserID)
+                    foreach (var messageList in messagePrint)
                     {
+                        if (currentUser.UserId == messageList.SendUserID)
+                        {
                             MessageList.Add(new ChatMessage
                             {
                                 Message = $"나: {messageList.SendMessage}",
                                 Alignment = TextAlignment.Right
                             });
                         }
-                    else
-                    {
+                        else
+                        {
                             MessageList.Add(new ChatMessage
                             {
                                 Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                 Alignment = TextAlignment.Left
                             });
                         }
+                    }
                 }
-            }
 
-            this.chattingPartner = chattingPartner;
-            this.client = client;
+                this.chattingPartner = chattingPartner;
+                this.client = client;
 
                 MessageList.Add(new ChatMessage
                 {
@@ -104,9 +147,28 @@ namespace SlimMy.ViewModel
                     Alignment = TextAlignment.Left
                 });
                 //this.Title = chattingPartner + "님과의 채팅방";
+
+
+                if (currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId).ToString())
+                {
+                    IsHost = true; // 방장
+                }
+                else
+                {
+                    IsHost = false;
+                }
             });
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+            UpdateHostCommand = new RelayCommand(UpdateHost);
+            // KickMemberCommand = new RelayCommand(KickMember);
+            // LeaveRoomCommand = new RelayCommand(LeaveRoom);
+
+            TogglePopupCommand = new RelayCommand(_ => IsPopupOpen = !IsPopupOpen);
+            Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
+            Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
+            Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
 
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
@@ -117,6 +179,9 @@ namespace SlimMy.ViewModel
         {
             try
             {
+                ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+                User currentUser = UserSession.Instance.CurrentUser;
+
                 this.client = client;
                 this.chattingPartners = targetChattingPartners;
 
@@ -130,43 +195,40 @@ namespace SlimMy.ViewModel
                     {
                         listView.ItemsSource = MessageList;
                     }
-                
 
-                string enteredUser = "";
-                foreach (var item in targetChattingPartners)
-                {
-                    enteredUser += item;
-                    enteredUser += "님, ";
-                }
 
-                ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
-                User currentUser = UserSession.Instance.CurrentUser;
-
-                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
-
-                // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-                if (messagePrint != null)
-                {
-                    foreach (var messageList in messagePrint)
+                    string enteredUser = "";
+                    foreach (var item in targetChattingPartners)
                     {
-                        if (currentUser.UserId == messageList.SendUserID)
+                        enteredUser += item;
+                        enteredUser += "님, ";
+                    }
+
+                    var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
+
+                    // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
+                    if (messagePrint != null)
+                    {
+                        foreach (var messageList in messagePrint)
                         {
+                            if (currentUser.UserId == messageList.SendUserID)
+                            {
                                 MessageList.Add(new ChatMessage
                                 {
                                     Message = $"나: {messageList.SendMessage}",
                                     Alignment = TextAlignment.Right
                                 });
                             }
-                        else
-                        {
+                            else
+                            {
                                 MessageList.Add(new ChatMessage
                                 {
                                     Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                     Alignment = TextAlignment.Left
                                 });
                             }
+                        }
                     }
-                }
 
                     MessageList.Add(new ChatMessage
                     {
@@ -175,11 +237,24 @@ namespace SlimMy.ViewModel
                     });
                     //this.Title = enteredUser + "과의 채팅방";
 
+                    if (currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId).ToString())
+                    {
+                        IsHost = true; // 방장
+                    }
+                    else
+                    {
+                        IsHost = false;
+                    }
                 });
 
                 SendCommand = new Command(Send_btn_Click);
 
                 Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+                TogglePopupCommand = new RelayCommand(_ => IsPopupOpen = !IsPopupOpen);
+                Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
+                Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
+                Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
 
                 ScrollToBot();
             }
@@ -338,6 +413,12 @@ namespace SlimMy.ViewModel
 
                 ScrollToBot();
             });
+        }
+
+        // 방장 변경하기(= 위임)
+        private void UpdateHost(object parameter)
+        {
+
         }
 
         //protected override void OnClosing(CancelEventArgs e)

@@ -241,7 +241,7 @@ namespace SlimMy
             }
         }
 
-        // 채팅 생성자 아이디 출력
+        // 사용자와 채팅방 관계 아이디 출력
         public Guid ChatRoomUserID(Guid chatRoomId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
@@ -250,6 +250,46 @@ namespace SlimMy
                 {
                     connection.Open();
                     string sql = "select userchatroomid from UserChatRooms where chatRoomId = :chatRoomId";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        // Guid를 byte[]로 변환
+                        byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
+                        command.Parameters.Add(new OracleParameter("chatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+
+                        // ExecuteScalar() 메서드는 object 타입을 반환하므로,
+                        // 이를 byte[]로 캐스팅하기 전에 null 체크
+                        object result = command.ExecuteScalar();
+
+                        if (result != null && result is byte[] userIdBytes)
+                        {
+                            // byte[]를 Guid로 변환
+                            Guid userId = new Guid(userIdBytes);
+                            return userId;
+                        }
+                        else
+                        {
+                            throw new Exception("방장 아이디를 가져오는 데 실패했습니다.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                    return Guid.Empty;
+                }
+            }
+        }
+
+        // 채팅방 아이디로 채팅방 생성한 사용자 아이디 찾기
+        public Guid GetHostUserIdByRoomId(Guid chatRoomId)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    string sql = "SELECT USERID FROM userchatrooms WHERE CHATROOMID = :chatRoomId AND CREATEDAT = ( SELECT MIN(CREATEDAT) FROM userchatrooms WHERE CHATROOMID = :chatRoomId )";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
