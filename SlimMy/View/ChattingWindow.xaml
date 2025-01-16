@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SlimMy.ViewModel" 
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
-        xmlns:b="http://schemas.microsoft.com/xaml/behaviors" 
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors" xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
         mc:Ignorable="d"
         Title="ChattingWindow" Height="550" Width="550"
@@ -28,31 +28,71 @@
             <RowDefinition Height="1*" />
         </Grid.RowDefinitions>
 
+        <!-- 상단 메뉴 버튼 -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="0" Width="534">
             <Grid HorizontalAlignment="Right" Width="534">
-                <!-- 버튼과 팝업 -->
-                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Width="60">
-                    <Button Width="50" Height="40" Command="{Binding TogglePopupCommand}" HorizontalAlignment="Right">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <materialDesign:PackIcon Kind="Menu" Width="20" Height="20" VerticalAlignment="Stretch"/>
-                        </StackPanel>
-                    </Button>
+                <!-- 전체 화면 클릭 감지 -->
+                <Border Background="Transparent">
+                    <i:Interaction.Triggers>
+                        <i:EventTrigger EventName="MouseDown">
+                            <i:InvokeCommandAction Command="{Binding CloseAllPopupsCommand}"/>
+                        </i:EventTrigger>
+                    </i:Interaction.Triggers>
 
-                    <!-- Popup -->
-                    <Popup IsOpen="{Binding IsPopupOpen}" Placement="Bottom" PlacementTarget="{Binding ElementName=OptionsButton}">
-                        <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
-                            <StackPanel>
-                                <!-- 선택지들 -->
-                                <Button Content="멤버 내보내기" Command="{Binding Option1Command}" Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  Margin="0,5"/>
-                                <Button Content="방장 위임" Command="{Binding Option2Command}" Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  Margin="0,5"/>
-                                <Button Content="채팅방 나가기" Command="{Binding Option3Command}" Margin="0,5"/>
-                            </StackPanel>
-                        </Border>
-                    </Popup>
-                </StackPanel>
+                    <Grid>
+                        <!-- 상단 메뉴 버튼 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="10">
+                            <Button x:Name="MenuButton" Command="{Binding TogglePopupCommand}">
+                                <materialDesign:PackIcon Kind="Menu" Width="20" Height="20"/>
+                            </Button>
+
+                            <!-- 첫 번째 Popup (기본 옵션) -->
+                            <Popup x:Name="MainOptionsPopup"
+                   IsOpen="{Binding IsMainPopupOpen}"
+                   Placement="Bottom"
+                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   HorizontalOffset="52"
+                   VerticalOffset="-32">
+                                <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
+                                    <StackPanel>
+                                        <Button Content="멤버 내보내기" 
+                                Command="{Binding Option1Command}" 
+                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  
+                                Margin="0,5"/>
+                                        <Button Content="방장 위임" 
+                                Command="{Binding ToggleDelegatePopupCommand}" 
+                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  
+                                Margin="0,5"/>
+                                        <Button Content="채팅방 나가기" 
+                                Command="{Binding Option3Command}" 
+                                Margin="0,5"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+
+                            <!-- 두 번째 Popup (방장 위임) -->
+                            <Popup x:Name="DelegatePopup"
+                   IsOpen="{Binding IsDelegatePopupOpen}"
+                   Placement="Bottom"
+                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   HorizontalOffset="52"
+                   VerticalOffset="-32">
+                                <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock Text="방장 위임 목록" FontWeight="Bold" Margin="0,5"/>
+                                        <!-- 예: 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
+                                        <ListBox ItemsSource="{Binding DelegateCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
+                                        <Button Content="위임하기" Command="{Binding ConfirmDelegateCommand}" Margin="0,5"/>
+                                        <Button Content="취소" Command="{Binding CancelDelegateCommand}" Margin="0,5"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Grid>
         </StackPanel>
-        
+
         <ListView x:Name="messageListView" VirtualizingStackPanel.IsVirtualizing="False"
           VirtualizingStackPanel.ScrollUnit="Pixel" Grid.Row="1" Margin="0,0,0,10">
             <ItemsControl x:Name="MessageList" ItemsSource="{Binding MessageList}">

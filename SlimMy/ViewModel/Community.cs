@@ -355,7 +355,7 @@ namespace SlimMy.ViewModel
                 }
 
                 // 문자열을 ChatUserList 객체로 변환
-                List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id)).ToList();
+                List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id, "")).ToList();
 
                 Community.GroupChattingReceivers = userList;
 

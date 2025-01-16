@@ -10,6 +10,7 @@ using Oracle.ManagedDataAccess.Client;
 using SlimMy.Model;
 using SlimMy.View;
 using Dapper;
+using System.Diagnostics;
 
 namespace SlimMy
 {
@@ -537,6 +538,46 @@ namespace SlimMy
                                 chatRoom.ChatRoomName = reader.GetString(1);
                                 chatRoom.Description = reader.GetString(2);
                                 chatRoom.Category = reader.GetString(3);
+                                chatRooms.Add(chatRoom);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+            return chatRooms;
+        }
+
+
+        // 같은 채팅방 모든 닉네임 출력
+        public IEnumerable<ChatUserList> SelectChatUserNickName(Guid userid)
+        {
+            var chatRooms = new List<ChatUserList>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    byte[] chatRoomIdBytes = userid.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string sql = "SELECT u.userid, u.nickname FROM users u INNER JOIN userchatrooms ucr ON ucr.userid = u.userid WHERE ucr.chatroomid = :ChatRoomId";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("ChatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                string userId = BitConverter.ToString((byte[])reader["userid"]);
+                                string nickName = reader["nickname"].ToString();
+
+                                ChatUserList chatRoom = new ChatUserList(userId, nickName);
                                 chatRooms.Add(chatRoom);
                             }
                         }

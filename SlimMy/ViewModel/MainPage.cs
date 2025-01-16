@@ -422,7 +422,7 @@ namespace SlimMy.ViewModel
                             if (string.IsNullOrEmpty(el))
                                 continue;
 
-                            tempUserList.Add(new ChatUserList(el));
+                            tempUserList.Add(new ChatUserList(el,""));
                         }
 
                         // 사용자 목록을 출력하기 위한 ChangeUserListView에 데이터 전송

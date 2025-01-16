@@ -40,6 +40,18 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private ObservableCollection<ChatUserList> delegateCandidateList = new ObservableCollection<ChatUserList>();
+
+        public ObservableCollection<ChatUserList> DelegateCandidateList
+        {
+            get => delegateCandidateList;
+            set
+            {
+                delegateCandidateList = value;
+                OnPropertyChanged();
+            }
+        }
+
         private string _messageText;
         public string MessageText
         {
@@ -66,25 +78,33 @@ namespace SlimMy.ViewModel
             }
         }
 
-        private bool _isPopupOpen;
-
-        // Popup 열림 상태 관리
-        public bool IsPopupOpen
+        // 팝업 열림/닫힘을 각각 다른 속성으로
+        private bool _isMainPopupOpen;
+        public bool IsMainPopupOpen
         {
-            get => _isPopupOpen;
-            set
-            {
-                _isPopupOpen = value;
-                OnPropertyChanged(nameof(IsPopupOpen));
-            }
+            get => _isMainPopupOpen;
+            set { _isMainPopupOpen = value; OnPropertyChanged(); }
         }
+
+        private bool _isDelegatePopupOpen;
+        public bool IsDelegatePopupOpen
+        {
+            get => _isDelegatePopupOpen;
+            set { _isDelegatePopupOpen = value; OnPropertyChanged(); }
+        }
+
 
         public ICommand UpdateHostCommand { get; }
         public ICommand KickMemberCommand { get; }
         public ICommand LeaveRoomCommand { get; }
 
-        // Commands
+        // 채팅방 설정
         public ICommand TogglePopupCommand { get; }
+
+        public ICommand ToggleDelegatePopupCommand { get; }
+
+        public ICommand CloseAllPopupsCommand { get; }
+
         public ICommand Option1Command { get; }
         public ICommand Option2Command { get; }
         public ICommand Option3Command { get; }
@@ -93,7 +113,7 @@ namespace SlimMy.ViewModel
         private void ExecuteOption(string option)
         {
             MessageBox.Show($"{option} Selected");
-            IsPopupOpen = false; // 선택 후 Popup 닫기
+            IsMainPopupOpen = false; // 선택 후 Popup 닫기
         }
 
         // 1명 채팅방 입장
@@ -161,11 +181,32 @@ namespace SlimMy.ViewModel
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
-            UpdateHostCommand = new RelayCommand(UpdateHost);
+            // 방장 위임 후보 리스트 초기화
+            UpdateHost();
+
             // KickMemberCommand = new RelayCommand(KickMember);
             // LeaveRoomCommand = new RelayCommand(LeaveRoom);
 
-            TogglePopupCommand = new RelayCommand(_ => IsPopupOpen = !IsPopupOpen);
+            // Toggle 메인 팝업
+            TogglePopupCommand = new RelayCommand(_ =>
+            {
+                IsMainPopupOpen = !IsMainPopupOpen;
+                if (IsMainPopupOpen) IsDelegatePopupOpen = false;
+            });
+
+            // Toggle 방장 위임 팝업
+            ToggleDelegatePopupCommand = new RelayCommand(_ =>
+            {
+                IsDelegatePopupOpen = !IsDelegatePopupOpen;
+                if (IsDelegatePopupOpen) IsMainPopupOpen = false;
+            });
+
+            // 모든 팝업 닫기
+            CloseAllPopupsCommand = new RelayCommand(_ =>
+            {
+                IsMainPopupOpen = false;
+                IsDelegatePopupOpen = false;
+            });
             Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
             Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
             Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
@@ -251,7 +292,30 @@ namespace SlimMy.ViewModel
 
                 Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
-                TogglePopupCommand = new RelayCommand(_ => IsPopupOpen = !IsPopupOpen);
+                // 방장 위임 후보 리스트 초기화
+                UpdateHost();
+
+                // Toggle 메인 팝업
+                TogglePopupCommand = new RelayCommand(_ =>
+                {
+                    IsMainPopupOpen = !IsMainPopupOpen;
+                    if (IsMainPopupOpen) IsDelegatePopupOpen = false;
+                });
+
+                // Toggle 방장 위임 팝업
+                ToggleDelegatePopupCommand = new RelayCommand(_ =>
+                {
+                    IsDelegatePopupOpen = !IsDelegatePopupOpen;
+                    if (IsDelegatePopupOpen) IsMainPopupOpen = false;
+                });
+
+                // 모든 팝업 닫기
+                CloseAllPopupsCommand = new RelayCommand(_ =>
+                {
+                    IsMainPopupOpen = false;
+                    IsDelegatePopupOpen = false;
+                });
+
                 Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
                 Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
                 Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
@@ -416,9 +480,27 @@ namespace SlimMy.ViewModel
         }
 
         // 방장 변경하기(= 위임)
-        private void UpdateHost(object parameter)
+        private void UpdateHost()
         {
+            // 같은 채팅방의 사용자 닉네임을 담은 리스트
+            DelegateCandidateList = new ObservableCollection<ChatUserList>();
 
+            // 현재 채팅방 ID 가져오기 (예제)
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+            Guid currentChatRoomId = currentChattingData.ChatRoomId;
+
+            // SelectChatUserNickName으로 데이터 가져오기
+            var usersInChatRoom = _repo.SelectChatUserNickName(currentChatRoomId);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                // DelegateCandidateList에 추가
+                foreach (var user in usersInChatRoom)
+                {
+                    DelegateCandidateList.Add(user);
+                }
+            });
+
+            OnPropertyChanged(nameof(DelegateCandidateList));
         }
 
         //protected override void OnClosing(CancelEventArgs e)
