@@ -78,6 +78,19 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 방장 권환 위임
+        private ChatUserList _userSelectedItem; // 사용자 권한 정보
+
+        public ChatUserList UserSelectedItem
+        {
+            get => _userSelectedItem;
+            set
+            {
+                _userSelectedItem = value;
+                OnPropertyChanged(nameof(_userSelectedItem));
+            }
+        }
+
         // 팝업 열림/닫힘을 각각 다른 속성으로
         private bool _isMainPopupOpen;
         public bool IsMainPopupOpen
@@ -104,6 +117,7 @@ namespace SlimMy.ViewModel
         public ICommand ToggleDelegatePopupCommand { get; }
 
         public ICommand CloseAllPopupsCommand { get; }
+        public ICommand ConfirmDelegateCommand { get; }
 
         public ICommand Option1Command { get; }
         public ICommand Option2Command { get; }
@@ -207,6 +221,10 @@ namespace SlimMy.ViewModel
                 IsMainPopupOpen = false;
                 IsDelegatePopupOpen = false;
             });
+
+            // 방장 위임 기능
+            ConfirmDelegateCommand = new Command(UpdateHostBtn);
+
             Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
             Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
             Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
@@ -278,6 +296,7 @@ namespace SlimMy.ViewModel
                     });
                     //this.Title = enteredUser + "과의 채팅방";
 
+                    // 방장이면 멤버 내보내기/방장 위임 출력
                     if (currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId).ToString())
                     {
                         IsHost = true; // 방장
@@ -315,6 +334,9 @@ namespace SlimMy.ViewModel
                     IsMainPopupOpen = false;
                     IsDelegatePopupOpen = false;
                 });
+
+                // 방장 위임 기능
+                ConfirmDelegateCommand = new Command(UpdateHostBtn);
 
                 Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
                 Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
@@ -479,13 +501,13 @@ namespace SlimMy.ViewModel
             });
         }
 
-        // 방장 변경하기(= 위임)
+        // 방장 위임 후보 리스트
         private void UpdateHost()
         {
             // 같은 채팅방의 사용자 닉네임을 담은 리스트
             DelegateCandidateList = new ObservableCollection<ChatUserList>();
 
-            // 현재 채팅방 ID 가져오기 (예제)
+            // 현재 채팅방 ID 가져오기
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             Guid currentChatRoomId = currentChattingData.ChatRoomId;
 
@@ -501,6 +523,39 @@ namespace SlimMy.ViewModel
             });
 
             OnPropertyChanged(nameof(DelegateCandidateList));
+        }
+
+        // 방장 위임 기능
+        private void UpdateHostBtn(object parameter)
+        {
+            try
+            {
+                ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+
+                // 방장이었던 사용자는 isowner = 0, 지목 당한 사용자는 isowner = 1
+                _repo.UpdateHost(currentChattingData.ChatRoomId, UserSelectedItem.UsersID);
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show(UserSelectedItem.UsersNickName + "에게 권한 위임 완료");
+                });
+
+                // 현재 사용자가 방장인지 확인하여 IsHost 업데이트
+                User currentUser = UserSession.Instance.CurrentUser;
+                IsHost = currentUser.UserId == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId);
+
+                // 위임 팝업 닫기
+                IsMainPopupOpen = false;
+
+                Debug.WriteLine("ChatRoomId : " + currentChattingData.ChatRoomId.ToString() + "\nUsersID : " + UserSelectedItem.UsersID);
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    MessageBox.Show("ERROR : " + ex);
+                });
+            }
         }
 
         //protected override void OnClosing(CancelEventArgs e)

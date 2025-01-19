@@ -368,10 +368,10 @@ namespace SlimMy.ViewModel
                     // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
                     // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
                     // 두명 이상일 때 "#"가 포함되기 때문에 #가 포함된 채팅방만 창이 실행되는거였음
-                    if (!groupChattingUserStrData.Contains(item.UsersName))
+                    if (!groupChattingUserStrData.Contains(item.UsersID))
                     {
                         groupChattingUserStrData += "#";
-                        groupChattingUserStrData += item.UsersName;
+                        groupChattingUserStrData += item.UsersID;
                     }
                     else
                     {

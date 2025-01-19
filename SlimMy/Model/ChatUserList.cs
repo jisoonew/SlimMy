@@ -9,12 +9,12 @@ namespace SlimMy.Model
 {
     public class ChatUserList
     {
-        public string UsersName { get; set; }
+        public string UsersID { get; set; }
         public string UsersNickName { get; set; } // NickName 속성 추가
 
-        public ChatUserList(string name, string nickName)
+        public ChatUserList(string userId, string nickName)
         {
-            this.UsersName = name;
+            this.UsersID = userId;
             this.UsersNickName = nickName;
         }
     }

@@ -290,7 +290,7 @@ namespace SlimMy
                 try
                 {
                     connection.Open();
-                    string sql = "SELECT USERID FROM userchatrooms WHERE CHATROOMID = :chatRoomId AND CREATEDAT = ( SELECT MIN(CREATEDAT) FROM userchatrooms WHERE CHATROOMID = :chatRoomId )";
+                    string sql = "SELECT USERID FROM userchatrooms WHERE CHATROOMID = :chatRoomId AND isowner = 1";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
@@ -695,6 +695,53 @@ namespace SlimMy
 
                         // SQL 명령문을 데이터베이스에 실행하도록 지시하는 메서드
                         command.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        // 방장 위임
+        public void UpdateHost(Guid chatroomid, string updateHostID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    // GUID -> 바이트 배열로 변환
+                    byte[] chatroomIdBytes = chatroomid.ToByteArray();
+                    byte[] updateHostBytes = updateHostID.Split('-')
+                                                         .Select(hex => Convert.ToByte(hex, 16))
+                                                         .ToArray(); // 하이픈으로 구분된 문자열을 바이트 배열로 변환
+
+                    // 기존 방장의 ISOWNER 제거
+                    string sql1 = @"
+    UPDATE USERCHATROOMS
+    SET ISOWNER = 0
+    WHERE CHATROOMID = :chatroomIdBytes AND ISOWNER = 1";
+
+                    // 새로운 방장의 ISOWNER 설정
+                    string sql2 = @"
+    UPDATE USERCHATROOMS
+    SET ISOWNER = 1
+    WHERE USERID = :updateHostBytes AND CHATROOMID = :chatroomIdBytes";
+
+                    using (OracleCommand command1 = new OracleCommand(sql1, connection))
+                    {
+                        command1.Parameters.Add(new OracleParameter("chatroomIdBytes", OracleDbType.Raw, chatroomIdBytes, ParameterDirection.Input));
+                        command1.ExecuteNonQuery();
+                    }
+
+                    using (OracleCommand command2 = new OracleCommand(sql2, connection))
+                    {
+                        command2.Parameters.Add(new OracleParameter("updateHostBytes", OracleDbType.Raw, updateHostBytes, ParameterDirection.Input));
+                        command2.Parameters.Add(new OracleParameter("chatroomIdBytes", OracleDbType.Raw, chatroomIdBytes, ParameterDirection.Input));
+                        command2.ExecuteNonQuery();
                     }
                 }
                 catch (Exception ex)
