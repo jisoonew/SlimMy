@@ -553,7 +553,7 @@ namespace SlimMy
 
 
         // 같은 채팅방 모든 닉네임 출력
-        public IEnumerable<ChatUserList> SelectChatUserNickName(Guid userid)
+        public IEnumerable<ChatUserList> SelectChatUserNickName(Guid chatRoomId)
         {
             var chatRooms = new List<ChatUserList>();
 
@@ -563,7 +563,7 @@ namespace SlimMy
                 {
                     connection.Open();
 
-                    byte[] chatRoomIdBytes = userid.ToByteArray(); // GUID를 바이트 배열로 변환
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray(); // GUID를 바이트 배열로 변환
 
                     string sql = "SELECT u.userid, u.nickname FROM users u INNER JOIN userchatrooms ucr ON ucr.userid = u.userid WHERE ucr.chatroomid = :ChatRoomId";
                     using (OracleCommand command = new OracleCommand(sql, connection))
@@ -574,10 +574,13 @@ namespace SlimMy
                         {
                             while (reader.Read())
                             {
-                                string userId = BitConverter.ToString((byte[])reader["userid"]);
+                                // 바이트 배열을 GUID로 변환한 후 표준 문자열 형식으로 변환
+                                byte[] userIdBytes = (byte[])reader["userid"];
+                                string userIdStr = new Guid(userIdBytes).ToString();
+
                                 string nickName = reader["nickname"].ToString();
 
-                                ChatUserList chatRoom = new ChatUserList(userId, nickName);
+                                ChatUserList chatRoom = new ChatUserList(userIdStr, nickName);
                                 chatRooms.Add(chatRoom);
                             }
                         }
@@ -715,9 +718,10 @@ namespace SlimMy
 
                     // GUID -> 바이트 배열로 변환
                     byte[] chatroomIdBytes = chatroomid.ToByteArray();
-                    byte[] updateHostBytes = updateHostID.Split('-')
-                                                         .Select(hex => Convert.ToByte(hex, 16))
-                                                         .ToArray(); // 하이픈으로 구분된 문자열을 바이트 배열로 변환
+
+                    // GUID 형식 확인 및 변환
+                    Guid updateHostGuid = Guid.Parse(updateHostID); // GUID로 변환
+                    byte[] updateHostBytes = updateHostGuid.ToByteArray(); // GUID를 byte[]로 변환
 
                     // 기존 방장의 ISOWNER 제거
                     string sql1 = @"
