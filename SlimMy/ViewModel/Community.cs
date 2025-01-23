@@ -383,8 +383,7 @@ namespace SlimMy.ViewModel
 
                 byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
-                currentUser.Client.GetStream().Write(chattingStartByte, 0, chattingStartByte.Length);
-
+                currentUser.Client.GetStream().WriteAsync(chattingStartByte, 0, chattingStartByte.Length);
 
             }
             catch (Exception ex)

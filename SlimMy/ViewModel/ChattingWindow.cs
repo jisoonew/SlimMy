@@ -52,6 +52,8 @@ namespace SlimMy.ViewModel
             }
         }
 
+        public ICommand CancelDelegateCommand { get; private set; }
+
         private string _messageText;
         public string MessageText
         {
@@ -543,6 +545,15 @@ namespace SlimMy.ViewModel
                 // 현재 사용자가 방장인지 확인하여 IsHost 업데이트
                 User currentUser = UserSession.Instance.CurrentUser;
                 IsHost = currentUser.UserId == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId);
+
+                // 서버에 방장 변경 업데이트
+                string parsedMessage = "";
+                string parsedChatRoomId = currentChattingData.ChatRoomId.ToString();
+
+                // 채팅방 아이디와 위임 받을 사용자 아이디
+                parsedMessage = string.Format("HostChanged:{0}:{1}", parsedChatRoomId, UserSelectedItem.UsersID);
+                byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
+                client.GetStream().Write(byteData, 0, byteData.Length);
 
                 // 위임 팝업 닫기
                 IsMainPopupOpen = false;

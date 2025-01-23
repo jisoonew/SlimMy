@@ -404,10 +404,10 @@ namespace SlimMy.ViewModel
                     chattingPartner = splitedMsg[0]; // "관리자"
                     message = splitedMsg[1]; // "TEST"
 
-                    // 관리자
+                    // chattingPartner -> 사용자 아이디 출력
                     // MessageBox.Show("chattingPartner : " + chattingPartner);
 
-                    // message -> $닉네임1$닉네임2$닉네임3
+                    // message -> <> 안에 있는 내용 출력
                     // MessageBox.Show("message : " + message);
 
                     // 관리자가 보낸 하트비트 메시지인 경우
@@ -436,12 +436,16 @@ namespace SlimMy.ViewModel
                     // 그룹채팅
                     // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
                     // 문자열을 # 문자를 기준으로 나누는 메서드
-                    else if (chattingPartner.Contains("#"))
+                    else if (chattingPartner.Contains("#") || chattingPartner.Contains(":"))
                     {
                         //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
 
+                        // 여기서부터 시작 서버의 방장 내용 가져옴
+                        // MessageBox.Show("chattingPartner : " + chattingPartner);
+                        // MessageBox.Show("message : " + message);
+
                         // '#' 기준으로 수신자들을 분리
-                        string[] splitedChattingPartner = chattingPartner.Split('#');
+                        string[] splitedChattingPartner = chattingPartner.Split("#");
                         List<string> chattingPartners = new List<string>();
 
                         foreach (var el in splitedChattingPartner)
