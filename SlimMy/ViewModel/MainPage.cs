@@ -422,7 +422,7 @@ namespace SlimMy.ViewModel
                             if (string.IsNullOrEmpty(el))
                                 continue;
 
-                            tempUserList.Add(new ChatUserList(el,""));
+                            tempUserList.Add(new ChatUserList(el, ""));
                         }
 
                         // 사용자 목록을 출력하기 위한 ChangeUserListView에 데이터 전송
@@ -441,8 +441,8 @@ namespace SlimMy.ViewModel
                         //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
 
                         // 여기서부터 시작 서버의 방장 내용 가져옴
-                        // MessageBox.Show("chattingPartner : " + chattingPartner);
-                        // MessageBox.Show("message : " + message);
+                        MessageBox.Show("chattingPartner : " + chattingPartner);
+                        MessageBox.Show("message : " + message);
 
                         // '#' 기준으로 수신자들을 분리
                         string[] splitedChattingPartner = chattingPartner.Split("#");
