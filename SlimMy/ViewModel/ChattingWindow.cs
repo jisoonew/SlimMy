@@ -503,6 +503,29 @@ namespace SlimMy.ViewModel
             });
         }
 
+        public void ReceiveHostChangedMessage(List<string> hostData, string message)
+        {
+            if (hostData == null || hostData.Count < 2)
+            {
+                Debug.WriteLine("hostData가 null이거나 값이 충분하지 않습니다.");
+                return;
+            }
+
+            string hostChangedChattingID = hostData[0];
+            string hostChangedUserID = hostData[1];
+
+            Debug.WriteLine($"hostChangedChattingID: {hostChangedChattingID}, hostChangedUserID: {hostChangedUserID}, message: {message}");
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                MessageList.Add(new ChatMessage
+                {
+                    Message = $"{hostChangedChattingID}: {hostChangedUserID} 도착??",
+                    Alignment = TextAlignment.Left
+                });
+            });
+        }
+
         // 방장 위임 후보 리스트
         private void UpdateHost()
         {
@@ -558,7 +581,7 @@ namespace SlimMy.ViewModel
                 // 위임 팝업 닫기
                 IsMainPopupOpen = false;
 
-                Debug.WriteLine("ChatRoomId : " + currentChattingData.ChatRoomId.ToString() + "\nUsersID : " + UserSelectedItem.UsersID);
+                // Debug.WriteLine("ChatRoomId : " + currentChattingData.ChatRoomId.ToString() + "\nUsersID : " + UserSelectedItem.UsersID);
             }
             catch (Exception ex)
             {

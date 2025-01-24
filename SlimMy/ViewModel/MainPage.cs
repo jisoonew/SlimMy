@@ -436,15 +436,12 @@ namespace SlimMy.ViewModel
                     // 그룹채팅
                     // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
                     // 문자열을 # 문자를 기준으로 나누는 메서드
-                    else if (chattingPartner.Contains("#") || chattingPartner.Contains(":"))
+                    else if (chattingPartner.Contains("#"))
                     {
                         //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
 
-                        // 여기서부터 시작 서버의 방장 내용 가져옴
-                        MessageBox.Show("chattingPartner : " + chattingPartner);
-                        MessageBox.Show("message : " + message);
-
                         // '#' 기준으로 수신자들을 분리
+                        // 상대 사용자가 전송한 메시지
                         string[] splitedChattingPartner = chattingPartner.Split("#");
                         List<string> chattingPartners = new List<string>();
 
@@ -455,11 +452,13 @@ namespace SlimMy.ViewModel
                             chattingPartners.Add(el);
                         }
 
-                        // 발신자는 리스트의 첫번째 요소
+                        // 메시지를 발송한 발신자는 리스트의 첫번째 요소
                         string sender = chattingPartners[0];
 
                         // 채팅 방 번호 가져오기
                         int chattingRoomNum = GetChattingRoomNum(chattingPartners);
+
+                        //MessageBox.Show("chattingPartner : " + chattingPartner + "\n" + message);
 
                         // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
                         // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
@@ -482,7 +481,53 @@ namespace SlimMy.ViewModel
                             // 이미 존재하는 채팅 스레드가 활성화된 경우 메시지를 전달
                             if (groupChattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
                             {
-                                groupChattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, message);
+                                if (chattingPartner.Contains("#"))
+                                {
+                                    lock (lockObj)
+                                    {
+                                        groupChattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, message);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 처리한 메시지 리스트를 비우기
+                        messageList.Clear();
+                        return;
+                    }
+
+                    // 방장 위임
+                    else if (chattingPartner.Contains(":"))
+                    {
+                        // 방장 위임 : 채팅방 아이디, 위임 받는 사용자 아이디
+                        string[] hostChangedPartner = chattingPartner.Split(":");
+                        List<string> hostChangedList = new List<string>();
+
+                        foreach (var el1 in hostChangedPartner)
+                        {
+                            if (string.IsNullOrEmpty(el1))
+                                continue;
+                            hostChangedList.Add(el1);
+                        }
+
+                        // 방장 위임 하는 채팅방 번호 가져오기
+                        int hostChangedChattingRoomNum = GetHostChangedChattingRoomNum(hostChangedList[0]);
+
+                        // 방장 위임 하는 채팅방 생성 여부
+                        if (hostChangedChattingRoomNum != 0)
+                        {
+                            // 이미 존재하는 채팅 스레드가 활성화된 경우 메시지를 전달
+                            if (groupChattingThreadDic[hostChangedChattingRoomNum].chattingThread.IsAlive)
+                            {
+                                if (chattingPartner.Contains(":"))
+                                {
+                                    lock (lockObj)
+                                    {
+                                        // hostChangedList-> 채팅방 아이디:사용자 아이디
+                                        // message-> HostChanged
+                                        groupChattingThreadDic[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
+                                    }
+                                }
                             }
                         }
 
@@ -526,7 +571,21 @@ namespace SlimMy.ViewModel
             return -1;
         }
 
+
         private Dictionary<string, View.ChattingWindow> chattingWindows = new Dictionary<string, View.ChattingWindow>();
+
+        private int GetHostChangedChattingRoomNum(string chattingPartners)
+        {
+            foreach (var item in groupChattingThreadDic)
+            {
+                // 채팅 방 번호가 요청한 채팅 방 멤버와 일치하는지 확인
+                if (chattingWindows.ContainsKey(chattingPartners))
+                    return item.Value.chattingRoomNum; // 일치하는 채팅 방 번호를 반환
+            }
+
+            // 일치하는 채팅 방 번호가 없는 경우 -1을 반환
+            return -1;
+        }
 
         private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
 
