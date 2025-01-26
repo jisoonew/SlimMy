@@ -503,6 +503,15 @@ namespace SlimMy.ViewModel
             });
         }
 
+        private ChatUserList _chatUserList;
+
+        public ChatUserList ChatUserList
+        {
+            get { return _chatUserList; }
+            set { _chatUserList = value; OnPropertyChanged(nameof(User)); }
+        }
+
+        // 방장 위임 알림
         public void ReceiveHostChangedMessage(List<string> hostData, string message)
         {
             if (hostData == null || hostData.Count < 2)
@@ -511,19 +520,29 @@ namespace SlimMy.ViewModel
                 return;
             }
 
-            string hostChangedChattingID = hostData[0];
+            // 방장 위임을 진행하는 채팅방 아이디
+            string hostChangedChattingRoomID = hostData[0];
+            // 방장 위임을 받는 사용자 아이디
             string hostChangedUserID = hostData[1];
 
-            Debug.WriteLine($"hostChangedChattingID: {hostChangedChattingID}, hostChangedUserID: {hostChangedUserID}, message: {message}");
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
-            Application.Current.Dispatcher.Invoke(() =>
+            // 현재 입장한 채팅방과 위임을 진행하는 채팅방이 일치하면 방장 위임 채팅방 알림
+            if (currentChattingData.ChatRoomId.ToString() == hostChangedChattingRoomID)
             {
-                MessageList.Add(new ChatMessage
+
+                string hostUserNick = _repo.SendNickName(hostChangedUserID);
+
+                // 방장 위임 문구 출력
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Message = $"{hostChangedChattingID}: {hostChangedUserID} 도착??",
-                    Alignment = TextAlignment.Left
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{hostUserNick}님이 새로운 방장이 되었습니다.",
+                        Alignment = TextAlignment.Left
+                    });
                 });
-            });
+            }
         }
 
         // 방장 위임 후보 리스트

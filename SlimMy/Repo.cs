@@ -581,6 +581,7 @@ namespace SlimMy
                                 string nickName = reader["nickname"].ToString();
 
                                 ChatUserList chatRoom = new ChatUserList(userIdStr, nickName);
+                                
                                 chatRooms.Add(chatRoom);
                             }
                         }

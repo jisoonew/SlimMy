@@ -11,6 +11,7 @@ namespace SlimMy.Model
     {
         public string UsersID { get; set; }
         public string UsersNickName { get; set; } // NickName 속성 추가
+        public string HostUserID { get; set; }
 
         public ChatUserList(string userId, string nickName)
         {
