@@ -64,7 +64,7 @@
                                 Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}, Mode=TwoWay}"  
                                 Margin="0,5"/>
                                         <Button Content="채팅방 나가기" 
-                                Command="{Binding Option3Command}" 
+                                Command="{Binding ExitChatRoomCommand}" 
                                 Margin="0,5"/>
                                     </StackPanel>
                                 </Border>

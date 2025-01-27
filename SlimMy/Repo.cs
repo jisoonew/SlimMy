@@ -841,6 +841,31 @@ namespace SlimMy
             }
         }
 
+        // 채팅방 나가기
+        public void ExitChatRoom(Guid userID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = "delete from userchatrooms where userid = :userid";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+
+                        command.ExecuteNonQuery();
+                    }
+                } 
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                }
+            }
+        }
+
         public User GetUserData(string email)
         {
             // 데이터베이스에서 사용자 데이터 로드

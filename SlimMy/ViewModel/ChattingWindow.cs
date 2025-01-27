@@ -121,6 +121,9 @@ namespace SlimMy.ViewModel
         public ICommand CloseAllPopupsCommand { get; }
         public ICommand ConfirmDelegateCommand { get; }
 
+        // 채팅방 나가기
+        public ICommand ExitChatRoomCommand { get; }
+
         public ICommand Option1Command { get; }
         public ICommand Option2Command { get; }
         public ICommand Option3Command { get; }
@@ -226,6 +229,9 @@ namespace SlimMy.ViewModel
 
             // 방장 위임 기능
             ConfirmDelegateCommand = new Command(UpdateHostBtn);
+
+            // 채팅방 나가기
+            ExitChatRoomCommand = new Command(ExitChatRoom);
 
             Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
             Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
@@ -339,6 +345,9 @@ namespace SlimMy.ViewModel
 
                 // 방장 위임 기능
                 ConfirmDelegateCommand = new Command(UpdateHostBtn);
+
+                // 채팅방 나가기
+                ExitChatRoomCommand = new Command(ExitChatRoom);
 
                 Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
                 Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
@@ -631,6 +640,25 @@ namespace SlimMy.ViewModel
                     MessageBox.Show("ERROR : " + ex);
                 });
             }
+        }
+
+        // 채팅방 나가기
+        public void ExitChatRoom(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+            ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
+
+            // 현재 채팅방의 방장 아이디 가져오기
+            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId);
+            
+            // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
+            if (selectUserID != currentUser.UserId)
+            {
+                // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
+                _repo.ExitChatRoom(currentUser.UserId);
+            }
+
+            // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
         }
 
         //protected override void OnClosing(CancelEventArgs e)
