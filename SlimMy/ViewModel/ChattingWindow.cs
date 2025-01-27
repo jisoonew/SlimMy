@@ -511,7 +511,7 @@ namespace SlimMy.ViewModel
             set { _chatUserList = value; OnPropertyChanged(nameof(User)); }
         }
 
-        // 방장 위임 알림
+        // 방장 위임 알림 출력
         public void ReceiveHostChangedMessage(List<string> hostData, string message)
         {
             if (hostData == null || hostData.Count < 2)
@@ -527,12 +527,12 @@ namespace SlimMy.ViewModel
 
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
+            // 방장 위임을 받는 사용자 닉네임
+            string hostUserNick = _repo.SendNickName(hostChangedUserID);
+
             // 현재 입장한 채팅방과 위임을 진행하는 채팅방이 일치하면 방장 위임 채팅방 알림
             if (currentChattingData.ChatRoomId.ToString() == hostChangedChattingRoomID)
             {
-
-                string hostUserNick = _repo.SendNickName(hostChangedUserID);
-
                 // 방장 위임 문구 출력
                 Application.Current.Dispatcher.Invoke(() =>
                 {
@@ -543,6 +543,22 @@ namespace SlimMy.ViewModel
                     });
                 });
             }
+
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            // 위임 팝업
+            IsDelegatePopupOpen = false;
+
+            // 채팅방 메인 팝업
+            IsMainPopupOpen = false;
+
+            // 위임 받는 사용자와 현재 로그인한 사용자가 같은가?
+            if (currentUser.UserId.ToString() == hostChangedUserID)
+            {
+                // 방장 위임 버튼 off
+                IsHost = true;
+            }
+
         }
 
         // 방장 위임 후보 리스트
@@ -569,7 +585,7 @@ namespace SlimMy.ViewModel
             OnPropertyChanged(nameof(DelegateCandidateList));
         }
 
-        // 방장 위임 기능
+        // 방장 위임 버튼
         private void UpdateHostBtn(object parameter)
         {
             try
@@ -596,6 +612,12 @@ namespace SlimMy.ViewModel
                 parsedMessage = string.Format("HostChanged:{0}:{1}", parsedChatRoomId, UserSelectedItem.UsersID);
                 byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
                 client.GetStream().Write(byteData, 0, byteData.Length);
+
+                // 위임 받을 사용자 닉네임
+                string hostUserNick = _repo.SendNickName(UserSelectedItem.UsersID);
+
+                // 방장 위임 공지 DB 저장
+                _repo.InsertMessage(Guid.Parse(parsedChatRoomId), Guid.Parse(UserSelectedItem.UsersID), $"{hostUserNick}님이 새로운 방장이 되었습니다.");
 
                 // 위임 팝업 닫기
                 IsMainPopupOpen = false;

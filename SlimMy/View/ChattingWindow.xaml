@@ -48,7 +48,7 @@
 
                             <!-- 첫 번째 Popup (기본 옵션) -->
                             <Popup x:Name="MainOptionsPopup"
-                   IsOpen="{Binding IsMainPopupOpen}"
+                   IsOpen="{Binding IsMainPopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
                    PlacementTarget="{Binding ElementName=OptionsButton}"
                    HorizontalOffset="52"
@@ -57,11 +57,11 @@
                                     <StackPanel>
                                         <Button Content="멤버 내보내기" 
                                 Command="{Binding Option1Command}" 
-                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  
+                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}"  
                                 Margin="0,5"/>
                                         <Button Content="방장 위임" 
                                 Command="{Binding ToggleDelegatePopupCommand}" 
-                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}}"  
+                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}, Mode=TwoWay}"  
                                 Margin="0,5"/>
                                         <Button Content="채팅방 나가기" 
                                 Command="{Binding Option3Command}" 
@@ -72,7 +72,7 @@
 
                             <!-- 두 번째 Popup (방장 위임) -->
                             <Popup x:Name="DelegatePopup"
-                   IsOpen="{Binding IsDelegatePopupOpen}"
+                   IsOpen="{Binding IsDelegatePopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
                    PlacementTarget="{Binding ElementName=OptionsButton}"
                    HorizontalOffset="52"
