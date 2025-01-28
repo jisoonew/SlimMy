@@ -283,47 +283,61 @@ namespace SlimMy
         }
 
         // 채팅방 아이디로 채팅방 생성한 사용자 아이디 찾기
-        public Guid GetHostUserIdByRoomId(Guid chatRoomId)
+        public Guid GetHostUserIdByRoomId(String chatRoomId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
                     connection.Open();
+
+                    // Guid를 byte[]로 변환
+                    byte[] chatRoomIdBytes = Guid.Parse(chatRoomId).ToByteArray();
+
+                    string chatRoomIdHex = BitConverter.ToString(chatRoomIdBytes).Replace("-", "");
+
                     string sql = "SELECT USERID FROM userchatrooms WHERE CHATROOMID = :chatRoomId AND isowner = 1";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
-                        // Guid를 byte[]로 변환
-                        byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
-                        command.Parameters.Add(new OracleParameter("chatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
-
-                        // ExecuteScalar() 메서드는 object 타입을 반환하므로,
-                        // 이를 byte[]로 캐스팅하기 전에 null 체크
-                        object result = command.ExecuteScalar();
-
-                        if (result != null && result is byte[] userIdBytes)
+                        // 매개변수 설정
+                        command.Parameters.Add(new OracleParameter
                         {
-                            // byte[]를 Guid로 변환
-                            Guid userId = new Guid(userIdBytes);
-                            return userId;
-                        }
-                        else
+                            ParameterName = "chatRoomId",
+                            OracleDbType = OracleDbType.Raw,
+                            Value = chatRoomIdBytes,
+                            Size = 16 // RAW(16 BYTE)와 맞춤
+                        });
+
+                        // OracleDataReader를 사용해 결과 읽기
+                        using (OracleDataReader reader = command.ExecuteReader())
                         {
-                            throw new Exception("방장 아이디를 가져오는 데 실패했습니다.");
+                            if (reader.Read())
+                            {
+                                // 결과에서 USERID를 가져와 Guid로 변환
+                                byte[] userIdBytes = (byte[])reader["USERID"];
+                                Guid userId = new Guid(userIdBytes);
+                                return userId;
+                            }
+                            else
+                            {
+                                // 결과가 없으면 예외 발생
+                                throw new Exception($"No data found for CHATROOMID: {chatRoomIdHex}, isowner: 1");
+                            }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("오류 : " + ex);
+                    // 예외 처리 및 기본값 반환
+                    MessageBox.Show($"오류: {ex.Message}");
                     return Guid.Empty;
                 }
             }
         }
 
         // 사용자와 채팅방 간의 관계 정보 저장
-        public void InsertUserChatRooms(Guid userId, Guid chatRoomId, DateTime createdAt)
+        public void InsertUserChatRooms(Guid userId, Guid chatRoomId, DateTime createdAt, int num)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
@@ -334,7 +348,7 @@ namespace SlimMy
                     byte[] userIdBytes = userId.ToByteArray();
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
 
-                    string sql = "insert into UserChatRooms (USERCHATROOMID, USERID, CHATROOMID, CREATEDAT) values (:USERCHATROOMID, :USERID, :CHATROOMID, :CreatedAt)";
+                    string sql = "insert into UserChatRooms (USERCHATROOMID, USERID, CHATROOMID, CREATEDAT, ISOWNER) values (:USERCHATROOMID, :USERID, :CHATROOMID, :CreatedAt, :Isowner)";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
@@ -345,9 +359,11 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("USERID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("Isowner", OracleDbType.Decimal, num, ParameterDirection.Input));
 
                         command.ExecuteNonQuery();
                     }
+
                 }
                 catch (Exception ex)
                 {
@@ -841,8 +857,8 @@ namespace SlimMy
             }
         }
 
-        // 채팅방 나가기
-        public void ExitChatRoom(Guid userID)
+        // 사용자 : 채팅방 나가기
+        public void ExitUserChatRoom(Guid userID, Guid chatRoomID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
@@ -850,11 +866,12 @@ namespace SlimMy
                 {
                     connection.Open();
 
-                    string sql = "delete from userchatrooms where userid = :userid";
+                    string sql = "delete from userchatrooms where userid = :userid and chatroomid = :chatRoomID";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
                         command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter("chatRoomID", OracleDbType.Raw, chatRoomID.ToByteArray(), ParameterDirection.Input));
 
                         command.ExecuteNonQuery();
                     }
@@ -862,6 +879,57 @@ namespace SlimMy
                 catch (Exception ex)
                 {
                     MessageBox.Show("오류 : " + ex);
+                }
+            }
+        }
+
+        // 방장이 채팅방을 나갈 경우
+        // 채팅방, 사용자와 채팅방 관계, 메시지 모두 삭제
+        public void DeleteChatRoomWithRelations(Guid chatID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                connection.Open();
+                using (OracleTransaction transaction = connection.BeginTransaction()) // 트랜잭션 시작
+                {
+                    try
+                    {
+                        // 1. 사용자와 채팅방 관계 삭제
+                        string sql1 = "DELETE FROM userchatrooms WHERE chatroomID = :chatID";
+                        using (OracleCommand command1 = new OracleCommand(sql1, connection))
+                        {
+                            command1.Transaction = transaction;
+                            command1.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
+                            command1.ExecuteNonQuery();
+                        }
+
+                        // 2. 채팅방 메시지 삭제
+                        string sql2 = "DELETE FROM Message WHERE chatroomID = :chatID";
+                        using (OracleCommand command2 = new OracleCommand(sql2, connection))
+                        {
+                            command2.Transaction = transaction;
+                            command2.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
+                            command2.ExecuteNonQuery();
+                        }
+
+                        // 3. 채팅방 삭제
+                        string sql3 = "DELETE FROM chatrooms WHERE chatroomid = :chatID";
+                        using (OracleCommand command3 = new OracleCommand(sql3, connection))
+                        {
+                            command3.Transaction = transaction;
+                            command3.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
+                            command3.ExecuteNonQuery();
+                        }
+
+                        // 모든 작업이 성공하면 커밋
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        // 오류 발생 시 롤백
+                        transaction.Rollback();
+                        MessageBox.Show("오류 : " + ex.Message);
+                    }
                 }
             }
         }

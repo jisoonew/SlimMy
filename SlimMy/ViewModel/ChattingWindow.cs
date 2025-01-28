@@ -187,15 +187,8 @@ namespace SlimMy.ViewModel
                 });
                 //this.Title = chattingPartner + "님과의 채팅방";
 
-
-                if (currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId).ToString())
-                {
-                    IsHost = true; // 방장
-                }
-                else
-                {
-                    IsHost = false;
-                }
+                // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
+                IsHost = currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString()).ToString();
             });
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
@@ -304,15 +297,8 @@ namespace SlimMy.ViewModel
                     });
                     //this.Title = enteredUser + "과의 채팅방";
 
-                    // 방장이면 멤버 내보내기/방장 위임 출력
-                    if (currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId).ToString())
-                    {
-                        IsHost = true; // 방장
-                    }
-                    else
-                    {
-                        IsHost = false;
-                    }
+                    // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
+                    IsHost = currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString()).ToString();
                 });
 
                 SendCommand = new Command(Send_btn_Click);
@@ -611,7 +597,7 @@ namespace SlimMy.ViewModel
 
                 // 현재 사용자가 방장인지 확인하여 IsHost 업데이트
                 User currentUser = UserSession.Instance.CurrentUser;
-                IsHost = currentUser.UserId == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId);
+                IsHost = currentUser.UserId == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
 
                 // 서버에 방장 변경 업데이트
                 string parsedMessage = "";
@@ -649,16 +635,23 @@ namespace SlimMy.ViewModel
             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
             // 현재 채팅방의 방장 아이디 가져오기
-            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId);
+            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
             
             // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
             if (selectUserID != currentUser.UserId)
             {
                 // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
-                _repo.ExitChatRoom(currentUser.UserId);
+                _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
+
+                string chatRoomKey = string.Join(",", currentChatRoom.ChatRoomId.ToString());
+                
             }
 
             // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
+            if(selectUserID == currentUser.UserId)
+            {
+                _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+            }
         }
 
         //protected override void OnClosing(CancelEventArgs e)

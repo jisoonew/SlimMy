@@ -308,7 +308,7 @@ namespace SlimMy.ViewModel
                         DateTime now = DateTime.Now;
 
                         // 사용자와 채팅방 간의 관계 생성
-                        _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now);
+                        _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now, 0);
 
                         ServerInfo serverInfo = new ServerInfo
                         {

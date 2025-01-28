@@ -75,7 +75,7 @@ namespace SlimMy.ViewModel
             Guid userId = UserSession.Instance.CurrentUser.UserId;
 
             // 사용자와 채팅방 간의 관계 생성
-            _repo.InsertUserChatRooms(userId, chatRoomId, now);
+            _repo.InsertUserChatRooms(userId, chatRoomId, now, 1);
 
             // 이벤트 발생
             ChatRoomCreated?.Invoke(this, EventArgs.Empty);
