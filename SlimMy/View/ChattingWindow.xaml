@@ -55,8 +55,8 @@
                    VerticalOffset="-32">
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel>
-                                        <Button Content="멤버 내보내기" 
-                                Command="{Binding Option1Command}" 
+                                        <Button Content="방출하기" 
+                                Command="{Binding ToggleBanPopupCommand}" 
                                 Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}"  
                                 Margin="0,5"/>
                                         <Button Content="방장 위임" 
@@ -70,13 +70,14 @@
                                 </Border>
                             </Popup>
 
-                            <!-- 두 번째 Popup (방장 위임) -->
+                            <!-- 방장 위임 Popup -->
                             <Popup x:Name="DelegatePopup"
                    IsOpen="{Binding IsDelegatePopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
                    PlacementTarget="{Binding ElementName=OptionsButton}"
                    HorizontalOffset="52"
-                   VerticalOffset="-32">
+                   VerticalOffset="-32"
+                                   StaysOpen="False">
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock Text="방장 위임 목록" FontWeight="Bold" Margin="0,5"/>
@@ -84,6 +85,25 @@
                                         <ListBox ItemsSource="{Binding DelegateCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
                                         <Button Content="위임하기" Command="{Binding ConfirmDelegateCommand}" Margin="0,5"/>
                                         <Button Content="취소" Command="{Binding CancelDelegateCommand}" Margin="0,5"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+
+                            <!-- 방출하기 Popup -->
+                            <Popup x:Name="BanPopup"
+                   IsOpen="{Binding IsBanPopupOpen, Mode=TwoWay}"
+                   Placement="Bottom"
+                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   HorizontalOffset="52"
+                   VerticalOffset="-32"
+                                   StaysOpen="False">
+                                <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock Text="멤버 목록" FontWeight="Bold" Margin="0,5"/>
+                                        <!-- 예: 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
+                                        <ListBox ItemsSource="{Binding BanCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserBanSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
+                                        <Button Content="방출하기" Command="{Binding BanCommand}" Margin="0,5"/>
+                                        <Button Content="취소" Command="{Binding CancelBanCommand}" Margin="0,5"/>
                                     </StackPanel>
                                 </Border>
                             </Popup>

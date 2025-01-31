@@ -52,6 +52,18 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private ObservableCollection<ChatUserList> banCandidateList = new ObservableCollection<ChatUserList>();
+
+        public ObservableCollection<ChatUserList> BanCandidateList
+        {
+            get => banCandidateList;
+            set
+            {
+                banCandidateList = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ICommand CancelDelegateCommand { get; private set; }
 
         private string _messageText;
@@ -93,6 +105,19 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 방출하기
+        private ChatUserList _userBanSelectedItem; // 사용자 권한 정보
+
+        public ChatUserList UserBanSelectedItem
+        {
+            get => _userBanSelectedItem;
+            set
+            {
+                _userBanSelectedItem = value;
+                OnPropertyChanged(nameof(_userBanSelectedItem));
+            }
+        }
+
         // 팝업 열림/닫힘을 각각 다른 속성으로
         private bool _isMainPopupOpen;
         public bool IsMainPopupOpen
@@ -108,6 +133,13 @@ namespace SlimMy.ViewModel
             set { _isDelegatePopupOpen = value; OnPropertyChanged(); }
         }
 
+        private bool _isBanPopupOpen;
+        public bool IsBanPopupOpen
+        {
+            get => _isBanPopupOpen;
+            set { _isBanPopupOpen = value; OnPropertyChanged(); }
+        }
+
 
         public ICommand UpdateHostCommand { get; }
         public ICommand KickMemberCommand { get; }
@@ -117,6 +149,8 @@ namespace SlimMy.ViewModel
         public ICommand TogglePopupCommand { get; }
 
         public ICommand ToggleDelegatePopupCommand { get; }
+        // 방출하기
+        public ICommand ToggleBanPopupCommand { get; }
 
         public ICommand CloseAllPopupsCommand { get; }
         public ICommand ConfirmDelegateCommand { get; }
@@ -124,9 +158,8 @@ namespace SlimMy.ViewModel
         // 채팅방 나가기
         public ICommand ExitChatRoomCommand { get; }
 
-        public ICommand Option1Command { get; }
-        public ICommand Option2Command { get; }
-        public ICommand Option3Command { get; }
+        // 멤버 방출하기
+        public ICommand BanCommand { get; }
 
 
         private void ExecuteOption(string option)
@@ -203,14 +236,21 @@ namespace SlimMy.ViewModel
             TogglePopupCommand = new RelayCommand(_ =>
             {
                 IsMainPopupOpen = !IsMainPopupOpen;
-                if (IsMainPopupOpen) IsDelegatePopupOpen = false;
+                if (IsMainPopupOpen) IsDelegatePopupOpen = false; IsBanPopupOpen = false;
             });
 
             // Toggle 방장 위임 팝업
             ToggleDelegatePopupCommand = new RelayCommand(_ =>
             {
                 IsDelegatePopupOpen = !IsDelegatePopupOpen;
-                if (IsDelegatePopupOpen) IsMainPopupOpen = false;
+                if (IsDelegatePopupOpen) IsMainPopupOpen = false; IsBanPopupOpen = false;
+            });
+
+            // Toggle 방출하기 팝업
+            ToggleBanPopupCommand = new RelayCommand(_ =>
+            {
+                IsBanPopupOpen = !IsBanPopupOpen;
+                if (IsBanPopupOpen) IsDelegatePopupOpen = false; IsMainPopupOpen = false;
             });
 
             // 모든 팝업 닫기
@@ -218,6 +258,7 @@ namespace SlimMy.ViewModel
             {
                 IsMainPopupOpen = false;
                 IsDelegatePopupOpen = false;
+                IsBanPopupOpen = false;
             });
 
             // 방장 위임 기능
@@ -226,9 +267,8 @@ namespace SlimMy.ViewModel
             // 채팅방 나가기
             ExitChatRoomCommand = new Command(ExitChatRoom);
 
-            Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
-            Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
-            Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
+            // 멤버 방출하기
+            BanCommand = new Command(BanMember);
 
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
@@ -312,14 +352,21 @@ namespace SlimMy.ViewModel
                 TogglePopupCommand = new RelayCommand(_ =>
                 {
                     IsMainPopupOpen = !IsMainPopupOpen;
-                    if (IsMainPopupOpen) IsDelegatePopupOpen = false;
+                    if (IsMainPopupOpen) IsDelegatePopupOpen = false; IsBanPopupOpen = false;
                 });
 
                 // Toggle 방장 위임 팝업
                 ToggleDelegatePopupCommand = new RelayCommand(_ =>
                 {
                     IsDelegatePopupOpen = !IsDelegatePopupOpen;
-                    if (IsDelegatePopupOpen) IsMainPopupOpen = false;
+                    if (IsDelegatePopupOpen) IsMainPopupOpen = false; IsBanPopupOpen = false;
+                });
+
+                // Toggle 방출하기 팝업
+                ToggleBanPopupCommand = new RelayCommand(_ =>
+                {
+                    IsBanPopupOpen = !IsBanPopupOpen;
+                    if (IsBanPopupOpen) IsDelegatePopupOpen = false; IsMainPopupOpen = false;
                 });
 
                 // 모든 팝업 닫기
@@ -327,6 +374,7 @@ namespace SlimMy.ViewModel
                 {
                     IsMainPopupOpen = false;
                     IsDelegatePopupOpen = false;
+                    IsBanPopupOpen = false;
                 });
 
                 // 방장 위임 기능
@@ -335,9 +383,8 @@ namespace SlimMy.ViewModel
                 // 채팅방 나가기
                 ExitChatRoomCommand = new Command(ExitChatRoom);
 
-                Option1Command = new RelayCommand(_ => ExecuteOption("멤버 내보내기"));
-                Option2Command = new RelayCommand(_ => ExecuteOption("방장 위임"));
-                Option3Command = new RelayCommand(_ => ExecuteOption("채팅방 나가기"));
+                // 멤버 방출하기
+                BanCommand = new Command(BanMember);
 
                 ScrollToBot();
             }
@@ -559,8 +606,11 @@ namespace SlimMy.ViewModel
         // 방장 위임 후보 리스트
         private void UpdateHost()
         {
-            // 같은 채팅방의 사용자 닉네임을 담은 리스트
+            // 같은 채팅방의 사용자 닉네임을 담은 리스트(방장 위임 리스트)
             DelegateCandidateList = new ObservableCollection<ChatUserList>();
+
+            // 같은 채팅방의 사용자 닉네임을 담은 리스트(멤버 내보내기)
+            BanCandidateList = new ObservableCollection<ChatUserList>();
 
             // 현재 채팅방 ID 가져오기
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
@@ -574,10 +624,12 @@ namespace SlimMy.ViewModel
                 foreach (var user in usersInChatRoom)
                 {
                     DelegateCandidateList.Add(user);
+                    BanCandidateList.Add(user);
                 }
             });
 
             OnPropertyChanged(nameof(DelegateCandidateList));
+            OnPropertyChanged(nameof(BanCandidateList));
         }
 
         // 방장 위임 버튼
@@ -636,21 +688,59 @@ namespace SlimMy.ViewModel
 
             // 현재 채팅방의 방장 아이디 가져오기
             Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
-            
-            // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
-            if (selectUserID != currentUser.UserId)
-            {
-                // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
-                _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
 
-                string chatRoomKey = string.Join(",", currentChatRoom.ChatRoomId.ToString());
-                
+            string msg = string.Format("\"{0}\" 채팅방을 나가시겠습니까?", currentChatRoom.ChatRoomName);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
             }
-
-            // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
-            if(selectUserID == currentUser.UserId)
+            else
             {
-                _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+                // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
+                if (selectUserID != currentUser.UserId)
+                {
+                    // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
+                    _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
+
+                    string chatRoomKey = string.Join(",", currentChatRoom.ChatRoomId.ToString());
+
+                }
+
+                // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
+                if (selectUserID == currentUser.UserId)
+                {
+                    _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+                }
+            }
+        }
+
+        // 사용자 방출하기
+        public void BanMember(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+            ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
+
+            // 현재 채팅방의 방장 아이디 가져오기
+            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
+
+            string msg = string.Format("\"{0}\"님을 방출하시겠습니까?", UserBanSelectedItem.UsersNickName);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
+                if (selectUserID == currentUser.UserId)
+                {
+                    // 사용자와 채팅방 간의 관계 정보 삭제
+                    _repo.DeleteBanUserChatRoom(currentChatRoom.ChatRoomId, Guid.Parse(UserBanSelectedItem.UsersID));
+
+                    // 방출 사용자 정보 저장
+                    _repo.InsertBanUser(currentChatRoom.ChatRoomId, UserBanSelectedItem.UsersID);
+                }
             }
         }
 

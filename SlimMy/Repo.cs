@@ -934,6 +934,72 @@ namespace SlimMy
             }
         }
 
+        // 사용자 방출 저장
+        public void InsertBanUser(Guid chatRoomId, String userId)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    Guid messageId = Guid.NewGuid(); // 새로운 GUID 생성
+                    byte[] messageIdBytes = messageId.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    Guid senderIDGuid = Guid.Parse(userId);
+                    byte[] senderIDBytes = senderIDGuid.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    string query = "INSERT INTO BANUSERS (BanId, UserId, ChatRoomId, BanAt, IsNotified) " +
+                   "VALUES (:banId, :userId, :chatRoomId, SYSTIMESTAMP, 0)";
+
+                    using (OracleCommand cmd = new OracleCommand(query, connection))
+                    {
+                        cmd.Parameters.Add(new OracleParameter(":banId", OracleDbType.Raw, messageIdBytes, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":userId", OracleDbType.Raw, senderIDBytes, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":chatRoomId", OracleDbType.Raw, chatRoomId.ToByteArray(), ParameterDirection.Input));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+            }
+        }
+
+        // 방출 당한 사용자와 채팅방 간의 관계 정보 삭제
+        public void DeleteBanUserChatRoom(Guid chatID, Guid userID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                connection.Open();
+                using (OracleTransaction transaction = connection.BeginTransaction()) // 트랜잭션 시작
+                {
+                    try
+                    {
+                        string sql1 = "DELETE FROM userchatrooms WHERE chatroomID = :chatID and userID = :userID";
+                        using (OracleCommand command1 = new OracleCommand(sql1, connection))
+                        {
+                            command1.Transaction = transaction;
+                            command1.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
+                            command1.Parameters.Add(new OracleParameter("userID", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+                            command1.ExecuteNonQuery();
+                        }
+
+                        // 모든 작업이 성공하면 커밋
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        // 오류 발생 시 롤백
+                        transaction.Rollback();
+                        MessageBox.Show("오류 : " + ex.Message);
+                    }
+                }
+            }
+        }
+
         public User GetUserData(string email)
         {
             // 데이터베이스에서 사용자 데이터 로드
