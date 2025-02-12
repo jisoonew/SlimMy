@@ -14,6 +14,7 @@ namespace SlimMy.ViewModel
         public Thread chattingThread;
         public ChattingWindow chattingWindow;
         public int chattingRoomNum;
+        public string chattingRoomNumStr;
         private static object obj = new object();
 
         public ChattingThreadData(Thread chattingThread, ChattingWindow chattingWindow)
@@ -23,6 +24,16 @@ namespace SlimMy.ViewModel
                 this.chattingThread = chattingThread;
                 this.chattingWindow = chattingWindow;
                 this.chattingRoomNum = ++chattingRoomCnt;
+            }
+        }
+
+        public ChattingThreadData(Thread chattingThread, ChattingWindow chattingWindow, string chatRoom)
+        {
+            lock (obj)
+            {
+                this.chattingThread = chattingThread;
+                this.chattingWindow = chattingWindow;
+                this.chattingRoomNumStr = chatRoom;
             }
         }
     }

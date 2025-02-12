@@ -171,8 +171,13 @@ namespace SlimMy.ViewModel
         // 1명 채팅방 입장
         public ChattingWindow(TcpClient client, string chattingPartner)
         {
-            User currentUser = UserSession.Instance.CurrentUser;
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            this.client = client;
+            this.chattingPartner = chattingPartner;
+
+            _repo = new Repo(_connstring); // Repo 초기화
 
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
             Application.Current.Dispatcher.Invoke(() =>
@@ -223,6 +228,8 @@ namespace SlimMy.ViewModel
                 // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
                 IsHost = currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString()).ToString();
             });
+
+            SendCommand = new Command(Send_btn_Click);
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
@@ -411,28 +418,55 @@ namespace SlimMy.ViewModel
                     return;
                 }
 
+                //if (chattingPartner != null)
+                //{
+                //    parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
+                //    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
+                //    client.GetStream().Write(byteData, 0, byteData.Length);
+                //}
+                //// 그룹채팅
+                //else
+                //{
+                //    User currentUser = UserSession.Instance.CurrentUser;
+                //    ChatRooms currentChatRooms = ChattingSession.Instance.CurrentChattingData;
+                //    string myName = currentUser.NickName;
+                //    string myUid = currentUser.UserId.ToString();
+                //    string partners = myUid;
+                //    foreach (var item in chattingPartners)
+                //    {
+                //        if (item == myUid)
+                //            continue;
+                //        partners += "#" + item;
+                //    }
+
+                //    // parsedMessage = string.Format("{0}<{1}>", partners, message);
+
+                //    parsedMessage = string.Format("{0}:{1}<ChattingContent>", chattingPartner, message);
+                //    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
+                //    client.GetStream().Write(byteData, 0, byteData.Length);
+
+                //    _repo.InsertMessage(currentChatRooms.ChatRoomId, Guid.Parse(myUid), message);
+                //}
+
+                Debug.WriteLine("chattingPartner : " + chattingPartner);
+
                 if (chattingPartner != null)
-                {
-                    parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
-                    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                    client.GetStream().Write(byteData, 0, byteData.Length);
-                }
-                // 그룹채팅
-                else
                 {
                     User currentUser = UserSession.Instance.CurrentUser;
                     ChatRooms currentChatRooms = ChattingSession.Instance.CurrentChattingData;
                     string myName = currentUser.NickName;
                     string myUid = currentUser.UserId.ToString();
                     string partners = myUid;
-                    foreach (var item in chattingPartners)
-                    {
-                        if (item == myUid)
-                            continue;
-                        partners += "#" + item;
-                    }
+                    //foreach (var item in chattingPartners)
+                    //{
+                    //    if (item == myUid)
+                    //        continue;
+                    //    partners += "#" + item;
+                    //}
 
-                    parsedMessage = string.Format("{0}<{1}>", partners, message);
+                    // parsedMessage = string.Format("{0}<{1}>", partners, message);
+
+                    parsedMessage = string.Format("{0}:{1}:{2}<ChattingContent>", currentChatRooms.ChatRoomId, message, myUid);
                     byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
                     client.GetStream().Write(byteData, 0, byteData.Length);
 
@@ -508,7 +542,7 @@ namespace SlimMy.ViewModel
             ScrollToBot();
         }
 
-
+        // 전송 메시지
         public void ReceiveMessage(string sender, string message)
         {
             if (message == "ChattingStart")
@@ -531,18 +565,22 @@ namespace SlimMy.ViewModel
             }
 
             string senderNickName = _repo.SendNickName(sender);
+            User currentUser = UserSession.Instance.CurrentUser;
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-
-                MessageList.Add(new ChatMessage
+            // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
+            if (!sender.Equals(currentUser.UserId.ToString())) {
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    Message = $"{senderNickName}: {message}",
-                    Alignment = TextAlignment.Left
-                });
 
-                ScrollToBot();
-            });
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{senderNickName}: {message}",
+                        Alignment = TextAlignment.Left
+                    });
+
+                    ScrollToBot();
+                });
+            }
         }
 
         private ChatUserList _chatUserList;

@@ -90,7 +90,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 현재 사용자 목록을 저장하는 ObservableCollection입니다. 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
+        // 현재 사용자 목록을 저장하는 ObservableCollection 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
         private static ObservableCollection<ChatUserList> _currentUserList = new ObservableCollection<ChatUserList>();
 
         public static ObservableCollection<ChatUserList> CurrentUserList
@@ -99,8 +99,8 @@ namespace SlimMy.ViewModel
             set
             {
                 _currentUserList = value;
-                // static 속성에서는 OnPropertyChanged를 호출할 수 없습니다.
-                // 속성이 static이 아닌 경우 UI 바인딩이 필요하다면, static 메서드를 사용하는 것이 적절하지 않을 수 있습니다.
+                // static 속성에서는 OnPropertyChanged를 호출할 수 없음
+                // 속성이 static이 아닌 경우 UI 바인딩이 필요하다면, static 메서드를 사용하는 것이 적절하지 않을 수 있음
             }
         }
 
@@ -251,7 +251,6 @@ namespace SlimMy.ViewModel
             _dataService = new DataService();
             Initialize(); // 초기화 메서드 호출
 
-            // 예제 데이터 생성
             AllData = ChatRooms;
 
             // 총 페이지 수 계산
@@ -379,7 +378,9 @@ namespace SlimMy.ViewModel
                     }
                 }
 
-                string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+                // string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
+
+                string chattingStartMessage = $"{myUid}:{selectedChatRoom.ChatRoomId}<JoinChatRoom>";
 
                 byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 

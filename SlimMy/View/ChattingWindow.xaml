@@ -118,7 +118,7 @@
             <ItemsControl x:Name="MessageList" ItemsSource="{Binding MessageList}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <TextBlock x:Name="MessageSenderText" Text="{Binding Message}" Margin="5" TextAlignment="{Binding Alignment}"/>
+                        <TextBlock x:Name="MessageSenderText" Text="{Binding Message}" Margin="5" TextAlignment="{Binding Alignment}" Width="530"/>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>

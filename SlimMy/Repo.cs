@@ -146,8 +146,6 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("dietGoal", dietGoal));
 
                         command.ExecuteNonQuery();
-
-                        MessageBox.Show("회원가입 되었습니다!");
                     }
                 }
                 catch (Exception ex)
