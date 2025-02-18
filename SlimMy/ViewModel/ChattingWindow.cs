@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Service;
 using SlimMy.Singleton;
 using System;
 using System.Collections.Generic;
@@ -25,6 +26,7 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
+        private readonly INavigationService _navigationService;
 
         public ICommand Window_PreviewKeyDownCommand { get; private set; }
 
@@ -268,6 +270,8 @@ namespace SlimMy.ViewModel
                 IsBanPopupOpen = false;
             });
 
+            _navigationService = new NavigationService();
+
             // 방장 위임 기능
             ConfirmDelegateCommand = new Command(UpdateHostBtn);
 
@@ -384,6 +388,8 @@ namespace SlimMy.ViewModel
                     IsBanPopupOpen = false;
                 });
 
+                _navigationService = new NavigationService();
+
                 // 방장 위임 기능
                 ConfirmDelegateCommand = new Command(UpdateHostBtn);
 
@@ -418,59 +424,19 @@ namespace SlimMy.ViewModel
                     return;
                 }
 
-                //if (chattingPartner != null)
-                //{
-                //    parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
-                //    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                //    client.GetStream().Write(byteData, 0, byteData.Length);
-                //}
-                //// 그룹채팅
-                //else
-                //{
-                //    User currentUser = UserSession.Instance.CurrentUser;
-                //    ChatRooms currentChatRooms = ChattingSession.Instance.CurrentChattingData;
-                //    string myName = currentUser.NickName;
-                //    string myUid = currentUser.UserId.ToString();
-                //    string partners = myUid;
-                //    foreach (var item in chattingPartners)
-                //    {
-                //        if (item == myUid)
-                //            continue;
-                //        partners += "#" + item;
-                //    }
-
-                //    // parsedMessage = string.Format("{0}<{1}>", partners, message);
-
-                //    parsedMessage = string.Format("{0}:{1}<ChattingContent>", chattingPartner, message);
-                //    byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                //    client.GetStream().Write(byteData, 0, byteData.Length);
-
-                //    _repo.InsertMessage(currentChatRooms.ChatRoomId, Guid.Parse(myUid), message);
-                //}
-
-                Debug.WriteLine("chattingPartner : " + chattingPartner);
-
                 if (chattingPartner != null)
                 {
                     User currentUser = UserSession.Instance.CurrentUser;
                     ChatRooms currentChatRooms = ChattingSession.Instance.CurrentChattingData;
                     string myName = currentUser.NickName;
-                    string myUid = currentUser.UserId.ToString();
-                    string partners = myUid;
-                    //foreach (var item in chattingPartners)
-                    //{
-                    //    if (item == myUid)
-                    //        continue;
-                    //    partners += "#" + item;
-                    //}
-
-                    // parsedMessage = string.Format("{0}<{1}>", partners, message);
+                    Guid myUid = currentUser.UserId;
+                    string partners = myUid.ToString();
 
                     parsedMessage = string.Format("{0}:{1}:{2}<ChattingContent>", currentChatRooms.ChatRoomId, message, myUid);
                     byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
                     client.GetStream().Write(byteData, 0, byteData.Length);
 
-                    _repo.InsertMessage(currentChatRooms.ChatRoomId, Guid.Parse(myUid), message);
+                    _repo.InsertMessage(currentChatRooms.ChatRoomId, myUid, message);
                 }
 
                 MessageList.Add(new ChatMessage
@@ -575,6 +541,28 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{senderNickName}: {message}",
+                        Alignment = TextAlignment.Left
+                    });
+
+                    ScrollToBot();
+                });
+            }
+        }
+
+        // 채팅방 나가기 메시지 수신
+        public void ReceiveLeaveRoomMessage(string sender, string message)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
+            if (!sender.Equals(currentUser.UserId.ToString()))
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{sender}님이 채팅방을 나갔습니다.",
                         Alignment = TextAlignment.Left
                     });
 
@@ -735,20 +723,32 @@ namespace SlimMy.ViewModel
             }
             else
             {
+                string leaveRoomData = "";
                 // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
                 if (selectUserID != currentUser.UserId)
                 {
                     // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
                     _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
 
-                    string chatRoomKey = string.Join(",", currentChatRoom.ChatRoomId.ToString());
+                    // 채팅방 아이디와 사용자 아이디
+                    leaveRoomData = string.Format("{0}:{1}<leaveRoom>", currentChatRoom.ChatRoomId, currentUser.UserId);
+                    byte[] leaveRoomDataByte = Encoding.Default.GetBytes(leaveRoomData);
+                    client.GetStream().Write(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
 
+                    _navigationService.NavigateToClose("ChattingWindow");
                 }
 
                 // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
                 if (selectUserID == currentUser.UserId)
                 {
                     _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+
+                    // 채팅방 아이디와 사용자 아이디
+                    leaveRoomData = string.Format("{0}:{1}<leaveRoom>", currentChatRoom.ChatRoomId, currentUser.UserId);
+                    byte[] leaveRoomDataByte = Encoding.Default.GetBytes(leaveRoomData);
+                    client.GetStream().Write(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
+
+                    _navigationService.NavigateToClose("ChattingWindow");
                 }
             }
         }

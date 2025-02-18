@@ -378,8 +378,6 @@ namespace SlimMy.ViewModel
                     }
                 }
 
-                // string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-
                 string chattingStartMessage = $"{myUid}:{selectedChatRoom.ChatRoomId}<JoinChatRoom>";
 
                 byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
