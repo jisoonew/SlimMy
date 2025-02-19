@@ -439,7 +439,7 @@ namespace SlimMy.ViewModel
                     // 그룹채팅
                     // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
                     // 문자열을 # 문자를 기준으로 나누는 메서드
-                    else if (chattingPartner.Contains("#"))
+                    else if (message.Contains("GroupChattingUserStart"))
                     {
                         //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
 
@@ -456,7 +456,7 @@ namespace SlimMy.ViewModel
                         }
 
                         // 메시지를 발송한 발신자는 리스트의 첫번째 요소
-                        string sender = chattingPartners[0];
+                        string sender = chattingPartners[1];
 
                         // 채팅 방 번호 가져오기
                         string chattingRoomNum = GetChattingRoomNumTest(chattingPartners);
@@ -486,7 +486,7 @@ namespace SlimMy.ViewModel
                             {
                                 lock (lockObj)
                                 {
-                                    groupChattingThreadDicTest[chattingRoomNum].chattingWindow.ReceiveMessage(sender, message);
+                                    groupChattingThreadDicTest[chattingRoomNum].chattingWindow.ReceiveAddRoomMessage(sender, message);
                                 }
                             }
                         }
@@ -643,12 +643,12 @@ namespace SlimMy.ViewModel
                             // 이미 존재하는 채팅 스레드가 활성화된 경우 메시지를 전달
                             if (groupChattingThreadDicTest[hostChangedChattingRoomNum].chattingThread.IsAlive)
                             {
-                                    lock (lockObj)
-                                    {
-                                        // hostChangedList-> 채팅방 아이디:사용자 아이디
-                                        // message-> HostChanged
-                                        groupChattingThreadDicTest[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
-                                    }
+                                lock (lockObj)
+                                {
+                                    // hostChangedList-> 채팅방 아이디:사용자 아이디
+                                    // message-> HostChanged
+                                    groupChattingThreadDicTest[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
+                                }
                             }
                         }
 

@@ -534,7 +534,8 @@ namespace SlimMy.ViewModel
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
-            if (!sender.Equals(currentUser.UserId.ToString())) {
+            if (!sender.Equals(currentUser.UserId.ToString()))
+            {
                 Application.Current.Dispatcher.Invoke(() =>
                 {
 
@@ -563,6 +564,30 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{sender}님이 채팅방을 나갔습니다.",
+                        Alignment = TextAlignment.Left
+                    });
+
+                    ScrollToBot();
+                });
+            }
+        }
+
+        // 채팅방 참가 메시지 수신
+        public void ReceiveAddRoomMessage(string sender, string message)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            string senderNickName = _repo.SendNickName(sender);
+
+            // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
+            if (!sender.Equals(currentUser.UserId.ToString()))
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{senderNickName}님이 참여하였습니다.",
                         Alignment = TextAlignment.Left
                     });
 
