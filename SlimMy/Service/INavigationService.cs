@@ -9,5 +9,13 @@ namespace SlimMy.Service
     public interface INavigationService
     {
         void NavigateToClose(string viewCloseName);
+
+        void NavigateToFrame(Type page);
+
+        void NavigateToAddExercise();
+
+        Task NavigateToFrameAsync(Type pageType);
+
+        Task NavigateToCommunityFrameAsync(Type pageType);
     }
 }

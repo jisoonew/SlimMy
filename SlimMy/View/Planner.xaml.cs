@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,13 +23,6 @@ namespace SlimMy.View
         public Planner()
         {
             InitializeComponent();
-        }
-
-        // 운동 추가
-        private void AddExerciseBtn_Click(object sender, RoutedEventArgs e)
-        {
-            AddExercise addExercise = new AddExercise();
-            addExercise.Show();
         }
     }
 }

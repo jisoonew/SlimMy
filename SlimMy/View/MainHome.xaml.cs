@@ -1,4 +1,5 @@
 using SlimMy.Service;
+using SlimMy.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -21,33 +22,16 @@ namespace SlimMy.View
     /// </summary>
     public partial class MainHome : Window, IView
     {
+        private NavigationService _navigationService;
+
         public MainHome()
         {
             InitializeComponent();
+            Loaded += MainHome_Loaded;
         }
 
         public MainHome(Community bViewModel)
         {
-        }
-
-        private void DashBoard_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("DashBoard.xaml", UriKind.Relative);
-        }
-
-        private void Planner_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("Planner.xaml", UriKind.Relative);
-        }
-
-        private void Community_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("Community.xaml", UriKind.Relative);
-        }
-
-        private void MyChats_Click(object sender, RoutedEventArgs e)
-        {
-            MainFrame.Source = new Uri("MyChats.xaml", UriKind.Relative);
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -60,6 +44,13 @@ namespace SlimMy.View
             }
 
             Environment.Exit(1);
+        }
+
+        private void MainHome_Loaded(object sender, RoutedEventArgs e)
+        {
+            _navigationService = new NavigationService(MainFrame);
+            _navigationService.SetFrame(MainFrame);
+            this.DataContext = new MainPage(_navigationService);
         }
     }
 }

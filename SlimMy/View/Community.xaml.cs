@@ -27,5 +27,10 @@ namespace SlimMy.View
         {
             InitializeComponent();
         }
+
+        private void ChatRoomListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+
+        }
     }
 }

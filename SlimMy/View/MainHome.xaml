@@ -6,7 +6,7 @@
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:MainPage}"
         mc:Ignorable="d"
-        Title="DashBoard" MinHeight="850" MinWidth="1300" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" SizeToContent="WidthAndHeight">
+        Title="DashBoard" MinHeight="850" MinWidth="1300" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" SizeToContent="WidthAndHeight" Loaded="MainHome_Loaded">
 
     <Grid Height="850" Width="1300">
         <!-- 왼쪽 메뉴 패널 -->
@@ -39,9 +39,9 @@
                         <TextBlock Text="DashBoard" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <Button Content="Planner" FontSize="25" Click="Planner_Click" Padding="1,5,1,5" Height="50" Margin="5,0,5,10"/>
-                <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Click="Community_Click" Command="{Binding CommunityBtnCommand}" Height="50" Margin="5,0,5,10"/>
-                <Button x:Name="MyChats" Content="MyChats" FontSize="25" Padding="1,5,1,5" Click="MyChats_Click" Height="50" Margin="5,0,5,10"/>
+                <Button Content="Planner" FontSize="25" Command="{Binding PlannerCommand}" Padding="1,5,1,5" Height="50" Margin="5,0,5,10"/>
+                <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Command="{Binding CommunityCommand}" Height="50" Margin="5,0,5,10"/>
+                <Button x:Name="MyChats" Content="MyChats" FontSize="25" Padding="1,5,1,5" Command="{Binding MyChatsCommand}" Height="50" Margin="5,0,5,10"/>
                 <Button Content="My Page" FontSize="25" Padding="1,5,1,5" Height="50" Margin="5,0,5,0"/>
             </StackPanel>
 
@@ -51,7 +51,7 @@
 
         <!-- 메인 콘텐츠 영역 -->
         <Grid Margin="190,0,0,0" Width="1110" Height="850">
-            <Frame Name="MainFrame" Source="/View/DashBoard.xaml" NavigationUIVisibility="Hidden"/>
+            <Frame Name="MainFrame" Source="" NavigationUIVisibility="Hidden"/>
         </Grid>
     </Grid>
 </Window>

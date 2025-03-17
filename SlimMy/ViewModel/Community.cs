@@ -240,17 +240,15 @@ namespace SlimMy.ViewModel
         {
             _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService)); // _dataService 필드 초기화
 
-            InsertCommand = new Command(ChatRoomSelected);
-
-            Initialize(); // 필요한 다른 초기화 작업 수행
+            InsertCommand = new AsyncRelayCommand(ChatRoomSelected);
         }
 
         // 기본 생성자 (IDataService의 기본 구현 사용)
         public Community()
         {
             _dataService = new DataService();
-            Initialize(); // 초기화 메서드 호출
 
+            ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
             AllData = ChatRooms;
 
             // 총 페이지 수 계산
@@ -268,27 +266,43 @@ namespace SlimMy.ViewModel
                 execute: _ => PreviousPage(),
                 canExecute: _ => CanGoToPreviousPage());
 
-            // 현재 페이지 데이터 초기화
-            UpdateCurrentPageData();
         }
 
         // 초기화 메서드
-        private void Initialize()
+        private async Task Initialize()
         {
             _repo = new Repo(_connstring); // Repo 초기화
-            ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
-            RefreshChatRooms(); // 채팅 방 불러오기
-            InsertCommand = new Command(ChatRoomSelected);
-            ChattingCommand = new Command(OpenCreateChatRoomWindow);
+            await RefreshChatRooms(); // 채팅 방 불러오기
+            InsertCommand = new AsyncRelayCommand(ChatRoomSelected);
+            ChattingCommand = new AsyncRelayCommand(OpenCreateChatRoomWindow);
+
+            // 현재 페이지 데이터 초기화
+            await UpdateCurrentPageData();
+        }
+
+        public static async Task<Community> CreateAsync()
+        {
+            var instance = new Community();
+            await instance.Initialize();
+            return instance;
         }
 
         // 채팅 목록 선택
-        public void ChatRoomSelected(object parameter)
+        public async Task ChatRoomSelected(object parameter)
         {
-            User currentUser = UserSession.Instance.CurrentUser;
             if (parameter is ChatRooms selectedChatRoom)
             {
+                SelectedChatRoom = null;
+                OnPropertyChanged(nameof(SelectedChatRoom));
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    SelectedChatRoom = selectedChatRoom;
+                    OnPropertyChanged(nameof(SelectedChatRoom));
+                });
+
                 string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
+
                 MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (messageBoxResult == MessageBoxResult.No)
                 {
@@ -296,18 +310,20 @@ namespace SlimMy.ViewModel
                 }
                 else
                 {
+
+                    User currentUser = UserSession.Instance.CurrentUser;
                     myName = currentUser.NickName;
                     myUid = currentUser.UserId;
-                    _dataService.SetUserId(currentUser.UserId.ToString()); // UserId 설정
+                    _dataService.SetUserId(currentUser.UserId.ToString());
 
                     // 만약 사용자가 채팅방에 참가하지 않은 상태라면?
                     // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
-                    if (_repo.CheckUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId))
+                    if (await _repo.CheckUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId))
                     {
                         DateTime now = DateTime.Now;
 
                         // 사용자와 채팅방 간의 관계 생성
-                        _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now, 0);
+                        await _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now, 0);
 
                         ServerInfo serverInfo = new ServerInfo
                         {
@@ -316,13 +332,13 @@ namespace SlimMy.ViewModel
                         };
 
                         // 채팅방에 참여한 사용자 아이디들을 서버로 전송
-                        SendRoomUserIds(selectedChatRoom, currentUser);
+                        await SendRoomUserIds(selectedChatRoom, currentUser);
 
                     }
                     else
                     {
                         // 채팅방에 참여한 사용자 아이디들을 서버로 전송
-                        SendRoomUserIds(selectedChatRoom, currentUser);
+                        await SendRoomUserIds(selectedChatRoom, currentUser);
                     }
                 }
             }
@@ -333,7 +349,7 @@ namespace SlimMy.ViewModel
         }
 
         // 채팅방에 참여한 사용자 아이디들을 서버로 전송
-        public void SendRoomUserIds(ChatRooms selectedChatRoom, User currentUser)
+        public async Task SendRoomUserIds(ChatRooms selectedChatRoom, User currentUser)
         {
             // 싱글톤에 저장
             // 채팅방마다 각각의 고유한 아이디를 부여해서 해당 채팅방의 실행 여부 확인
@@ -345,7 +361,7 @@ namespace SlimMy.ViewModel
             try
             {
                 // 특정 채팅방에 참가한 사용자들 아이디 모음
-                var userIds = _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
+                var userIds = await _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
 
                 if (userIds == null || userIds.Count == 0)
                 {
@@ -375,14 +391,14 @@ namespace SlimMy.ViewModel
                     else
                     {
                         groupChattingUserStrData += "#";
-                    }
+                    } 
                 }
 
-                string chattingStartMessage = $"{myUid}:{selectedChatRoom.ChatRoomId}<JoinChatRoom>";
+                string chattingStartMessage = $"{myUid}:{selectedChatRoom.ChatRoomId}<UserJoinChatRoom>";
 
                 byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
 
-                currentUser.Client.GetStream().WriteAsync(chattingStartByte, 0, chattingStartByte.Length);
+                await currentUser.Client.GetStream().WriteAsync(chattingStartByte, 0, chattingStartByte.Length);
 
             }
             catch (Exception ex)
@@ -405,9 +421,9 @@ namespace SlimMy.ViewModel
         }
 
         // 채팅 목록
-        public void RefreshChatRooms()
+        public async Task RefreshChatRooms()
         {
-            var chatRooms = _repo.SelectChatRoom();
+            var chatRooms = await _repo.SelectChatRoom();
 
             ChatRooms.Clear(); // 기존 데이터 제거
 
@@ -416,18 +432,18 @@ namespace SlimMy.ViewModel
                 ChatRooms.Add(chatRoom); // 새 데이터 추가
             }
 
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // ListView에 바인딩된 데이터 업데이트
                 OnPropertyChanged(nameof(ChatRooms));
             });
         }
 
-        public void ChattingRefreshChatRooms()
+        public async Task ChattingRefreshChatRooms()
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                var chatRooms = _repo.SelectChatRoom(); // DB에서 최신 데이터 가져오기
+                var chatRooms = await _repo.SelectChatRoom(); // DB에서 최신 데이터 가져오기
 
                 if (AllData == null)
                     AllData = new ObservableCollection<ChatRooms>();
@@ -446,14 +462,14 @@ namespace SlimMy.ViewModel
                     CurrentPage = TotalPages;
 
                 // 현재 페이지 데이터 업데이트
-                UpdateCurrentPageData();
+                await UpdateCurrentPageData();
             });
         }
 
         // 사용자 목록이 변경될 때마다 호출되는 메서드로, 현재 사용자 목록을 업데이트
-        public static void ChangeUserListView(IEnumerable<ChatUserList> tempUserList)
+        public static async Task ChangeUserListView(IEnumerable<ChatUserList> tempUserList)
         {
-            Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 CurrentUserList.Clear(); // 기존 목록을 비우고
 
@@ -461,10 +477,10 @@ namespace SlimMy.ViewModel
                 {
                     CurrentUserList.Add(item);
                 }
-            }));
+            }, DispatcherPriority.Normal);
         }
 
-        private void UpdateCurrentPageData()
+        private async Task UpdateCurrentPageData()
         {
             // Skip: 현재 페이지 이전의 항목을 건너뜀.
             // Tack: 페이지 크기만큼 데이터를 가져옴.
@@ -477,13 +493,18 @@ namespace SlimMy.ViewModel
 
             int dataToTake = Math.Min(_pageSize, remainingDataCount); // 현재 페이지에 가져올 데이터 수
 
-            CurrentPageData = new ObservableCollection<ChatRooms>(
-                AllData.Skip((CurrentPage - 1) * _pageSize).Take(dataToTake));
+            // 데이터를 비동기로 필터링 (CPU 연산 비중이 크다면 Task.Run으로 감싸서 실행)
+            var newPageData = await Task.Run(() =>
+                new ObservableCollection<ChatRooms>(
+                    AllData.Skip((CurrentPage - 1) * _pageSize).Take(dataToTake)
+                ));
 
-            Application.Current.Dispatcher.Invoke(() =>
+            // UI 업데이트를 비동기로 수행
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
+                CurrentPageData = newPageData;
                 OnPropertyChanged(nameof(CurrentPageData));
-            });
+            }, DispatcherPriority.Background);
         }
 
         private void NextPage()
@@ -503,21 +524,31 @@ namespace SlimMy.ViewModel
         private bool CanGoToNextPage() => CurrentPage < TotalPages;
         private bool CanGoToPreviousPage() => CurrentPage > 1;
 
-        public void OpenCreateChatRoomWindow(object parameter)
+        public async Task OpenCreateChatRoomWindow(object parameter)
         {
             var createChatRoomViewModel = new CreateChatRoom();
-            createChatRoomViewModel.ChatRoomCreated += (s, e) =>
+
+            // 이벤트 핸들러를 명시적으로 정의
+            void OnChatRoomCreated(object sender, EventArgs e)
             {
-                // 채팅방 리스트 새로고침
-                ChattingRefreshChatRooms();
-            };
+                _ = Task.Run(async () => await ChattingRefreshChatRooms());
+                createChatRoomViewModel.ChatRoomCreated -= OnChatRoomCreated; // 이벤트 핸들러 제거 (메모리 누수 방지)
+            }
+
+            createChatRoomViewModel.ChatRoomCreated += OnChatRoomCreated;
 
             var createChatRoomWindow = new CreateChatRoomView
             {
                 DataContext = createChatRoomViewModel
             };
 
-            createChatRoomWindow.Show();
+            // 모달 창으로 실행하여 사용자가 닫을 때까지 기다림
+            bool? result = createChatRoomWindow.ShowDialog();
+
+            if (result == true) // 사용자가 정상적으로 방을 생성하고 닫았을 경우
+            {
+                await ChattingRefreshChatRooms();
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿<Window x:Class="SlimMy.View.AddExercise"
+<Window x:Class="SlimMy.View.AddExercise"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,6 +23,15 @@
                     </WrapPanel>
                 </WrapPanel>
             </ScrollViewer>
+
+            <!-- 페이징 버튼 -->
+            <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="10,10,10,10">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                    <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5" />
+                    <TextBlock Text="{Binding CurrentPage}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="5" />
+                    <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5" />
+                </StackPanel>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </Window>

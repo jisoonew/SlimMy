@@ -28,11 +28,11 @@
         <Button x:Name="CommunityChat" Content="채팅방 생성" Command="{Binding ChattingCommand}" Width="100" HorizontalAlignment="Right" Margin="0,10,10,0" Height="40"/>
 
         <!-- 리스트뷰 -->
-        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10" 
-          ItemsSource="{Binding CurrentPageData}" SelectedIndex="{Binding SelectedChatRoomIndex}"
+        <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10"
+          ItemsSource="{Binding CurrentPageData}" 
           SelectedItem="{Binding SelectedChatRoom}">
             <i:Interaction.Triggers>
-                <i:EventTrigger EventName="SelectionChanged">
+                <i:EventTrigger EventName="MouseDoubleClick">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
                 </i:EventTrigger>
             </i:Interaction.Triggers>

@@ -23,27 +23,6 @@ namespace SlimMy
             _connString = connString;
         }
 
-        public void InsertPerson(string name)
-        {
-            using (OracleConnection connection = new OracleConnection(_connString))
-            {
-                try
-                {
-                    connection.Open();
-                    string sql = "INSERT INTO test (name) VALUES (:name)";
-                    using (OracleCommand sqlCommand = new OracleCommand(sql, connection))
-                    {
-                        sqlCommand.Parameters.Add(new OracleParameter("name", name));
-                        sqlCommand.ExecuteNonQuery();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error : " + ex.Message);
-                }
-            }
-        }
-
         // 이메일 중복 확인
         public bool DuplicateEmail(string email)
         {
@@ -119,13 +98,13 @@ namespace SlimMy
         }
 
         // 회원가입
-        public void InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
+        public async Task InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
                     string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, weight, diet_goal) " +
             "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :weight, :dietGoal)";
 
@@ -145,7 +124,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("weight", weight));
                         command.Parameters.Add(new OracleParameter("dietGoal", dietGoal));
 
-                        command.ExecuteNonQuery();
+                        await command.ExecuteNonQueryAsync();
                     }
                 }
                 catch (Exception ex)
@@ -156,13 +135,13 @@ namespace SlimMy
         }
 
         // 로그인
-        public bool LoginSuccess(string email, string password)
+        public async Task<bool> LoginSuccess(string email, string password)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
                     string sql = "select count(*) from Users where email = :email and password = :password";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
@@ -170,7 +149,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("email", email));
                         command.Parameters.Add(new OracleParameter("password", password));
 
-                        return (decimal)command.ExecuteScalar() > 0;
+                        return (decimal)await command.ExecuteScalarAsync() > 0;
                     }
                 }
                 catch (Exception ex)
@@ -181,21 +160,53 @@ namespace SlimMy
             }
         }
 
-        // 로그인 이후 닉네임 가져오기
-        public string NickName(string email)
+        // 로그인에 성공한 사용자의 로그인 시간 저장
+        public async Task LastLogin()
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
+
+                    User userID = UserSession.Instance.CurrentUser;
+
+                    byte[] userIDByte = ConvertGuidToOracleRaw(userID.UserId);
+
+                    // 생성 시간
+                    DateTime now = DateTime.Now;
+
+                    string sql = "Update users set LASTLOGIN = SYSTIMESTAMP  where userid = :UserId";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("UserId", OracleDbType.Raw, userIDByte, ParameterDirection.Input));
+
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error : " + ex.Message);
+                }
+            }
+        }
+
+        // 로그인 이후 닉네임 가져오기
+        public async Task<string> NickName(string email)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
                     string sql = "select nickname from Users where email = :email";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
                         command.Parameters.Add(new OracleParameter("email", email));
 
-                        object resultNickName = command.ExecuteScalar();
+                        object resultNickName = await command.ExecuteScalarAsync();
 
                         return resultNickName.ToString();
                     }
@@ -209,13 +220,13 @@ namespace SlimMy
         }
 
         // 로그인 이후 사용자 아이디 가져오기
-        public Guid UserID(string email)
+        public async Task<Guid> UserID(string email)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
                     string sql = "select userid from Users where email = :email";
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
@@ -224,7 +235,7 @@ namespace SlimMy
 
                         // ExecuteScalar() 메서드는 object 타입을 반환하므로,
                         // 이를 byte[]로 캐스팅한 후 Guid로 변환합니다.
-                        byte[] userIdBytes = (byte[])command.ExecuteScalar();
+                        byte[] userIdBytes = (byte[])await command.ExecuteScalarAsync();
 
                         // byte[]를 Guid로 변환
                         Guid userId = new Guid(userIdBytes);
@@ -281,13 +292,13 @@ namespace SlimMy
         }
 
         // 채팅방 아이디로 채팅방 생성한 사용자 아이디 찾기
-        public Guid GetHostUserIdByRoomId(String chatRoomId)
+        public async Task<Guid> GetHostUserIdByRoomId(String chatRoomId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     // Guid를 byte[]로 변환
                     byte[] chatRoomIdBytes = Guid.Parse(chatRoomId).ToByteArray();
@@ -308,9 +319,9 @@ namespace SlimMy
                         });
 
                         // OracleDataReader를 사용해 결과 읽기
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
-                            if (reader.Read())
+                            if (await reader.ReadAsync())
                             {
                                 // 결과에서 USERID를 가져와 Guid로 변환
                                 byte[] userIdBytes = (byte[])reader["USERID"];
@@ -328,20 +339,23 @@ namespace SlimMy
                 catch (Exception ex)
                 {
                     // 예외 처리 및 기본값 반환
-                    MessageBox.Show($"오류: {ex.Message}");
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        MessageBox.Show($"오류: {ex.Message}");
+                    });
                     return Guid.Empty;
                 }
             }
         }
 
         // 사용자와 채팅방 간의 관계 정보 저장
-        public void InsertUserChatRooms(Guid userId, Guid chatRoomId, DateTime createdAt, int num)
+        public async Task InsertUserChatRooms(Guid userId, Guid chatRoomId, DateTime createdAt, int num)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     byte[] userIdBytes = userId.ToByteArray();
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
@@ -359,7 +373,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("Isowner", OracleDbType.Decimal, num, ParameterDirection.Input));
 
-                        command.ExecuteNonQuery();
+                        await command.ExecuteNonQueryAsync();
                     }
 
                 }
@@ -371,13 +385,13 @@ namespace SlimMy
         }
 
         // UserChatRooms의 사용자와 테이블의 데이터가 존재하는가?
-        public bool CheckUserChatRooms(Guid userId, Guid chatRoomId)
+        public async Task<bool> CheckUserChatRooms(Guid userId, Guid chatRoomId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     byte[] userIdBytes = userId.ToByteArray();
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
@@ -389,7 +403,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("USERID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("CHATROOMID", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
 
-                        int count = Convert.ToInt32(command.ExecuteScalar());
+                        int count = Convert.ToInt32(await command.ExecuteScalarAsync());
 
                         // 중복이라면 false, 중복이 아니라면 true
                         if (count >= 1)
@@ -411,13 +425,13 @@ namespace SlimMy
         }
 
         // 채팅방 생성
-        public Guid InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
+        public async Task<Guid> InsertChatRoom(string chatRoomName, string description, string category, DateTime createdAt)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     Guid chatRoomId = Guid.NewGuid(); // 새로운 GUID 생성
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray(); // GUID를 바이트 배열로 변환
@@ -432,7 +446,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("Category", category));
                         command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
 
-                        command.ExecuteNonQuery();
+                        await command.ExecuteNonQueryAsync();
 
                         MessageBox.Show("채팅방이 생성되었습니다.");
                     }
@@ -488,7 +502,7 @@ namespace SlimMy
 
 
         // 특정 채팅방의 클라이언트 모든 아이디 출력
-        public List<string> GetChatRoomUserIds(string chatRoomId)
+        public async Task<List<string>> GetChatRoomUserIds(string chatRoomId)
         {
             List<string> userIds = new List<string>();
 
@@ -497,7 +511,7 @@ namespace SlimMy
 
             using (OracleConnection connection = new OracleConnection(_connString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 using (OracleCommand command = new OracleCommand())
                 {
@@ -507,7 +521,7 @@ namespace SlimMy
 
                     try
                     {
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
                             while (reader.Read())
                             {
@@ -530,7 +544,7 @@ namespace SlimMy
         }
 
         // 채팅방 출력
-        public IEnumerable<ChatRooms> SelectChatRoom()
+        public async Task<IEnumerable<ChatRooms>> SelectChatRoom()
         {
             var chatRooms = new List<ChatRooms>();
 
@@ -538,12 +552,12 @@ namespace SlimMy
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     string sql = "select ChatRoomID, ChatRoomName, Description, Category from ChatRooms";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
                             while (reader.Read())
                             {
@@ -567,7 +581,7 @@ namespace SlimMy
 
 
         // 같은 채팅방 모든 닉네임 출력
-        public IEnumerable<ChatUserList> SelectChatUserNickName(Guid chatRoomId)
+        public async Task<List<ChatUserList>> SelectChatUserNickName(Guid chatRoomId)
         {
             var chatRooms = new List<ChatUserList>();
 
@@ -575,7 +589,7 @@ namespace SlimMy
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     byte[] chatRoomIdBytes = chatRoomId.ToByteArray(); // GUID를 바이트 배열로 변환
 
@@ -584,9 +598,9 @@ namespace SlimMy
                     {
                         command.Parameters.Add(new OracleParameter("ChatRoomId", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
 
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
-                            while (reader.Read())
+                            while (await reader.ReadAsync())
                             {
                                 // 바이트 배열을 GUID로 변환한 후 표준 문자열 형식으로 변환
                                 byte[] userIdBytes = (byte[])reader["userid"];
@@ -610,7 +624,7 @@ namespace SlimMy
         }
 
         // 내가 참여한 채팅방 출력
-        public IEnumerable<ChatRooms> MyChatRooms(Guid userID)
+        public async Task<IEnumerable<ChatRooms>> MyChatRooms(Guid userID)
         {
             var chatRooms = new List<ChatRooms>();
 
@@ -618,7 +632,7 @@ namespace SlimMy
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
                     byte[] userIdBytes = userID.ToByteArray(); // GUID를 바이트 배열로 변환
 
                     string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE c.ChatRoomID in ( SELECT uc_inner.ChatRoomID FROM userChatrooms uc_inner WHERE uc_inner.UserID = :userIdBytes)";
@@ -627,9 +641,9 @@ namespace SlimMy
                         // 바인드 변수 추가
                         command.Parameters.Add(new OracleParameter("userIdBytes", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
 
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
-                            while (reader.Read())
+                            while (await reader.ReadAsync())
                             {
                                 ChatRooms chatRoom = new ChatRooms();
                                 chatRoom.ChatRoomId = reader.GetGuid(0);
@@ -650,7 +664,7 @@ namespace SlimMy
         }
 
         // 내가 참여한 채팅방 출력
-        public IEnumerable<ChatRooms> MyChatRoomsSearch(String searchWord)
+        public async Task<IEnumerable<ChatRooms>> MyChatRoomsSearch(String searchWord)
         {
             var chatRooms = new List<ChatRooms>();
 
@@ -658,16 +672,16 @@ namespace SlimMy
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE c.ChatRoomName = :searchWord or c.Description = :searchWord or c.Category = :searchWord";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
                         command.Parameters.Add(new OracleParameter("searchWord", searchWord));
 
-                        using (OracleDataReader reader = command.ExecuteReader())
+                        using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
-                            while (reader.Read())
+                            while (await reader.ReadAsync())
                             {
                                 ChatRooms chatRoom = new ChatRooms();
                                 chatRoom.ChatRoomId = reader.GetGuid(0);
@@ -688,13 +702,13 @@ namespace SlimMy
         }
 
         // 메시지 생성
-        public void InsertMessage(Guid chatRoomId, Guid userId, string content)
+        public async Task InsertMessage(Guid chatRoomId, Guid userId, string content)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     Guid messageId = Guid.NewGuid(); // 새로운 GUID 생성
                     byte[] messageIdBytes = messageId.ToByteArray(); // GUID를 바이트 배열로 변환
@@ -712,7 +726,7 @@ namespace SlimMy
                         // command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, createdAt, ParameterDirection.Input));
 
                         // SQL 명령문을 데이터베이스에 실행하도록 지시하는 메서드
-                        command.ExecuteNonQuery();
+                        await command.ExecuteNonQueryAsync();
                     }
                 }
                 catch (Exception ex)
@@ -723,13 +737,13 @@ namespace SlimMy
         }
 
         // 방장 위임
-        public void UpdateHost(Guid chatroomid, string updateHostID)
+        public async Task UpdateHost(Guid chatroomid, string updateHostID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     // GUID -> 바이트 배열로 변환
                     byte[] chatroomIdBytes = chatroomid.ToByteArray();
@@ -753,14 +767,14 @@ namespace SlimMy
                     using (OracleCommand command1 = new OracleCommand(sql1, connection))
                     {
                         command1.Parameters.Add(new OracleParameter("chatroomIdBytes", OracleDbType.Raw, chatroomIdBytes, ParameterDirection.Input));
-                        command1.ExecuteNonQuery();
+                        await command1.ExecuteNonQueryAsync();
                     }
 
                     using (OracleCommand command2 = new OracleCommand(sql2, connection))
                     {
                         command2.Parameters.Add(new OracleParameter("updateHostBytes", OracleDbType.Raw, updateHostBytes, ParameterDirection.Input));
                         command2.Parameters.Add(new OracleParameter("chatroomIdBytes", OracleDbType.Raw, chatroomIdBytes, ParameterDirection.Input));
-                        command2.ExecuteNonQuery();
+                        await command2.ExecuteNonQueryAsync();
                     }
                 }
                 catch (Exception ex)
@@ -825,13 +839,13 @@ namespace SlimMy
         }
 
         // 사용자 아이디로 닉네임 출력
-        public string SendNickName(string senderID)
+        public async Task<string> SendNickName(string senderID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     Guid senderIDGuid = Guid.Parse(senderID);
                     byte[] senderIDBytes = senderIDGuid.ToByteArray(); // GUID를 바이트 배열로 변환
@@ -842,7 +856,7 @@ namespace SlimMy
                     {
                         command.Parameters.Add(new OracleParameter("senderID", OracleDbType.Raw, senderIDBytes, ParameterDirection.Input));
 
-                        object resultNickName = command.ExecuteScalar();
+                        object resultNickName = await command.ExecuteScalarAsync();
 
                         return resultNickName.ToString();
                     }
@@ -856,13 +870,13 @@ namespace SlimMy
         }
 
         // 사용자 : 채팅방 나가기
-        public void ExitUserChatRoom(Guid userID, Guid chatRoomID)
+        public async Task ExitUserChatRoom(Guid userID, Guid chatRoomID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     string sql = "delete from userchatrooms where userid = :userid and chatroomid = :chatRoomID";
 
@@ -871,7 +885,7 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
                         command.Parameters.Add(new OracleParameter("chatRoomID", OracleDbType.Raw, chatRoomID.ToByteArray(), ParameterDirection.Input));
 
-                        command.ExecuteNonQuery();
+                        await command.ExecuteNonQueryAsync();
                     }
                 } 
                 catch (Exception ex)
@@ -883,11 +897,11 @@ namespace SlimMy
 
         // 방장이 채팅방을 나갈 경우
         // 채팅방, 사용자와 채팅방 관계, 메시지 모두 삭제
-        public void DeleteChatRoomWithRelations(Guid chatID)
+        public async Task DeleteChatRoomWithRelations(Guid chatID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 using (OracleTransaction transaction = connection.BeginTransaction()) // 트랜잭션 시작
                 {
                     try
@@ -898,7 +912,7 @@ namespace SlimMy
                         {
                             command1.Transaction = transaction;
                             command1.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
-                            command1.ExecuteNonQuery();
+                            await command1.ExecuteNonQueryAsync();
                         }
 
                         // 2. 채팅방 메시지 삭제
@@ -907,7 +921,7 @@ namespace SlimMy
                         {
                             command2.Transaction = transaction;
                             command2.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
-                            command2.ExecuteNonQuery();
+                            await command2.ExecuteNonQueryAsync();
                         }
 
                         // 3. 채팅방 삭제
@@ -916,16 +930,16 @@ namespace SlimMy
                         {
                             command3.Transaction = transaction;
                             command3.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
-                            command3.ExecuteNonQuery();
+                            await command3.ExecuteNonQueryAsync();
                         }
 
                         // 모든 작업이 성공하면 커밋
-                        transaction.Commit();
+                        await transaction.CommitAsync();
                     }
                     catch (Exception ex)
                     {
                         // 오류 발생 시 롤백
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         MessageBox.Show("오류 : " + ex.Message);
                     }
                 }
@@ -933,13 +947,13 @@ namespace SlimMy
         }
 
         // 사용자 방출 저장
-        public void InsertBanUser(Guid chatRoomId, String userId)
+        public async Task InsertBanUser(Guid chatRoomId, String userId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     Guid messageId = Guid.NewGuid(); // 새로운 GUID 생성
                     byte[] messageIdBytes = messageId.ToByteArray(); // GUID를 바이트 배열로 변환
@@ -956,7 +970,7 @@ namespace SlimMy
                         cmd.Parameters.Add(new OracleParameter(":userId", OracleDbType.Raw, senderIDBytes, ParameterDirection.Input));
                         cmd.Parameters.Add(new OracleParameter(":chatRoomId", OracleDbType.Raw, chatRoomId.ToByteArray(), ParameterDirection.Input));
 
-                        cmd.ExecuteNonQuery();
+                        await cmd.ExecuteNonQueryAsync();
                     }
                 }
                 catch (Exception ex)
@@ -967,11 +981,11 @@ namespace SlimMy
         }
 
         // 방출 당한 사용자와 채팅방 간의 관계 정보 삭제
-        public void DeleteBanUserChatRoom(Guid chatID, Guid userID)
+        public async Task DeleteBanUserChatRoom(Guid chatID, Guid userID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
-                connection.Open();
+                await connection.OpenAsync();
                 using (OracleTransaction transaction = connection.BeginTransaction()) // 트랜잭션 시작
                 {
                     try
@@ -982,20 +996,35 @@ namespace SlimMy
                             command1.Transaction = transaction;
                             command1.Parameters.Add(new OracleParameter("chatID", OracleDbType.Raw, chatID.ToByteArray(), ParameterDirection.Input));
                             command1.Parameters.Add(new OracleParameter("userID", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
-                            command1.ExecuteNonQuery();
+                            await command1.ExecuteNonQueryAsync();
                         }
 
                         // 모든 작업이 성공하면 커밋
-                        transaction.Commit();
+                        await transaction.CommitAsync();
                     }
                     catch (Exception ex)
                     {
                         // 오류 발생 시 롤백
-                        transaction.Rollback();
+                        await transaction.RollbackAsync();
                         MessageBox.Show("오류 : " + ex.Message);
                     }
                 }
             }
+        }
+
+        private byte[] ConvertGuidToOracleRaw(Guid guid)
+        {
+            byte[] guidBytes = guid.ToByteArray();
+
+            return new byte[]
+            {
+        guidBytes[0], guidBytes[1], guidBytes[2], guidBytes[3],  // Data1 (DWORD) - 바이트 순서 변경
+        guidBytes[4], guidBytes[5],
+
+        guidBytes[6], guidBytes[7],
+        guidBytes[8], guidBytes[9], guidBytes[10], guidBytes[11],
+        guidBytes[12], guidBytes[13], guidBytes[14], guidBytes[15]
+            };
         }
 
         public User GetUserData(string email)

@@ -228,10 +228,11 @@ namespace SlimMy.ViewModel
                 //this.Title = chattingPartner + "님과의 채팅방";
 
                 // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
-                IsHost = currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString()).ToString();
+                Task<Guid> hostUserID = _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
+                IsHost = currentUser.UserId.ToString() == hostUserID.ToString();
             });
 
-            SendCommand = new Command(Send_btn_Click);
+            SendCommand = new AsyncRelayCommand(Send_btn_Click);
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
@@ -273,13 +274,13 @@ namespace SlimMy.ViewModel
             _navigationService = new NavigationService();
 
             // 방장 위임 기능
-            ConfirmDelegateCommand = new Command(UpdateHostBtn);
+            ConfirmDelegateCommand = new AsyncRelayCommand(UpdateHostBtn);
 
             // 채팅방 나가기
-            ExitChatRoomCommand = new Command(ExitChatRoom);
+            ExitChatRoomCommand = new AsyncRelayCommand(ExitChatRoom);
 
             // 멤버 방출하기
-            BanCommand = new Command(BanMember);
+            BanCommand = new AsyncRelayCommand(BanMember);
 
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
@@ -349,10 +350,11 @@ namespace SlimMy.ViewModel
                     //this.Title = enteredUser + "과의 채팅방";
 
                     // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
-                    IsHost = currentUser.UserId.ToString() == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString()).ToString();
+                    Task<Guid> hostUserID = _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
+                    IsHost = currentUser.UserId.ToString() == hostUserID.ToString();
                 });
 
-                SendCommand = new Command(Send_btn_Click);
+                SendCommand = new AsyncRelayCommand(Send_btn_Click);
 
                 Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
@@ -391,13 +393,13 @@ namespace SlimMy.ViewModel
                 _navigationService = new NavigationService();
 
                 // 방장 위임 기능
-                ConfirmDelegateCommand = new Command(UpdateHostBtn);
+                ConfirmDelegateCommand = new AsyncRelayCommand(UpdateHostBtn);
 
                 // 채팅방 나가기
-                ExitChatRoomCommand = new Command(ExitChatRoom);
+                ExitChatRoomCommand = new AsyncRelayCommand(ExitChatRoom);
 
                 // 멤버 방출하기
-                BanCommand = new Command(BanMember);
+                BanCommand = new AsyncRelayCommand(BanMember);
 
                 ScrollToBot();
             }
@@ -408,7 +410,7 @@ namespace SlimMy.ViewModel
         }
 
         // 메시지 전송
-        private void Send_btn_Click(object parameter)
+        private async Task Send_btn_Click(object parameter)
         {
             if (string.IsNullOrEmpty(MessageText))
                 return;
@@ -434,9 +436,9 @@ namespace SlimMy.ViewModel
 
                     parsedMessage = string.Format("{0}:{1}:{2}<ChattingContent>", currentChatRooms.ChatRoomId, message, myUid);
                     byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                    client.GetStream().Write(byteData, 0, byteData.Length);
+                    await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
 
-                    _repo.InsertMessage(currentChatRooms.ChatRoomId, myUid, message);
+                    // _repo.InsertMessage(currentChatRooms.ChatRoomId, myUid, message);
                 }
 
                 MessageList.Add(new ChatMessage
@@ -448,7 +450,7 @@ namespace SlimMy.ViewModel
                 // 메시지 전송 후 초기화
                 MessageText = string.Empty;
 
-                ScrollToBot();
+                await ScrollToBot();
             }
             catch (Exception ex)
             {
@@ -509,7 +511,7 @@ namespace SlimMy.ViewModel
         }
 
         // 전송 메시지
-        public void ReceiveMessage(string sender, string message)
+        public async Task ReceiveMessage(string sender, string message)
         {
             if (message == "ChattingStart")
             {
@@ -526,17 +528,17 @@ namespace SlimMy.ViewModel
                     Alignment = TextAlignment.Left
                 });
 
-                ScrollToBot();
+                await ScrollToBot();
                 return;
             }
 
-            string senderNickName = _repo.SendNickName(sender);
+            string senderNickName = await _repo.SendNickName(sender);
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (!sender.Equals(currentUser.UserId.ToString()))
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
 
                     MessageList.Add(new ChatMessage
@@ -545,20 +547,20 @@ namespace SlimMy.ViewModel
                         Alignment = TextAlignment.Left
                     });
 
-                    ScrollToBot();
+                    await ScrollToBot();
                 });
             }
         }
 
         // 채팅방 나가기 메시지 수신
-        public void ReceiveLeaveRoomMessage(string sender, string message)
+        public async Task ReceiveLeaveRoomMessage(string sender, string message)
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (!sender.Equals(currentUser.UserId.ToString()))
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
 
                     MessageList.Add(new ChatMessage
@@ -567,31 +569,30 @@ namespace SlimMy.ViewModel
                         Alignment = TextAlignment.Left
                     });
 
-                    ScrollToBot();
+                    await ScrollToBot();
                 });
             }
         }
 
         // 채팅방 참가 메시지 수신
-        public void ReceiveAddRoomMessage(string sender, string message)
+        public async Task ReceiveAddRoomMessage(string sender, string message)
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            string senderNickName = _repo.SendNickName(sender);
+            string senderNickName = await _repo.SendNickName(sender);
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (!sender.Equals(currentUser.UserId.ToString()))
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
-
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{senderNickName}님이 참여하였습니다.",
                         Alignment = TextAlignment.Left
                     });
 
-                    ScrollToBot();
+                    await ScrollToBot();
                 });
             }
         }
@@ -605,7 +606,7 @@ namespace SlimMy.ViewModel
         }
 
         // 방장 위임 알림 출력
-        public void ReceiveHostChangedMessage(List<string> hostData, string message)
+        public async Task ReceiveHostChangedMessage(List<string> hostData, string message)
         {
             if (hostData == null || hostData.Count < 2)
             {
@@ -621,13 +622,13 @@ namespace SlimMy.ViewModel
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
             // 방장 위임을 받는 사용자 닉네임
-            string hostUserNick = _repo.SendNickName(hostChangedUserID);
+            string hostUserNick = await _repo.SendNickName(hostChangedUserID);
 
             // 현재 입장한 채팅방과 위임을 진행하는 채팅방이 일치하면 방장 위임 채팅방 알림
             if (currentChattingData.ChatRoomId.ToString() == hostChangedChattingRoomID)
             {
                 // 방장 위임 문구 출력
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageList.Add(new ChatMessage
                     {
@@ -655,7 +656,7 @@ namespace SlimMy.ViewModel
         }
 
         // 방장 위임 후보 리스트
-        private void UpdateHost()
+        private async Task UpdateHost()
         {
             // 같은 채팅방의 사용자 닉네임을 담은 리스트(방장 위임 리스트)
             DelegateCandidateList = new ObservableCollection<ChatUserList>();
@@ -668,8 +669,8 @@ namespace SlimMy.ViewModel
             Guid currentChatRoomId = currentChattingData.ChatRoomId;
 
             // SelectChatUserNickName으로 데이터 가져오기
-            var usersInChatRoom = _repo.SelectChatUserNickName(currentChatRoomId);
-            Application.Current.Dispatcher.Invoke(() =>
+            var usersInChatRoom = await _repo.SelectChatUserNickName(currentChatRoomId);
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // DelegateCandidateList에 추가
                 foreach (var user in usersInChatRoom)
@@ -684,23 +685,24 @@ namespace SlimMy.ViewModel
         }
 
         // 방장 위임 버튼
-        private void UpdateHostBtn(object parameter)
+        private async Task UpdateHostBtn(object parameter)
         {
             try
             {
                 ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
                 // 방장이었던 사용자는 isowner = 0, 지목 당한 사용자는 isowner = 1
-                _repo.UpdateHost(currentChattingData.ChatRoomId, UserSelectedItem.UsersID);
+                await _repo.UpdateHost(currentChattingData.ChatRoomId, UserSelectedItem.UsersID);
 
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageBox.Show(UserSelectedItem.UsersNickName + "에게 권한 위임 완료");
                 });
 
                 // 현재 사용자가 방장인지 확인하여 IsHost 업데이트
                 User currentUser = UserSession.Instance.CurrentUser;
-                IsHost = currentUser.UserId == _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
+
+                IsHost = currentUser.UserId == await _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
 
                 // 서버에 방장 변경 업데이트
                 string parsedMessage = "";
@@ -709,13 +711,13 @@ namespace SlimMy.ViewModel
                 // 채팅방 아이디와 위임 받을 사용자 아이디
                 parsedMessage = string.Format("HostChanged:{0}:{1}", parsedChatRoomId, UserSelectedItem.UsersID);
                 byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                client.GetStream().Write(byteData, 0, byteData.Length);
+                await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
 
                 // 위임 받을 사용자 닉네임
-                string hostUserNick = _repo.SendNickName(UserSelectedItem.UsersID);
+                string hostUserNick = await _repo.SendNickName(UserSelectedItem.UsersID);
 
                 // 방장 위임 공지 DB 저장
-                _repo.InsertMessage(Guid.Parse(parsedChatRoomId), Guid.Parse(UserSelectedItem.UsersID), $"{hostUserNick}님이 새로운 방장이 되었습니다.");
+                await _repo.InsertMessage(Guid.Parse(parsedChatRoomId), Guid.Parse(UserSelectedItem.UsersID), $"{hostUserNick}님이 새로운 방장이 되었습니다.");
 
                 // 위임 팝업 닫기
                 IsMainPopupOpen = false;
@@ -724,7 +726,7 @@ namespace SlimMy.ViewModel
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageBox.Show("ERROR : " + ex);
                 });
@@ -732,60 +734,60 @@ namespace SlimMy.ViewModel
         }
 
         // 채팅방 나가기
-        public void ExitChatRoom(object parameter)
+        public async Task ExitChatRoom(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
             // 현재 채팅방의 방장 아이디 가져오기
-            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
+            Guid selectUserID = await _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
 
-            string msg = string.Format("\"{0}\" 채팅방을 나가시겠습니까?", currentChatRoom.ChatRoomName);
+            string msg = string.Format($"{currentChatRoom.ChatRoomName} 채팅방을 나가시겠습니까?");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (messageBoxResult == MessageBoxResult.No)
             {
                 return;
             }
-            else
+
+            string leaveRoomData = string.Format("{0}:{1}<leaveRoom>", currentChatRoom.ChatRoomId, currentUser.UserId);
+            byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
+
+            try
             {
-                string leaveRoomData = "";
-                // 현재 사용자와 채팅방 방장이 동일인물이 아니라면 사용자와 채팅방 간의 관계 테이블에서 채팅방을 나가고자 하는 사용자 아이디만 삭제
-                if (selectUserID != currentUser.UserId)
+                if (!selectUserID.Equals(currentUser.UserId))
                 {
                     // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
-                    _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
+                    await _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
 
-                    // 채팅방 아이디와 사용자 아이디
-                    leaveRoomData = string.Format("{0}:{1}<leaveRoom>", currentChatRoom.ChatRoomId, currentUser.UserId);
-                    byte[] leaveRoomDataByte = Encoding.Default.GetBytes(leaveRoomData);
-                    client.GetStream().Write(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    _navigationService.NavigateToClose("ChattingWindow");
+                    // 클라이언트에게 메시지 전송
+                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
                 }
-
-                // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
-                if (selectUserID == currentUser.UserId)
+                else
                 {
-                    _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+                    // 채팅방 데이터 및 연관된 데이터 삭제
+                    await _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
 
-                    // 채팅방 아이디와 사용자 아이디
-                    leaveRoomData = string.Format("{0}:{1}<leaveRoom>", currentChatRoom.ChatRoomId, currentUser.UserId);
-                    byte[] leaveRoomDataByte = Encoding.Default.GetBytes(leaveRoomData);
-                    client.GetStream().Write(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    _navigationService.NavigateToClose("ChattingWindow");
+                    // 클라이언트에게 메시지 전송
+                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
                 }
+
+                // UI 이동
+                _navigationService.NavigateToClose("ChattingWindow");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ExitChatRoom] Error: {ex.Message}");
             }
         }
 
         // 사용자 방출하기
-        public void BanMember(object parameter)
+        public async Task BanMember(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
             // 현재 채팅방의 방장 아이디 가져오기
-            Guid selectUserID = _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
+            Guid selectUserID = await _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
 
             string msg = string.Format("\"{0}\"님을 방출하시겠습니까?", UserBanSelectedItem.UsersNickName);
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -799,10 +801,10 @@ namespace SlimMy.ViewModel
                 if (selectUserID == currentUser.UserId)
                 {
                     // 사용자와 채팅방 간의 관계 정보 삭제
-                    _repo.DeleteBanUserChatRoom(currentChatRoom.ChatRoomId, Guid.Parse(UserBanSelectedItem.UsersID));
+                    await _repo.DeleteBanUserChatRoom(currentChatRoom.ChatRoomId, Guid.Parse(UserBanSelectedItem.UsersID));
 
                     // 방출 사용자 정보 저장
-                    _repo.InsertBanUser(currentChatRoom.ChatRoomId, UserBanSelectedItem.UsersID);
+                    await _repo.InsertBanUser(currentChatRoom.ChatRoomId, UserBanSelectedItem.UsersID);
                 }
             }
         }
@@ -826,9 +828,9 @@ namespace SlimMy.ViewModel
         //    this.DialogResult = true;
         //}
 
-        private void ScrollToBot()
+        private async Task ScrollToBot()
         {
-            Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
                 var messageListView = GetMessageListView();
                 if (messageListView != null && messageListView.Items.Count > 0)
@@ -842,7 +844,8 @@ namespace SlimMy.ViewModel
                     // 선택 항목으로 스크롤
                     messageListView.ScrollIntoView(messageListView.SelectedItem);
                 }
-            }));
+                await Task.Yield(); // 추가된 부분 (UI 스레드에서 자연스럽게 실행되도록 함)
+            }, DispatcherPriority.Background);
         }
 
         private ListView GetMessageListView()

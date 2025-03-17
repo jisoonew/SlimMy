@@ -15,7 +15,7 @@ using System.Windows.Input;
 
 namespace SlimMy.ViewModel
 {
-    public class CreateChatRoom : INotifyPropertyChanged
+    public class CreateChatRoom : BaseViewModel
     {
         private readonly Community _communityViewModel;
         private ChatRooms _chat;
@@ -31,7 +31,7 @@ namespace SlimMy.ViewModel
         public ObservableCollection<ChatRooms> ChatRooms
         {
             get { return _chatRooms; }
-            set { _chatRooms = value; OnPropertyChanged(); }
+            set { _chatRooms = value; OnPropertyChanged(nameof(ChatRooms)); }
         }
 
         public ChatRooms Chat
@@ -61,21 +61,21 @@ namespace SlimMy.ViewModel
         {
             _chat = new ChatRooms();
             _repo = new Repo(_connstring);
-            OpenCreateChatRoomCommand = new Command(CreateChat);
+            OpenCreateChatRoomCommand = new AsyncRelayCommand(CreateChat);
         }
 
         // 채팅방 생성
-        private void CreateChat(object parameter)
+        private async Task CreateChat(object parameter)
         {
             // 생성 시간
             DateTime now = DateTime.Now;
 
-            Guid chatRoomId = _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
+            Guid chatRoomId = await _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
 
             Guid userId = UserSession.Instance.CurrentUser.UserId;
 
             // 사용자와 채팅방 간의 관계 생성
-            _repo.InsertUserChatRooms(userId, chatRoomId, now, 1);
+            await _repo.InsertUserChatRooms(userId, chatRoomId, now, 1);
 
             // 이벤트 발생
             ChatRoomCreated?.Invoke(this, EventArgs.Empty);
@@ -95,13 +95,6 @@ namespace SlimMy.ViewModel
                     break;
                 }
             }
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 }
