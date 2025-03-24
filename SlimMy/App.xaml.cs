@@ -26,7 +26,7 @@ namespace SlimMy
 
             // 로그인 뷰 표시
             var loginView = new View.Login();
-            var loginViewModel = new MainPage(_dataService, loginView);
+            var loginViewModel = new MainPageViewModel(_dataService, loginView);
             loginView.DataContext = loginViewModel;
 
             loginView.ShowDialog();

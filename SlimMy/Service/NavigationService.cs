@@ -68,7 +68,7 @@ namespace SlimMy.Service
 
             if (pageType == typeof(View.MyChats))
             {
-                var myChatsViewModel = await ViewModel.MyChats.CreateAsync();
+                var myChatsViewModel = await ViewModel.MyChatsViewModel.CreateAsync();
                 pageInstance = new View.MyChats { DataContext = myChatsViewModel };
             }
             else if (pageType.IsSubclassOf(typeof(Page)))
@@ -98,7 +98,7 @@ namespace SlimMy.Service
 
             if (pageType == typeof(View.Community))
             {
-                var myChatsViewModel = await ViewModel.Community.CreateAsync();
+                var myChatsViewModel = await ViewModel.CommunityViewModel.CreateAsync();
                 pageInstance = new View.Community { DataContext = myChatsViewModel };
             }
             else if (pageType.IsSubclassOf(typeof(Page)))

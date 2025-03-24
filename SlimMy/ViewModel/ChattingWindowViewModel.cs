@@ -18,7 +18,7 @@ using System.Windows.Threading;
 
 namespace SlimMy.ViewModel
 {
-    public class ChattingWindow : INotifyPropertyChanged
+    public class ChattingWindowViewModel : INotifyPropertyChanged
     {
         private string chattingPartner = null;
         private TcpClient client = null;
@@ -171,7 +171,7 @@ namespace SlimMy.ViewModel
         }
 
         // 1명 채팅방 입장
-        public ChattingWindow(TcpClient client, string chattingPartner)
+        public ChattingWindowViewModel(TcpClient client, string chattingPartner)
         {
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             User currentUser = UserSession.Instance.CurrentUser;
@@ -287,7 +287,7 @@ namespace SlimMy.ViewModel
         }
 
         // 다수 채팅방 입장
-        public ChattingWindow(TcpClient client, List<string> targetChattingPartners)
+        public ChattingWindowViewModel(TcpClient client, List<string> targetChattingPartners)
         {
             try
             {
@@ -538,16 +538,13 @@ namespace SlimMy.ViewModel
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (!sender.Equals(currentUser.UserId.ToString()))
             {
-                await Application.Current.Dispatcher.InvokeAsync(async () =>
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{senderNickName}: {message}",
                         Alignment = TextAlignment.Left
                     });
-
-                    await ScrollToBot();
                 });
             }
         }

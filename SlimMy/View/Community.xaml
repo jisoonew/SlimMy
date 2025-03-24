@@ -4,12 +4,12 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:Community}"
+      xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:CommunityViewModel}"
       mc:Ignorable="d"  Background="White"
       Height="830" Width="1100"      Title="Community">
 
     <Page.DataContext>
-        <local:Community/>
+        <local:CommunityViewModel/>
     </Page.DataContext>
 
     <Grid>
@@ -30,7 +30,7 @@
         <!-- 리스트뷰 -->
         <ListView x:Name="ChatRoomListView" Grid.Row="1" Margin="10"
           ItemsSource="{Binding CurrentPageData}" 
-          SelectedItem="{Binding SelectedChatRoom}">
+          SelectedItem="{Binding SelectedChatRoom, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
             <i:Interaction.Triggers>
                 <i:EventTrigger EventName="MouseDoubleClick">
                     <i:InvokeCommandAction Command="{Binding InsertCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>

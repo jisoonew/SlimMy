@@ -1,4 +1,4 @@
-﻿using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Messaging;
 using MVVM2.ViewModel;
 using SlimMy.Model;
@@ -74,7 +74,7 @@ namespace SlimMy.ViewModel
         public Command LoginCommand { get; set; }
         public Command NickNameCommand { get; set; }
 
-        private Community _communityViewModel; // Community ViewModel 인스턴스 추가
+        private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
 
         private void SaveUser()
         {

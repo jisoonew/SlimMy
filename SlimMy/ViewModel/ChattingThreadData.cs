@@ -12,12 +12,12 @@ namespace SlimMy.ViewModel
     {
         public static int chattingRoomCnt = 0;
         public Thread chattingThread;
-        public ChattingWindow chattingWindow;
+        public ChattingWindowViewModel chattingWindow;
         public int chattingRoomNum;
         public string chattingRoomNumStr;
         private static object obj = new object();
 
-        public ChattingThreadData(Thread chattingThread, ChattingWindow chattingWindow)
+        public ChattingThreadData(Thread chattingThread, ChattingWindowViewModel chattingWindow)
         {
             lock (obj)
             {
@@ -27,7 +27,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public ChattingThreadData(Thread chattingThread, ChattingWindow chattingWindow, string chatRoom)
+        public ChattingThreadData(Thread chattingThread, ChattingWindowViewModel chattingWindow, string chatRoom)
         {
             lock (obj)
             {

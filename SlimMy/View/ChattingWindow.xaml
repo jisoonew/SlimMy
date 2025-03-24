@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:SlimMy.ViewModel" 
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes" 
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors" xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-        d:DataContext="{d:DesignInstance Type=local:ChattingWindow}"
+        d:DataContext="{d:DesignInstance Type=local:ChattingWindowViewModel}"
         mc:Ignorable="d"
         Title="ChattingWindow" Height="550" Width="550"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"

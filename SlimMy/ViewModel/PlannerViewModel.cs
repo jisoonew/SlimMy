@@ -1,6 +1,8 @@
+using SlimMy.Model;
 using SlimMy.Service;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,6 +23,7 @@ namespace SlimMy.ViewModel
             ExerciseCommand = new Command(AddExerciseNavigation);
         }
 
+        // 운동 추가 뷰
         public void AddExerciseNavigation(object parameter)
         {
             _navigationService.NavigateToAddExercise();

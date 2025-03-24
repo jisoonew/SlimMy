@@ -50,7 +50,7 @@ namespace SlimMy.View
         {
             _navigationService = new NavigationService(MainFrame);
             _navigationService.SetFrame(MainFrame);
-            this.DataContext = new MainPage(_navigationService);
+            this.DataContext = new MainPageViewModel(_navigationService);
         }
     }
 }

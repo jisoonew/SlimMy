@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SlimMy.ViewModel
 {
-    public class DashBoard : BaseViewModel
+    public class DashBoardViewModel : BaseViewModel
     {
     }
 }

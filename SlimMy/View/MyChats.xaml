@@ -4,7 +4,7 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-      xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:MyChats}"
+      xmlns:local="clr-namespace:SlimMy.ViewModel" d:DataContext="{d:DesignInstance Type=local:MyChatsViewModel}"
       mc:Ignorable="d"  Background="White"
       Height="830" Width="1100"
       Title="MyChats">
@@ -14,7 +14,7 @@
     </Page.Resources>
 
     <Page.DataContext>
-        <local:MyChats/>
+        <local:MyChatsViewModel/>
     </Page.DataContext>
 
     <Grid>

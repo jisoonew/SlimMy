@@ -11,6 +11,8 @@ using SlimMy.Model;
 using SlimMy.View;
 using Dapper;
 using System.Diagnostics;
+using System.IO;
+using System.Windows.Media.Imaging;
 
 namespace SlimMy
 {
@@ -1012,6 +1014,43 @@ namespace SlimMy
             }
         }
 
+        public IEnumerable<Exercise> AllExerciseList()
+        {
+            var exerciseList = new List<Exercise>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = "SELECT exerciseID, ExerciseName, Image FROM exercises";
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    using (OracleDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var exercise = new Exercise
+                            {
+                                ExerciseID = reader.GetGuid(0),
+                                ExerciseName = reader.GetString(1),
+                                ImagePath = ConvertByteArrayToImage(
+                                    reader.IsDBNull(2) ? null : (byte[])reader["Image"])
+                            };
+
+                            exerciseList.Add(exercise);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("AllExerciseList : " + ex.Message);
+                }
+            }
+
+            return exerciseList;
+        }
+
         private byte[] ConvertGuidToOracleRaw(Guid guid)
         {
             byte[] guidBytes = guid.ToByteArray();
@@ -1034,6 +1073,32 @@ namespace SlimMy
             {
                 Email = email
             };
+        }
+
+        // 바이트 배열 -> BitmapImage로 변환
+        public BitmapImage ConvertByteArrayToImage(byte[] imageData)
+        {
+            if (imageData == null || imageData.Length == 0)
+                return null;
+
+            try
+            {
+                using (MemoryStream ms = new MemoryStream(imageData))
+                {
+                    BitmapImage image = new BitmapImage();
+                    image.BeginInit();
+                    image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.StreamSource = ms;
+                    image.EndInit();
+                    image.Freeze();
+                    return image;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("이미지 변환 중 오류 발생: " + ex.Message);
+                return null;
+            }
         }
     }
 }

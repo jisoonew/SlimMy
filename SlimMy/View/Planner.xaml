@@ -6,77 +6,78 @@
       xmlns:local="clr-namespace:SlimMy.View"
       xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
       mc:Ignorable="d" 
-      Height="830" Width="1100"  d:DataContext="{d:DesignInstance Type=ViewModel:PlannerViewModel}"
+      Height="830" Width="1100" d:DataContext="{d:DesignInstance Type=ViewModel:PlannerViewModel}"
       Title="Planner" Background="White">
 
     <Page.DataContext>
         <ViewModel:PlannerViewModel/>
     </Page.DataContext>
-    
+
     <Grid>
         <!-- Header -->
-        <TextBlock Text="Planner" FontSize="25" Margin="30,20,0,0" />
+        <TextBlock Text="Planner" FontSize="28" FontWeight="Bold" Margin="30,20,0,0"/>
 
         <!-- Main Content 영역 -->
-        <Border BorderBrush="Black" BorderThickness="1" Margin="30,70,30,30" Background="LightGray">
-            <Grid Margin="20">
+        <Border BorderBrush="Black" BorderThickness="1" Margin="30,70,30,30" Background="White" CornerRadius="10">
+            <Grid Margin="30">
                 <Grid.RowDefinitions>
-                    <!-- 날짜 & 목표 설정 -->
                     <RowDefinition Height="Auto"/>
-                    <!-- 몸무게 입력 & 운동 선택 버튼 -->
                     <RowDefinition Height="Auto"/>
-                    <!-- 순서 변경 버튼 -->
                     <RowDefinition Height="Auto"/>
-                    <!-- 운동 리스트 -->
                     <RowDefinition Height="*"/>
-                    <!-- 총 칼로리 -->
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <!-- 리스트 -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 위/아래 버튼 -->
+                </Grid.ColumnDefinitions>
+
                 <!-- 날짜 및 목표 설정 -->
-                <Grid Grid.Row="0">
+                <Grid Grid.Row="0" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <DatePicker x:Name="datePicker" 
-                                Width="220" Height="40" FontSize="20" 
-                                Margin="0,0,10,0" Padding="2" 
-                                Background="White" 
-                                SelectedDate="{Binding SelectedDate}"/>
+                                Width="220" Height="40" FontSize="18" 
+                                Padding="2" Background="White" 
+                                SelectedDate="{Binding SelectedDate}" />
                     <Button Grid.Column="1" Content="목표 설정" 
-                            Width="130" Height="40" FontSize="20" 
+                            Width="130" Height="40" FontSize="18" 
                             HorizontalAlignment="Right" 
-                            Background="White" Foreground="Black"/>
+                            Margin="10,0,0,0"
+                            Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"/>
                 </Grid>
 
-                <!-- 몸무게 입력 및 운동 선택 버튼 (수평 그리드 사용) -->
-                <Grid Grid.Row="1" Margin="0,10">
+                <!-- 몸무게 입력 및 운동 선택 버튼 -->
+                <Grid Grid.Row="1" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- 몸무게 입력 영역 -->
-                    <Border Background="White" Padding="10" Width="500" HorizontalAlignment="Left">
+                    <!-- 몸무게 입력 -->
+                    <Border Background="White" Padding="10" Width="500" HorizontalAlignment="Left" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Label Content="몸무게" FontSize="20" VerticalAlignment="Center"/>
-                            <Grid Grid.Column="1" Margin="10,0,10,0">
+                            <Label Content="몸무게" FontSize="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <Grid Grid.Column="1" Margin="5,0">
                                 <TextBox Name="searchTextBox" 
-                                         Width="120" Height="40" FontSize="20" 
+                                         Width="120" Height="35" FontSize="18" 
                                          VerticalContentAlignment="Center"/>
                                 <TextBlock Text="몸무게 입력" IsHitTestVisible="False" 
-                                           FontSize="20" Margin="5,0,0,0" VerticalAlignment="Center">
+                                           FontSize="16" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="Gray">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Visibility" Value="Hidden"/>
-                                            <Setter Property="Foreground" Value="#FF858585"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding Text, ElementName=searchTextBox}" Value="">
                                                     <Setter Property="Visibility" Value="Visible"/>
@@ -86,38 +87,52 @@
                                     </TextBlock.Style>
                                 </TextBlock>
                             </Grid>
-                            <Label Grid.Column="2" Content="kg" FontSize="25" VerticalAlignment="Center"/>
+                            <Label Grid.Column="2" Content="kg" FontSize="18" VerticalAlignment="Center" Margin="5,0,0,0"/>
                         </Grid>
                     </Border>
 
-                    <!-- 운동 선택 버튼 (오른쪽 정렬) -->
-                    <Button Grid.Column="2" Content="운동 선택" 
-                            Width="120" Height="50" Command="{Binding ExerciseCommand}"
-                            HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand"/>
+                    <!-- 운동 선택 버튼 -->
+                    <Button Grid.Column="2" Content="운동 선택" Foreground="Black"
+                            Width="130" Height="45" FontSize="16"
+                            Command="{Binding ExerciseCommand}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" 
+                            Cursor="Hand" Margin="10,0,0,0" Background="#FFEEEEEE"  BorderBrush="Gray"/>
                 </Grid>
 
-                <!-- 순서 변경 버튼 (몸무게 입력 영역 아래) -->
-                <StackPanel Grid.Row="2" Orientation="Horizontal" 
-                            HorizontalAlignment="Right" Margin="0,10">
-                    <Button Content="위로" Width="75" Margin="5"/>
-                    <Button Content="아래로" Width="75" Margin="5"/>
-                </StackPanel>
+                <!-- 운동 리스트 + 위/아래 버튼 (Grid.Row=3) -->
+                <Grid Grid.Row="3" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- 운동 리스트 (ListBox) -->
-                <ListBox Grid.Row="3" x:Name="MyListBox" 
-                         ItemsSource="{Binding Items}" 
-                         Margin="0,10"/>
+                    <!-- 운동 리스트 -->
+                    <ListBox Grid.Column="0" x:Name="MyListBox" 
+             ItemsSource="{Binding Items}" 
+             BorderThickness="1" BorderBrush="LightGray"
+             Margin="0,0,10,0" />
 
-                <!-- 총 칼로리 입력 -->
-                <Grid Grid.Row="4" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <!-- 위로 / 아래로 버튼 -->
+                    <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
+                        <Button Content="위로" Width="60" Height="35" Margin="0,5" 
+                Background="#FFEFEFEF" Foreground="Black" 
+                Command="{Binding MoveUpCommand}"/>
+                        <Button Content="아래로" Width="60" Height="35" Margin="0,5" 
+                Background="#FFEFEFEF" Foreground="Black"
+                Command="{Binding MoveDownCommand}"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- 총 칼로리 -->
+                <Grid Grid.Row="4" HorizontalAlignment="Right">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="총 칼로리" FontSize="20" 
+                    <TextBlock Text="총 칼로리" FontSize="18" 
                                VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <TextBox Grid.Column="1" Width="200" Height="40" 
-                             FontSize="20" VerticalContentAlignment="Center"/>
+                             FontSize="18" VerticalContentAlignment="Center"/>
                 </Grid>
             </Grid>
         </Border>

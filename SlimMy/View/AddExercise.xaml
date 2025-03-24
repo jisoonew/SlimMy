@@ -3,9 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SlimMy.View"
+        xmlns:local="clr-namespace:SlimMy.ViewModel"
+      xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
-        Title="AddExercise" Height="500" Width="600">
+        Title="AddExercise" Height="900" Width="900" WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
+
+    <Window.DataContext>
+        <local:ExerciseViewModel/>
+    </Window.DataContext>
+    
     <Grid>
         <StackPanel Orientation="Horizontal" Height="30" VerticalAlignment="Top" HorizontalAlignment="Center" Width="370" Margin="0,10,0,0">
             <TextBox Width="300"></TextBox>
@@ -13,24 +19,44 @@
         </StackPanel>
 
         <StackPanel Margin="0,50,0,0">
-            <ScrollViewer VerticalScrollBarVisibility="auto">
-                <WrapPanel>
-                    <WrapPanel Background="LightGray" Margin="20,10,20,0" Height="350" Width="660" Orientation="Horizontal">
-                        <StackPanel>
-                            <Image  Source="/Resources/Logo.png" Width="120"></Image>
-                            <Label HorizontalAlignment="Center">운동명</Label>
-                        </StackPanel>
-                    </WrapPanel>
-                </WrapPanel>
-            </ScrollViewer>
+            <ListBox x:Name="ChatRoomListView" ItemsSource="{Binding CurrentPageData}" SelectedIndex="{Binding SelectedChatRoomIndex}"
+          SelectedItem="{Binding SelectedChatRoom}"
+         BorderThickness="0" Background="Transparent"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalAlignment="Left" Width="900">
 
-            <!-- 페이징 버튼 -->
-            <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="10,10,10,10">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-                    <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5" />
-                    <TextBlock Text="{Binding CurrentPage}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="5" />
-                    <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5" />
-                </StackPanel>
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="MouseLeftButtonUp">
+                        <i:InvokeCommandAction Command="{Binding TestCommand}" CommandParameter="{Binding SelectedItem, ElementName=ChatRoomListView}"/>
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel IsItemsHost="True"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Width="160" Height="Auto" Margin="0,2,0,0" CornerRadius="10" Background="#FFF" BorderBrush="Gray" BorderThickness="1" Padding="0,0,0,5" VerticalAlignment="Stretch">
+                            <StackPanel>
+                                <Image Source="{Binding ImagePath}" Height="120" Stretch="UniformToFill" Margin="0,0,0,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                                <TextBlock Text="{Binding ExerciseName}" FontSize="14" TextWrapping="Wrap"
+           TextAlignment="Center"
+                               HorizontalAlignment="Center" Margin="5,5,5,0"/>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </StackPanel>
+
+        <!-- 페이징 버튼 -->
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="10,0,10,0" VerticalAlignment="Bottom">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+                <Button Content="Previous" Command="{Binding PreviousPageCommand}" Margin="5" />
+                <TextBlock Text="{Binding CurrentPage}" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="5" />
+                <Button Content="Next" Command="{Binding NextPageCommand}" Margin="5" />
             </StackPanel>
         </StackPanel>
     </Grid>

@@ -15,9 +15,9 @@ using System.Windows.Input;
 
 namespace SlimMy.ViewModel
 {
-    public class CreateChatRoom : BaseViewModel
+    public class CreateChatRoomViewModel : BaseViewModel
     {
-        private readonly Community _communityViewModel;
+        private readonly CommunityViewModel _communityViewModel;
         private ChatRooms _chat;
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
@@ -57,7 +57,7 @@ namespace SlimMy.ViewModel
 
         public ICommand OpenCreateChatRoomCommand { get; private set; }
 
-        public CreateChatRoom()
+        public CreateChatRoomViewModel()
         {
             _chat = new ChatRooms();
             _repo = new Repo(_connstring);
