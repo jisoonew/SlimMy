@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace SlimMy.ViewModel
@@ -27,6 +28,11 @@ namespace SlimMy.ViewModel
         public void AddExerciseNavigation(object parameter)
         {
             _navigationService.NavigateToAddExercise();
+        }
+        
+        public void SelectedPlannerPrint(Guid exerciID)
+        {
+            MessageBox.Show("여기는 플래너 : " + exerciID);
         }
     }
 }

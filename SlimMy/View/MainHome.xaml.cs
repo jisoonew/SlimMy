@@ -24,14 +24,17 @@ namespace SlimMy.View
     {
         private NavigationService _navigationService;
 
-        public MainHome()
+        public MainHome(MainPageViewModel viewModel)
         {
             InitializeComponent();
-            Loaded += MainHome_Loaded;
-        }
 
-        public MainHome(Community bViewModel)
-        {
+            _navigationService = new NavigationService(MainFrame);
+            _navigationService.SetFrame(MainFrame);
+
+            // ViewModel에게 NavigationService를 주입하거나 초기화할 수 있다면 여기서 하면 됨
+            viewModel.SetNavigationService(_navigationService);
+
+            this.DataContext = viewModel;
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -44,13 +47,6 @@ namespace SlimMy.View
             }
 
             Environment.Exit(1);
-        }
-
-        private void MainHome_Loaded(object sender, RoutedEventArgs e)
-        {
-            _navigationService = new NavigationService(MainFrame);
-            _navigationService.SetFrame(MainFrame);
-            this.DataContext = new MainPageViewModel(_navigationService);
         }
     }
 }

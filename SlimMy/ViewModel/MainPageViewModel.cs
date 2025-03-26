@@ -40,7 +40,7 @@ namespace SlimMy.ViewModel
         Dictionary<string, ChattingThreadData> chattingThreadDic = new Dictionary<string, ChattingThreadData>();
         Dictionary<int, ChattingThreadData> groupChattingThreadDic = new Dictionary<int, ChattingThreadData>();
 
-        private readonly INavigationService _navigationService;
+        private INavigationService _navigationService;
 
         // 테스트 코드
         Dictionary<string, ChattingThreadData> groupChattingThreadDicTest = new Dictionary<string, ChattingThreadData>();
@@ -65,6 +65,13 @@ namespace SlimMy.ViewModel
         {
             get { return _user; }
             set { _user = value; OnPropertyChanged(nameof(User)); }
+        }
+
+        private string _nickName;
+        public string NickName
+        {
+            get { return _nickName; }
+            set { _nickName = value; OnPropertyChanged(nameof(NickName)); }
         }
 
         public ICommand NavigateToCommunityCommand { get; }
@@ -248,12 +255,6 @@ namespace SlimMy.ViewModel
             _user = new User();
 
             User.BirthDate = new DateTime(1990, 1, 1);
-        }
-
-        public Command PlannerCommand { get; set; }
-        public MainPageViewModel(NavigationService navigationService)
-        {
-            _navigationService = navigationService;
 
             PlannerCommand = new Command(NavigateToPlanner);
 
@@ -262,14 +263,21 @@ namespace SlimMy.ViewModel
             MyChatsCommand = new AsyncRelayCommand(MyChatsBtn);
 
             CommunityCommand = new AsyncRelayCommand(CommunityBtn);
-
-            // DashBoardCommand = new AsyncRelayCommand(DashBoardBtn);
         }
+
+        public Command PlannerCommand { get; set; }
+
 
         // 플래너 화면 전환
         private void NavigateToPlanner(object parameter)
         {
             _navigationService.NavigateToFrame(typeof(Planner));
+        }
+
+        // 프레임 지정
+        public void SetNavigationService(NavigationService navService)
+        {
+            _navigationService = navService;
         }
 
         // 로그인
@@ -296,6 +304,8 @@ namespace SlimMy.ViewModel
                 User.NickName = loggedInNickName;
                 User.IpNum = ip;
                 User.UserId = selectUserID;
+
+                NickName = loggedInNickName;
 
                 client = new TcpClient();
                 await client.ConnectAsync(ip, 9999);
@@ -324,13 +334,7 @@ namespace SlimMy.ViewModel
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    _view.Close();
-
-                    // MainView 열기
-                    var mainView = new MainHome
-                    {
-                        DataContext = this
-                    };
+                    var mainView = new MainHome(this); // this = MainPageViewModel 인스턴스
                     mainView.Show();
                 });
             }
@@ -349,6 +353,7 @@ namespace SlimMy.ViewModel
         // 커뮤니티 버튼 기능
         public async Task CommunityBtn(object parameter)
         {
+
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 선택된 그룹 채팅 참여자들의 정보를 문자열

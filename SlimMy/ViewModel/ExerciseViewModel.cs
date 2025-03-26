@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,10 +11,19 @@ using System.Windows.Input;
 
 namespace SlimMy.ViewModel
 {
+    // 시간 기반으로 칼로리를 계산할 것인지
+    // 횟수 기반으로 칼로리를 계산할 것인지 선택
+    public enum CalorieMode
+    {
+        TimeBased,
+        RepetitionBased
+    }
+
     public class ExerciseViewModel : BaseViewModel
     {
         private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
+        private readonly INavigationService _navigationService;
 
         private int _currentPage; // 현재 페이지 번호.
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
@@ -59,49 +69,85 @@ namespace SlimMy.ViewModel
             }
         }
 
-        private int _selectedChatRoomIndex;
-        public int SelectedChatRoomIndex
+        private int _selectedEXerciseIndex;
+        public int SelectedEXerciseIndex
         {
-            get => _selectedChatRoomIndex;
+            get => _selectedEXerciseIndex;
             set
             {
-                _selectedChatRoomIndex = value;
-                OnPropertyChanged(nameof(SelectedChatRoomIndex)); // UI에 변경 알림
+                _selectedEXerciseIndex = value;
+                OnPropertyChanged(nameof(SelectedEXerciseIndex)); // UI에 변경 알림
             }
         }
 
-        private Exercise _selectedChatRoom;
-        public Exercise SelectedChatRoom
+        private Exercise _selectedChatRoomData;
+        public Exercise SelectedChatRoomData
         {
-            get { return _selectedChatRoom; }
+            get { return _selectedChatRoomData; }
             set
             {
-                if (_selectedChatRoom != value)
+                if (_selectedChatRoomData != value)
                 {
-                    _selectedChatRoom = value;
-                    OnPropertyChanged(nameof(SelectedChatRoom));
+                    _selectedChatRoomData = value;
+                    OnPropertyChanged(nameof(SelectedChatRoomData));
                 }
                 else
                 {
                     // 동일한 항목을 선택해도 동작하도록 처리
-                    OnPropertyChanged(nameof(SelectedChatRoom));
+                    OnPropertyChanged(nameof(SelectedChatRoomData));
                 }
             }
         }
 
+        // 시간 or 횟수 기반 칼로리 계산
+        private CalorieMode _selectedCalorieMode;
+        public CalorieMode SelectedCalorieMode
+        {
+            get => _selectedCalorieMode;
+            set
+            {
+                _selectedCalorieMode = value;
+                OnPropertyChanged(nameof(SelectedCalorieMode));
+                OnPropertyChanged(nameof(IsTimeBased));
+                OnPropertyChanged(nameof(IsRepetitionBased));
+                // UpdateCalories(); // 선택 모드 바뀌면 즉시 칼로리 다시 계산
+            }
+        }
+
+        private string _exerciseName;
+        public string ExerciseName
+        {
+            get { return _exerciseName; }
+            set { _exerciseName = value; OnPropertyChanged(nameof(ExerciseName)); }
+        }
+
+        public bool IsTimeBased => SelectedCalorieMode == CalorieMode.TimeBased;
+        public bool IsRepetitionBased => SelectedCalorieMode == CalorieMode.RepetitionBased;
+
         public ObservableCollection<Exercise> AllData { get; set; } // 전체 데이터
 
+        // 페이징 다음 버튼
         public ICommand NextPageCommand { get; set; }
+
+        // 페이징 이전 버튼
         public ICommand PreviousPageCommand { get; set; }
 
-        public ICommand TestCommand { get; set; }
+        // 운동 선택
+        public ICommand SelectedExerciseCommand { get; set; }
+
+        // 플래너 운동 추가
+        public ICommand AddExerciseCommand { get; set; }
 
         public ExerciseViewModel()
         {
             _repo = new Repo(_connstring);
             Exercises = new ObservableCollection<Exercise>();
 
+            // 운동 목록 데이터 가져오기
             ExerciseList();
+
+            // 결합도를 낮추기 위한 뷰 전환 서비스
+            _navigationService = new NavigationService();
 
             AllData = Exercises;
 
@@ -122,7 +168,14 @@ namespace SlimMy.ViewModel
 
             UpdateCurrentPageData();
 
-            TestCommand = new RelayCommand(ExerciseTest);
+            // 운동 선택
+            SelectedExerciseCommand = new RelayCommand(SelectedExercise);
+
+            // 칼로리 계산 선택
+            SelectedCalorieMode = CalorieMode.TimeBased; // 기본값
+
+            // 플래너 운동 추가
+            AddExerciseCommand = new RelayCommand(AddExerciseData);
         }
 
         // 운동 목록 출력
@@ -143,43 +196,48 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public void ExerciseTest(object parameter)
+        // 운동 선택
+        public void SelectedExercise(object parameter)
         {
             if (parameter is Exercise exerciseData)
             {
-                SelectedChatRoom = exerciseData;
-                MessageBox.Show("AllData : " + exerciseData.ExerciseID + "이름 : " + exerciseData.ExerciseName);
+                SelectedChatRoomData = exerciseData;
+                string msg = string.Format("{0}를 선택하시겠습니까?", SelectedChatRoomData.ExerciseName);
+                MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (messageBoxResult == MessageBoxResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    // MessageBox.Show("AllData : " + exerciseData.ExerciseID + "이름 : " + exerciseData.ExerciseName);
+                    ExerciseName = SelectedChatRoomData.ExerciseName;
+                }
             }
         }
 
-        // 페이징에 따른 운동 목록
-        public void ChattingRefreshChatRooms()
+        // 플래너 운동 추가하기
+        public void AddExerciseData(object parameter)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            string msg = string.Format("{0}를 선택하시겠습니까?", SelectedChatRoomData.ExerciseName);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
             {
-                var chatRooms = _repo.AllExerciseList(); // DB에서 최신 데이터 가져오기
+                return;
+            }
+            else
+            {
+                // MessageBox.Show("AllData : " + exerciseData.ExerciseID + "이름 : " + exerciseData.ExerciseName);
+                // 운동 선택 윈도우 창 닫기
+                // _navigationService.NavigateToClose("AddExercise");
 
-                if (AllData == null)
-                    AllData = new ObservableCollection<Exercise>();
-
-                AllData.Clear();
-
-                foreach (var chatRoom in chatRooms)
-                {
-                    AllData.Add(chatRoom);
-                }
-
-                // 총 페이지 수 재계산
-                TotalPages = (int)Math.Ceiling((double)AllData.Count / _pageSize);
-
-                if (CurrentPage > TotalPages)
-                    CurrentPage = TotalPages;
-
-                // 현재 페이지 데이터 업데이트
-                UpdateCurrentPageData();
-            });
+                // 선택된 운동 아이디 플래너에게 전달
+                PlannerViewModel plannerViewModel = new PlannerViewModel();
+                plannerViewModel.SelectedPlannerPrint(SelectedChatRoomData.ExerciseID);
+            }
         }
 
+        // 페이지에 따른 운동 목록 출력
         private void UpdateCurrentPageData()
         {
             // Skip: 현재 페이지 이전의 항목을 건너뜀.
