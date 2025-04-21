@@ -1,3 +1,4 @@
+using SlimMy.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +18,9 @@ namespace SlimMy.Service
         Task NavigateToFrameAsync(Type pageType);
 
         Task NavigateToCommunityFrameAsync(Type pageType);
+
+        void NavigateToMainWindow(MainPageViewModel mainPageViewModel);
+
+        void NavigateToExerciseWindow();
     }
 }

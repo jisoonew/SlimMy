@@ -12,5 +12,6 @@ namespace SlimMy.Model
         public Guid ExerciseID { get; set; }
         public string ExerciseName { get; set; }
         public BitmapImage ImagePath { get; set; }
+        public decimal Met { get; set; }
     }
 }

@@ -146,6 +146,39 @@ namespace SlimMy.Service
         //    }
         //}
 
+        // 로그인 -> 메인 화면
+        public void NavigateToMainWindow(MainPageViewModel mainPageViewModel)
+        {
+            MessageBox.Show("메인 윈도우 진입");
+
+            var mainWindow = new MainHome(mainPageViewModel);
+            mainWindow.Show();
+
+            // 로그인 창 닫기
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is View.Login)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        // 운동 선택창 닫기
+        public void NavigateToExerciseWindow()
+        {
+            // 로그인 창 닫기
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is AddExercise)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
         public void SetFrame(Frame frame)
         {
             _frame = frame;

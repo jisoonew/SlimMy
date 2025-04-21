@@ -69,6 +69,25 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 운동 소모 시간
+        private string _plannedMinutes;
+        public string PlannedMinutes
+        {
+            get { return _plannedMinutes; }
+            set
+            {
+                _plannedMinutes = value; OnPropertyChanged(nameof(PlannedMinutes));
+            }
+        }
+
+        // 계산 이후 칼로리
+        private string _calories;
+        public string Calories
+        {
+            get { return _calories; }
+            set { _calories = value; OnPropertyChanged(nameof(Calories)); }
+        }
+
         private int _selectedEXerciseIndex;
         public int SelectedEXerciseIndex
         {
@@ -138,6 +157,8 @@ namespace SlimMy.ViewModel
         // 플래너 운동 추가
         public ICommand AddExerciseCommand { get; set; }
 
+        public ICommand CalculateCaloriesCommand { get; set; }
+
         public ExerciseViewModel()
         {
             _repo = new Repo(_connstring);
@@ -171,11 +192,14 @@ namespace SlimMy.ViewModel
             // 운동 선택
             SelectedExerciseCommand = new RelayCommand(SelectedExercise);
 
-            // 칼로리 계산 선택
+            // 칼로리 계산 시간/횟수 선택
             SelectedCalorieMode = CalorieMode.TimeBased; // 기본값
 
             // 플래너 운동 추가
             AddExerciseCommand = new RelayCommand(AddExerciseData);
+
+            // 칼로리 계산
+            CalculateCaloriesCommand = new RelayCommand(CalculateCalories);
         }
 
         // 운동 목록 출력
@@ -191,7 +215,8 @@ namespace SlimMy.ViewModel
                 {
                     ExerciseID = exerciseBundle.ExerciseID,
                     ExerciseName = exerciseBundle.ExerciseName,
-                    ImagePath = exerciseBundle.ImagePath
+                    ImagePath = exerciseBundle.ImagePath,
+                    Met = exerciseBundle.Met
                 });
             }
         }
@@ -211,7 +236,8 @@ namespace SlimMy.ViewModel
                 else
                 {
                     // MessageBox.Show("AllData : " + exerciseData.ExerciseID + "이름 : " + exerciseData.ExerciseName);
-                    ExerciseName = SelectedChatRoomData.ExerciseName;
+                    // 선택한 운동 이름 및 MET 값 설정
+                    ExerciseName = exerciseData.ExerciseName;
                 }
             }
         }
@@ -231,10 +257,35 @@ namespace SlimMy.ViewModel
                 // 운동 선택 윈도우 창 닫기
                 // _navigationService.NavigateToClose("AddExercise");
 
-                // 선택된 운동 아이디 플래너에게 전달
-                PlannerViewModel plannerViewModel = new PlannerViewModel();
-                plannerViewModel.SelectedPlannerPrint(SelectedChatRoomData.ExerciseID);
+                CalculateCalories(null);
+
+                if (string.IsNullOrEmpty(Calories) || Calories == "0")
+                {
+                    MessageBox.Show("운동 정보가 충분하지 않거나 칼로리를 계산할 수 없습니다.");
+                    return;
+                }
+                else
+                {
+                    // 선택된 운동 아이디 플래너에게 전달
+                    PlannerViewModel.Instance.SelectedPlannerPrint(SelectedChatRoomData, Calories);
+
+                    // 운동 선택창 닫기
+                    _navigationService.NavigateToExerciseWindow();
+                }
             }
+        }
+
+        // 칼로리 계산
+        private void CalculateCalories(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            double userWeight = _repo.SelectUserWeight(currentUser.UserId);
+            double met = (double)SelectedChatRoomData.Met;
+            int minutes = Convert.ToInt32(PlannedMinutes);
+            double result = (met * userWeight * 3.5 / 200) * minutes;
+
+            Calories = Math.Round(result, 1).ToString();
         }
 
         // 페이지에 따른 운동 목록 출력

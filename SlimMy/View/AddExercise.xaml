@@ -89,11 +89,13 @@
 
             <!-- 시간 기반 -->
             <TextBlock Text="예정 시간 (분)" FontWeight="Bold" Visibility="{Binding IsTimeBased, Converter={StaticResource BoolToVisibilityConverter}}"/>
-            <TextBox Text="{Binding PlannedMinutes}" Width="200" Margin="0,5" Visibility="{Binding IsTimeBased, Converter={StaticResource BoolToVisibilityConverter}}" HorizontalAlignment="Left"/>
+            <TextBox Text="{Binding PlannedMinutes}"  Width="200" Margin="0,5" Visibility="{Binding IsTimeBased, Converter={StaticResource BoolToVisibilityConverter}}" HorizontalAlignment="Left"/>
 
             <!-- 칼로리 계산 -->
             <TextBlock Text="예상 칼로리" FontWeight="Bold"/>
             <TextBox Text="{Binding Calories}" Width="200" Margin="0,5" HorizontalAlignment="Left"/>
+            
+            <Button Content="칼로리 계산" Command="{Binding CalculateCaloriesCommand}" Margin="0,10"/>
             
             <!-- 플래너에 추가 -->
             <Button Content="추가" Command="{Binding AddExerciseCommand}" Margin="0,10"/>

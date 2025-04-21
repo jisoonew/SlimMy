@@ -17,11 +17,18 @@ namespace SlimMy.ViewModel
 
         public ICommand ExerciseCommand { get; set; }
 
+        public ObservableCollection<string> Items { get; set; }
+
+        private static PlannerViewModel _instance;
+        public static PlannerViewModel Instance => _instance ?? (_instance = new PlannerViewModel());
+
         public PlannerViewModel()
         {
             _navigationService = new NavigationService();
 
             ExerciseCommand = new Command(AddExerciseNavigation);
+
+            Items = new ObservableCollection<string>();
         }
 
         // 운동 추가 뷰
@@ -30,9 +37,13 @@ namespace SlimMy.ViewModel
             _navigationService.NavigateToAddExercise();
         }
         
-        public void SelectedPlannerPrint(Guid exerciID)
+        public void SelectedPlannerPrint(Exercise exerciseData, string calories)
         {
-            MessageBox.Show("여기는 플래너 : " + exerciID);
+            Items.Clear();
+            Items.Add(exerciseData.ExerciseName);
+            Items.Add(calories);
+
+            MessageBox.Show("여기는 플래너 : " + exerciseData.ExerciseID + "\n" + exerciseData.ExerciseName + "\n" + calories);
         }
     }
 }

@@ -1014,6 +1014,7 @@ namespace SlimMy
             }
         }
 
+        // 운동 아이디, 이름, 이미지 데이터 출력
         public IEnumerable<Exercise> AllExerciseList()
         {
             var exerciseList = new List<Exercise>();
@@ -1024,18 +1025,21 @@ namespace SlimMy
                 {
                     connection.Open();
 
-                    string sql = "SELECT exerciseID, ExerciseName, Image FROM exercises";
+                    string sql = "SELECT exerciseID, ExerciseName, Image, Met FROM exercises";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     using (OracleDataReader reader = command.ExecuteReader())
                     {
                         while (reader.Read())
                         {
+                            decimal met = reader.IsDBNull(3) ? 0.0m : Convert.ToDecimal(reader["Met"]);
+
                             var exercise = new Exercise
                             {
                                 ExerciseID = reader.GetGuid(0),
                                 ExerciseName = reader.GetString(1),
                                 ImagePath = ConvertByteArrayToImage(
-                                    reader.IsDBNull(2) ? null : (byte[])reader["Image"])
+                                    reader.IsDBNull(2) ? null : (byte[])reader["Image"]),
+                                Met = met
                             };
 
                             exerciseList.Add(exercise);
@@ -1047,8 +1051,44 @@ namespace SlimMy
                     MessageBox.Show("AllExerciseList : " + ex.Message);
                 }
             }
-
             return exerciseList;
+        }
+
+        // 사용자 몸무게 출력
+        public double SelectUserWeight(Guid senderID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = "select weight from Users where userid = :senderID";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("senderID", OracleDbType.Raw, ConvertGuidToOracleRaw(senderID), ParameterDirection.Input));
+
+                        using (OracleDataReader reader = command.ExecuteReader())
+                        {
+                            if (reader.Read())
+                            {
+                                double weight = Convert.ToDouble(reader["Weight"]);
+                                return weight;
+                            }
+                            else
+                            {
+                                return -1; // 사용자 없음
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                    return -1;
+                }
+            }
         }
 
         private byte[] ConvertGuidToOracleRaw(Guid guid)

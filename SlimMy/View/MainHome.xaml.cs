@@ -48,5 +48,10 @@ namespace SlimMy.View
 
             Environment.Exit(1);
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
