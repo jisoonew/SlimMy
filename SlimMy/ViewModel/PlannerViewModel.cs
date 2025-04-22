@@ -17,7 +17,47 @@ namespace SlimMy.ViewModel
 
         public ICommand ExerciseCommand { get; set; }
 
-        public ObservableCollection<string> Items { get; set; }
+        public ObservableCollection<PlanItem> Items { get; set; }
+
+        public ICommand SelectedPlnnaerCommand { get; set; }
+
+        public int UpdateIndex { get; set; }
+
+        private PlanItem _selectedPlnnerData;
+        public PlanItem SelectedPlannerData
+        {
+            get { return _selectedPlnnerData; }
+            set
+            {
+                if (_selectedPlnnerData != value)
+                {
+                    _selectedPlnnerData = value;
+                    OnPropertyChanged(nameof(SelectedPlannerData));
+                }
+                else
+                {
+                    // 동일한 항목을 선택해도 동작하도록 처리
+                    OnPropertyChanged(nameof(SelectedPlannerData));
+                }
+            }
+        }
+
+        // 해당 운동 리스트 위로
+        public ICommand MoveUpCommand => new RelayCommand(_ =>
+        {
+            int index = Items.IndexOf(SelectedPlannerData);
+            if(index > 0)
+                Items.Move(index, index - 1);
+        }, _ => SelectedPlannerData != null && Items.IndexOf(SelectedPlannerData) > 0);
+
+        // 해당 운동 리스트 아래로
+        public ICommand MoveDownCommand => new RelayCommand(_ => {
+            int index = Items.IndexOf(SelectedPlannerData);
+            if (index < Items.Count - 1)
+                Items.Move(index, index + 1);
+        }, _ => SelectedPlannerData != null && Items.IndexOf(SelectedPlannerData) < Items.Count - 1);
+
+        public ICommand UpdateCommand { set; get; }
 
         private static PlannerViewModel _instance;
         public static PlannerViewModel Instance => _instance ?? (_instance = new PlannerViewModel());
@@ -28,7 +68,13 @@ namespace SlimMy.ViewModel
 
             ExerciseCommand = new Command(AddExerciseNavigation);
 
-            Items = new ObservableCollection<string>();
+            Items = new ObservableCollection<PlanItem>();
+
+            SelectedPlnnaerCommand = new RelayCommand(PrintPlannerData);
+
+            UpdateCommand = new RelayCommand(UpdatePlannerData);
+
+            Items.Clear();
         }
 
         // 운동 추가 뷰
@@ -36,14 +82,47 @@ namespace SlimMy.ViewModel
         {
             _navigationService.NavigateToAddExercise();
         }
-        
-        public void SelectedPlannerPrint(Exercise exerciseData, string calories)
-        {
-            Items.Clear();
-            Items.Add(exerciseData.ExerciseName);
-            Items.Add(calories);
 
-            MessageBox.Show("여기는 플래너 : " + exerciseData.ExerciseID + "\n" + exerciseData.ExerciseName + "\n" + calories);
+        // 리스트 선택한 운동 데이터 출력
+        public void PrintPlannerData(object parameter)
+        {
+            if (parameter is PlanItem planItem)
+            {
+                SelectedPlannerData = planItem;
+            }
+        }
+
+        // 리스트 선택한 운동 데이터 수정
+        public void UpdatePlannerData(object parameter)
+        {
+            ExerciseViewModel.IsEditMode = true;
+            UpdateIndex = Items.IndexOf(SelectedPlannerData);
+            _navigationService.NavigateToAddExercise();
+            // MessageBox.Show("테스트 : " + SelectedPlannerData.Name);
+        }
+
+        // 리스트 박스 수정
+        public void UpdatePlannerPrint(Exercise exerciseData, string calories, int minutes)
+        {
+            if (UpdateIndex >= 0)
+            {
+                Items[UpdateIndex].ExerciseID = exerciseData.ExerciseID;
+                Items[UpdateIndex].Name = exerciseData.ExerciseName;
+                Items[UpdateIndex].Minutes = minutes;
+                Items[UpdateIndex].Calories = double.Parse(calories);
+            }
+        }
+
+        // 운동 선택 이후에 데이터를 리스트 박스에 출력
+        public void SelectedPlannerPrint(Exercise exerciseData, string calories, int minutes)
+        {
+            Items.Add(new PlanItem
+            {
+                ExerciseID = exerciseData.ExerciseID,
+                Name = exerciseData.ExerciseName,
+                Minutes = minutes,
+                Calories = double.Parse(calories)
+            });
         }
     }
 }

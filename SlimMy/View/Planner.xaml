@@ -5,6 +5,8 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:SlimMy.View"
       xmlns:ViewModel="clr-namespace:SlimMy.ViewModel"
+      xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:dd="http://gong-wpf-dragdrop.com"
       mc:Ignorable="d" 
       Height="830" Width="1100" d:DataContext="{d:DesignInstance Type=ViewModel:PlannerViewModel}"
       Title="Planner" Background="White">
@@ -108,19 +110,90 @@
 
                     <!-- 운동 리스트 -->
                     <ListBox Grid.Column="0" x:Name="MyListBox" 
-             ItemsSource="{Binding Items}" 
+             ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedPlannerData}"
              BorderThickness="1" BorderBrush="LightGray"
-             Margin="0,0,10,0" />
+             Margin="0,0,10,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Width="500">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="[" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" />
+                                    <TextBlock Grid.Column="2" Text="분]" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Name}" />
+
+                                    <!-- 오른쪽 정렬 -->
+                                    <TextBlock Grid.Column="4" Text="{Binding Calories}" 
+                       HorizontalAlignment="Right" Margin="5,0" />
+                                    <TextBlock Grid.Column="5" Text="kcal" 
+                       HorizontalAlignment="Right" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="MouseLeftButtonUp">
+                                <i:InvokeCommandAction Command="{Binding SelectedPlnnaerCommand}" CommandParameter="{Binding SelectedItem, ElementName=MyListBox}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </ListBox>
 
                     <!-- 위로 / 아래로 버튼 -->
-                    <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-                        <Button Content="위로" Width="60" Height="35" Margin="0,5" 
-                Background="#FFEFEFEF" Foreground="Black" 
-                Command="{Binding MoveUpCommand}"/>
-                        <Button Content="아래로" Width="60" Height="35" Margin="0,5" 
-                Background="#FFEFEFEF" Foreground="Black"
-                Command="{Binding MoveDownCommand}"/>
-                    </StackPanel>
+                    <Grid Grid.Column="1" VerticalAlignment="Stretch" Height="500">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <!-- 위로 버튼 -->
+                            <RowDefinition Height="Auto"/>
+                            <!-- 아래로 버튼 -->
+                            <RowDefinition Height="*"/>
+                            <!-- 빈 공간 -->
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <!-- 저장 버튼 -->
+                        </Grid.RowDefinitions>
+
+                        <!--  위로 이동 -->
+                        <Button Grid.Row="0" Content="위로" Width="60" Height="35" Margin="0,5" 
+            Background="#FFEFEFEF" Foreground="Black" 
+            Command="{Binding MoveUpCommand}" />
+
+                        <!--  아래로 이동 -->
+                        <Button Grid.Row="1" Content="아래로" Width="60" Height="35" Margin="0,5" 
+            Background="#FFEFEFEF" Foreground="Black"
+            Command="{Binding MoveDownCommand}" />
+
+                        <!-- 수정 버튼 -->
+                        <Button Grid.Row="3" Content="수정" Width="60" Height="35" Margin="0,5" 
+        Background="#FFEFEFEF" Foreground="Black"
+        Command="{Binding UpdateCommand}" />
+
+                        <!-- 선 역할 -->
+                        <Rectangle Grid.Row="4" Height="1" Fill="Gray" Margin="0,10"/>
+                        
+                        <!-- 삭제 버튼 -->
+                        <Button Grid.Row="5" Content="삭제" Width="60" Height="35" Margin="0,5" 
+        Background="#FFEFEFEF" Foreground="Black"
+        Command="{Binding DeleteCommand}" />
+
+                        <!-- 선 역할 -->
+                        <Rectangle Grid.Row="6" Height="1" Fill="Gray" Margin="0,10"/>
+
+                        <!-- 저장 버튼 -->
+                        <Button Grid.Row="7" Content="저장" Width="60" Height="35" Margin="0,5" 
+        Background="#FFEFEFEF" Foreground="Black"
+        Command="{Binding SaveCommand}" Cursor="Hand" />
+                    </Grid>
                 </Grid>
 
                 <!-- 총 칼로리 -->

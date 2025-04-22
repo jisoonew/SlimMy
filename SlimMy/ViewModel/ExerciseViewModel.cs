@@ -29,6 +29,8 @@ namespace SlimMy.ViewModel
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
         private int _pageSize = 20; // 페이지당 항목 수
 
+        public int minutes; // 운동 시간
+
         // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산하여 저장.
         public int TotalPages
         {
@@ -145,6 +147,8 @@ namespace SlimMy.ViewModel
 
         public ObservableCollection<Exercise> AllData { get; set; } // 전체 데이터
 
+        public static bool IsEditMode { get; set; }
+
         // 페이징 다음 버튼
         public ICommand NextPageCommand { get; set; }
 
@@ -259,15 +263,18 @@ namespace SlimMy.ViewModel
 
                 CalculateCalories(null);
 
-                if (string.IsNullOrEmpty(Calories) || Calories == "0")
+                if (IsEditMode)
                 {
-                    MessageBox.Show("운동 정보가 충분하지 않거나 칼로리를 계산할 수 없습니다.");
-                    return;
+                    // 선택된 운동 아이디 플래너에게 전달
+                    PlannerViewModel.Instance.UpdatePlannerPrint(SelectedChatRoomData, Calories, minutes);
+
+                    // 운동 선택창 닫기
+                    _navigationService.NavigateToExerciseWindow();
                 }
                 else
                 {
                     // 선택된 운동 아이디 플래너에게 전달
-                    PlannerViewModel.Instance.SelectedPlannerPrint(SelectedChatRoomData, Calories);
+                    PlannerViewModel.Instance.SelectedPlannerPrint(SelectedChatRoomData, Calories, minutes);
 
                     // 운동 선택창 닫기
                     _navigationService.NavigateToExerciseWindow();
@@ -282,7 +289,7 @@ namespace SlimMy.ViewModel
 
             double userWeight = _repo.SelectUserWeight(currentUser.UserId);
             double met = (double)SelectedChatRoomData.Met;
-            int minutes = Convert.ToInt32(PlannedMinutes);
+            minutes = Convert.ToInt32(PlannedMinutes);
             double result = (met * userWeight * 3.5 / 200) * minutes;
 
             Calories = Math.Round(result, 1).ToString();
