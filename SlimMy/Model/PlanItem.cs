@@ -13,6 +13,7 @@ namespace SlimMy.Model
         private string name;
         private int minutes;
         private double calories;
+        private bool isCompleted;
 
         public Guid ExerciseID
         {
@@ -36,6 +37,12 @@ namespace SlimMy.Model
         {
             get { return calories; }
             set { calories = value; OnPropertyChanged(nameof(Calories)); }
+        }
+
+        public bool IsCompleted
+        {
+            get { return isCompleted; }
+            set { isCompleted = value; OnPropertyChanged(nameof(IsCompleted)); }
         }
 
         public override string ToString()

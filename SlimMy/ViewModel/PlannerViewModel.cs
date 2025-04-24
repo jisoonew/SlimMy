@@ -13,6 +13,9 @@ namespace SlimMy.ViewModel
 {
     public class PlannerViewModel : BaseViewModel
     {
+        private Repo _repo;
+        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
+
         private readonly INavigationService _navigationService;
 
         public ICommand ExerciseCommand { get; set; }
@@ -22,6 +25,10 @@ namespace SlimMy.ViewModel
         public ICommand SelectedPlnnaerCommand { get; set; }
 
         public int UpdateIndex { get; set; }
+
+        public ICommand DeleteCommand { get; set; }
+
+        public ICommand SaveCommand { get; set; }
 
         private PlanItem _selectedPlnnerData;
         public PlanItem SelectedPlannerData
@@ -40,6 +47,13 @@ namespace SlimMy.ViewModel
                     OnPropertyChanged(nameof(SelectedPlannerData));
                 }
             }
+        }
+
+        private DateTime _selectedDate;
+        public DateTime SelectedDate
+        {
+            get { return _selectedDate; }
+            set { _selectedDate = value; OnPropertyChanged(nameof(SelectedDate)); }
         }
 
         // 해당 운동 리스트 위로
@@ -64,6 +78,8 @@ namespace SlimMy.ViewModel
 
         public PlannerViewModel()
         {
+            _repo = new Repo(_connstring);
+
             _navigationService = new NavigationService();
 
             ExerciseCommand = new Command(AddExerciseNavigation);
@@ -73,6 +89,12 @@ namespace SlimMy.ViewModel
             SelectedPlnnaerCommand = new RelayCommand(PrintPlannerData);
 
             UpdateCommand = new RelayCommand(UpdatePlannerData);
+
+            DeleteCommand = new RelayCommand(DeletePlannerPrint);
+
+            SaveCommand = new RelayCommand(InsertPlannerPrint);
+
+            UpdateIndex = Items.IndexOf(SelectedPlannerData);
 
             Items.Clear();
         }
@@ -95,13 +117,16 @@ namespace SlimMy.ViewModel
         // 리스트 선택한 운동 데이터 수정
         public void UpdatePlannerData(object parameter)
         {
+            // 운동 추가 뷰모델에게 데이터 수정을 알림
             ExerciseViewModel.IsEditMode = true;
+
             UpdateIndex = Items.IndexOf(SelectedPlannerData);
+
+            // 운동 추가 뷰 생성
             _navigationService.NavigateToAddExercise();
-            // MessageBox.Show("테스트 : " + SelectedPlannerData.Name);
         }
 
-        // 리스트 박스 수정
+        // 플래너 수정
         public void UpdatePlannerPrint(Exercise exerciseData, string calories, int minutes)
         {
             if (UpdateIndex >= 0)
@@ -110,6 +135,51 @@ namespace SlimMy.ViewModel
                 Items[UpdateIndex].Name = exerciseData.ExerciseName;
                 Items[UpdateIndex].Minutes = minutes;
                 Items[UpdateIndex].Calories = double.Parse(calories);
+            }
+        }
+
+        // 플래너 삭제
+        public void DeletePlannerPrint(object parameter)
+        {
+            string msg = string.Format("{0}를 삭제하시겠습니까?", SelectedPlannerData.Name);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                Items.Remove(SelectedPlannerData);
+                SelectedPlannerData = null;
+            }
+        }
+
+        // 플래너 저장
+        public void InsertPlannerPrint(object parameter)
+        {
+            string msg = string.Format("저장하시겠습니까?");
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                User currentUser = UserSession.Instance.CurrentUser;
+
+                // Guid userID, Guid Exercise_info_id, int indexnum, int minutes, int calories, char isCompleted
+
+                int itemIndex = 0;
+                foreach (var item in Items)
+                {
+                    // MessageBox.Show(currentUser.UserId + "\n" + item.ExerciseID + "\n" + itemIndex + "\n" + item.Minutes + "\n" + item.Calories + "\n" + item.IsCompleted);
+
+                    _repo.InsertPlanner(currentUser.UserId, item.ExerciseID, itemIndex, item.Minutes, (int)item.Calories, item.IsCompleted, SelectedDate);
+                    itemIndex++;
+                }
+
+                // MessageBox.Show(currentUser.UserId + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n");
+                // await _repo.InsertPlanner();
             }
         }
 

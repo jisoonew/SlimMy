@@ -120,20 +120,26 @@
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="[" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" />
-                                    <TextBlock Grid.Column="2" Text="분]" />
-                                    <TextBlock Grid.Column="3" Text="{Binding Name}" />
+                                    <CheckBox Grid.Column="0"
+                          IsChecked="{Binding IsCompleted, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,10,0"/>
+
+                                    <TextBlock Grid.Column="1" Text="[" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Minutes}" />
+                                    <TextBlock Grid.Column="3" Text="분]" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Name}" />
 
                                     <!-- 오른쪽 정렬 -->
-                                    <TextBlock Grid.Column="4" Text="{Binding Calories}" 
+                                    <TextBlock Grid.Column="5" Text="{Binding Calories}" 
                        HorizontalAlignment="Right" Margin="5,0" />
-                                    <TextBlock Grid.Column="5" Text="kcal" 
+                                    <TextBlock Grid.Column="6" Text="kcal" 
                        HorizontalAlignment="Right" />
                                 </Grid>
                             </DataTemplate>

@@ -611,7 +611,7 @@ namespace SlimMy
                                 string nickName = reader["nickname"].ToString();
 
                                 ChatUserList chatRoom = new ChatUserList(userIdStr, nickName);
-                                
+
                                 chatRooms.Add(chatRoom);
                             }
                         }
@@ -889,7 +889,7 @@ namespace SlimMy
 
                         await command.ExecuteNonQueryAsync();
                     }
-                } 
+                }
                 catch (Exception ex)
                 {
                     MessageBox.Show("오류 : " + ex);
@@ -1025,7 +1025,9 @@ namespace SlimMy
                 {
                     connection.Open();
 
-                    string sql = "SELECT exerciseID, ExerciseName, Image, Met FROM exercises";
+                    string sql = "SELECT info.exercise_info_id, info.exercisename, info.image, inten.met " +
+"FROM exercise_info info INNER JOIN exercise_intensity inten ON info.exercise_info_id = inten.exercise_info_id INNER JOIN exercise_log log "
++ "ON log.exercise_intensity_id = inten.exercise_intensity_id";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     using (OracleDataReader reader = command.ExecuteReader())
                     {
@@ -1087,6 +1089,52 @@ namespace SlimMy
                 {
                     MessageBox.Show("오류 : " + ex);
                     return -1;
+                }
+            }
+        }
+
+        // 플래너 저장
+        public void InsertPlanner(Guid userID, Guid Exercise_info_id, int indexnum, int minutes, int calories, bool isCompleted, DateTime createDate)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    Guid plannerId = Guid.NewGuid(); // 새로운 GUID 생성
+                    byte[] plannerIdBytes = plannerId.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    char isCompletedChar;
+
+                    if (isCompleted)
+                    {
+                        isCompletedChar = 'Y';
+                    }else
+                    {
+                        isCompletedChar = 'N';
+                    }
+
+                    string query = "INSERT INTO Planner (PlannerId, UserId, Exercise_Info_Id, IndexNum, Minutes, Calories, IsCompleted, exercisedate) VALUES(:plannerId, :userID, :Exercise_info_id, :indexnum, :minutes, :calories, :isCompleted, :exercisedate)";
+
+                    using (OracleCommand cmd = new OracleCommand(query, connection))
+                    {
+                        cmd.Parameters.Add(new OracleParameter(":plannerId", OracleDbType.Raw, plannerIdBytes, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":userID", OracleDbType.Raw, userID, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":Exercise_info_id", OracleDbType.Raw, Exercise_info_id.ToByteArray(), ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":indexnum", OracleDbType.Int32, indexnum, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":minutes", OracleDbType.Int32, minutes, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":calories", OracleDbType.Int32, calories, ParameterDirection.Input));
+                        cmd.Parameters.Add(new OracleParameter(":isCompleted", OracleDbType.Char, isCompletedChar, ParameterDirection.Input));
+
+                        cmd.Parameters.Add(new OracleParameter(":exercisedate", OracleDbType.TimeStamp, createDate, ParameterDirection.Input));
+
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
                 }
             }
         }
