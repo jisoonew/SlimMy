@@ -49,11 +49,34 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private string _plannerTitle;
+        public string PlannerTitle
+        {
+            get { return _plannerTitle; }
+            set { _plannerTitle = value; OnPropertyChanged(nameof(PlannerTitle)); }
+        }
+
         private DateTime _selectedDate;
         public DateTime SelectedDate
         {
             get { return _selectedDate; }
-            set { _selectedDate = value; OnPropertyChanged(nameof(SelectedDate)); }
+            set {
+                if (_selectedDate != value)
+                {
+                    _selectedDate = value;
+                    OnPropertyChanged(nameof(SelectedDate));
+
+                    // 특정 날짜에 해당하는 플래너 내역 출력
+                    SelectedDatePlanner();
+                }
+            }
+        }
+
+        private string _totalCalories;
+        public string TotalCalories
+        {
+            get { return _totalCalories; }
+            set { _totalCalories = value; OnPropertyChanged(nameof(TotalCalories)); }
         }
 
         // 해당 운동 리스트 위로
@@ -76,6 +99,54 @@ namespace SlimMy.ViewModel
         private static PlannerViewModel _instance;
         public static PlannerViewModel Instance => _instance ?? (_instance = new PlannerViewModel());
 
+        private ObservableCollection<PlannerWithGroup> _plannerGroups;
+        public ObservableCollection<PlannerWithGroup> PlannerGroups
+        {
+            get => _plannerGroups;
+            set { _plannerGroups = value; OnPropertyChanged(nameof(PlannerGroups)); }
+        }
+
+        private PlannerWithGroup _selectedPlannerGroup;
+        public PlannerWithGroup SelectedPlannerGroup
+        {
+            get => _selectedPlannerGroup;
+            set
+            {
+                if (_selectedPlannerGroup != value)
+                {
+                    _selectedPlannerGroup = value;
+                    OnPropertyChanged(nameof(SelectedPlannerGroup));
+
+                    // 운동 리스트 세팅
+                    if (_selectedPlannerGroup != null)
+                    {
+                        Items = new ObservableCollection<PlanItem>(
+                            _selectedPlannerGroup.Exercises.Select(ex => new PlanItem
+                            {
+                                ExerciseID = ex.Exercise_Info_ID,
+                                IsCompleted = ex.IsCompleted,
+                                Name = ex.ExerciseName,
+                                Minutes = ex.Minutes,
+                                Calories = ex.Calories
+                            }));
+
+                        OnPropertyChanged(nameof(Items));
+
+                        // 선택한 플래너의 총 칼로리
+                        SelectedTotalCalories();
+                    }
+                    else
+                    {
+                        Items.Clear();
+                        OnPropertyChanged(nameof(Items));
+                    }
+                }
+            }
+        }
+
+        public IEnumerable<DateTime> HighlightDates { get; set; }
+
+
         public PlannerViewModel()
         {
             _repo = new Repo(_connstring);
@@ -94,7 +165,13 @@ namespace SlimMy.ViewModel
 
             SaveCommand = new RelayCommand(InsertPlannerPrint);
 
-            UpdateIndex = Items.IndexOf(SelectedPlannerData);
+            SelectedDate = DateTime.Now;
+
+            HighlightDates = new List<DateTime>
+        {
+            new DateTime(2025, 4, 30),
+            new DateTime(2025, 5, 1)
+        };
 
             Items.Clear();
         }
@@ -167,20 +244,60 @@ namespace SlimMy.ViewModel
             {
                 User currentUser = UserSession.Instance.CurrentUser;
 
-                // Guid userID, Guid Exercise_info_id, int indexnum, int minutes, int calories, char isCompleted
-
-                int itemIndex = 0;
-                foreach (var item in Items)
-                {
-                    // MessageBox.Show(currentUser.UserId + "\n" + item.ExerciseID + "\n" + itemIndex + "\n" + item.Minutes + "\n" + item.Calories + "\n" + item.IsCompleted);
-
-                    _repo.InsertPlanner(currentUser.UserId, item.ExerciseID, itemIndex, item.Minutes, (int)item.Calories, item.IsCompleted, SelectedDate);
-                    itemIndex++;
-                }
-
-                // MessageBox.Show(currentUser.UserId + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n" + currentUser.NickName + "\n");
-                // await _repo.InsertPlanner();
+                _repo.InsertPlanner(currentUser.UserId, PlannerTitle, SelectedDate, Items.ToList());
+                
             }
+        }
+
+        // 플래너 출력
+        public void PlannerPrint()
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            SelectedDate = SelectedDate.Date;
+
+            var resultList = _repo.ExerciseList(currentUser.UserId, SelectedDate);
+
+            // 특정 날짜의 콤보 박스에 플래너 내역 가져오기
+            PlannerGroups = new ObservableCollection<PlannerWithGroup>(resultList);
+        }
+
+        // 특정 날짜에 해당하는 플래너 내역 출력
+        public void SelectedDatePlanner()
+        {
+            if (UserSession.Instance.CurrentUser != null)
+            {
+                var resultList = _repo.ExerciseList(UserSession.Instance.CurrentUser.UserId, SelectedDate.Date);
+                PlannerGroups = new ObservableCollection<PlannerWithGroup>(resultList);
+
+                // 플래너 목록(콤보 박스)의 첫 번째 요소 혹은 null 반환
+                SelectedPlannerGroup = PlannerGroups.FirstOrDefault();
+
+                // 선택한 플래너의 총 칼로리
+                SelectedTotalCalories();
+            }
+        }
+
+        // 선택한 플래너의 총 칼로리
+        public void SelectedTotalCalories()
+        {
+            int totalCalorieSum;
+
+            if (SelectedPlannerGroup != null) // ⭐️ null 체크 추가
+            {
+                totalCalorieSum = 0;
+
+                foreach (var result in SelectedPlannerGroup.Exercises)
+                {
+                    totalCalorieSum += result.Calories;
+                }
+            }
+            else
+            {
+                totalCalorieSum = 0;
+            }
+
+            TotalCalories = totalCalorieSum.ToString();
         }
 
         // 운동 선택 이후에 데이터를 리스트 박스에 출력

@@ -26,6 +26,16 @@ namespace SlimMy.View
             InitializeComponent();
 
             DataContext = PlannerViewModel.Instance;
+
+            Loaded += Planner_Loaded;
+        }
+
+        private void Planner_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is PlannerViewModel vm)
+            {
+                vm.PlannerPrint();
+            }
         }
     }
 }

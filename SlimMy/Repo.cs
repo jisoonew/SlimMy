@@ -13,6 +13,7 @@ using Dapper;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Media.Imaging;
+using Oracle.ManagedDataAccess.Types;
 
 namespace SlimMy
 {
@@ -1094,49 +1095,146 @@ namespace SlimMy
         }
 
         // 플래너 저장
-        public void InsertPlanner(Guid userID, Guid Exercise_info_id, int indexnum, int minutes, int calories, bool isCompleted, DateTime createDate)
+        public void InsertPlanner(Guid userId, string plannerTitle, DateTime plannerDate, List<PlanItem> items)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
                     connection.Open();
-
-                    Guid plannerId = Guid.NewGuid(); // 새로운 GUID 생성
-                    byte[] plannerIdBytes = plannerId.ToByteArray(); // GUID를 바이트 배열로 변환
-
-                    char isCompletedChar;
-
-                    if (isCompleted)
+                    using (OracleTransaction transaction = connection.BeginTransaction())
                     {
-                        isCompletedChar = 'Y';
-                    }else
-                    {
-                        isCompletedChar = 'N';
-                    }
+                        // 1. PlannerGroup 저장
+                        Guid plannerGroupId = Guid.NewGuid();
+                        byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
 
-                    string query = "INSERT INTO Planner (PlannerId, UserId, Exercise_Info_Id, IndexNum, Minutes, Calories, IsCompleted, exercisedate) VALUES(:plannerId, :userID, :Exercise_info_id, :indexnum, :minutes, :calories, :isCompleted, :exercisedate)";
+                        string insertGroupQuery = @"
+                    INSERT INTO PlannerGroup 
+                    (PlannerGroupId, UserId, PlannerDate, PlannerTitle, CreatedAt)
+                    VALUES (:groupId, :userId, :plannerDate, :plannerTitle, SYSTIMESTAMP)";
 
-                    using (OracleCommand cmd = new OracleCommand(query, connection))
-                    {
-                        cmd.Parameters.Add(new OracleParameter(":plannerId", OracleDbType.Raw, plannerIdBytes, ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":userID", OracleDbType.Raw, userID, ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":Exercise_info_id", OracleDbType.Raw, Exercise_info_id.ToByteArray(), ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":indexnum", OracleDbType.Int32, indexnum, ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":minutes", OracleDbType.Int32, minutes, ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":calories", OracleDbType.Int32, calories, ParameterDirection.Input));
-                        cmd.Parameters.Add(new OracleParameter(":isCompleted", OracleDbType.Char, isCompletedChar, ParameterDirection.Input));
+                        using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                        {
+                            groupCmd.Transaction = transaction;
+                            groupCmd.Parameters.Add(new OracleParameter(":groupId", OracleDbType.Raw, plannerGroupIdBytes, ParameterDirection.Input));
+                            groupCmd.Parameters.Add(new OracleParameter(":userId", OracleDbType.Raw, userId.ToByteArray(), ParameterDirection.Input));
+                            groupCmd.Parameters.Add(new OracleParameter(":plannerDate", OracleDbType.Date, plannerDate, ParameterDirection.Input));
+                            groupCmd.Parameters.Add(new OracleParameter(":plannerTitle", OracleDbType.Varchar2, plannerTitle, ParameterDirection.Input));
+                            groupCmd.ExecuteNonQuery();
+                        }
 
-                        cmd.Parameters.Add(new OracleParameter(":exercisedate", OracleDbType.TimeStamp, createDate, ParameterDirection.Input));
+                        // 2. Planner 리스트 저장
+                        string insertDetailQuery = @"
+                    INSERT INTO Planner 
+                    (PlannerId, PlannerGroupId, Exercise_Info_Id, IndexNum, Minutes, Calories, IsCompleted)
+                    VALUES (:plannerId, :groupId, :exerciseId, :indexNum, :minutes, :calories, :isCompleted)";
 
-                        cmd.ExecuteNonQuery();
+                        foreach (var item in items)
+                        {
+                            Guid plannerId = Guid.NewGuid();
+
+                            using (OracleCommand itemCmd = new OracleCommand(insertDetailQuery, connection))
+                            {
+                                itemCmd.Transaction = transaction;
+                                itemCmd.Parameters.Add(new OracleParameter(":plannerId", OracleDbType.Raw, plannerId.ToByteArray(), ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":groupId", OracleDbType.Raw, plannerGroupIdBytes, ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":exerciseId", OracleDbType.Raw, item.ExerciseID.ToByteArray(), ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":indexNum", OracleDbType.Int32, items.IndexOf(item), ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":minutes", OracleDbType.Int32, item.Minutes, ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":calories", OracleDbType.Int32, item.Calories, ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":isCompleted", OracleDbType.Char, item.IsCompleted ? 'Y' : 'N', ParameterDirection.Input));
+                                itemCmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // 커밋
+                        transaction.Commit();
+                        MessageBox.Show("플래너 저장이 완료되었습니다.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message);
+                    MessageBox.Show("플래너 저장 오류: " + ex.Message);
                 }
             }
+        }
+
+        // 플래너 출력
+        public IEnumerable<PlannerWithGroup> ExerciseList(Guid userID, DateTime selectedDateTime)
+        {
+            var plannerGroups = new List<PlannerWithGroup>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = @"
+                SELECT 
+                    pg.plannergroupid, pg.plannerdate, pg.plannertitle,
+                    pl.plannerid, pl.exercise_info_id, pl.indexnum, pl.minutes, pl.calories, pl.iscompleted, ei.exercisename
+                FROM 
+                    PlannerGroup pg join Planner pl ON(pg.plannergroupid = pl.plannergroupid) join exercise_info ei ON(pl.exercise_info_id = ei.exercise_info_id)
+                WHERE 
+                    userid = :userID 
+                AND 
+                    TRUNC(plannerdate) = :selectedDate
+                ORDER BY 
+                    pg.plannergroupid, pl.indexnum"; // 순서 중요
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter(":userID", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter(":selectedDate", OracleDbType.Date, selectedDateTime, ParameterDirection.Input));
+
+                        using (var reader = command.ExecuteReader())
+                        {
+                            PlannerWithGroup currentGroup = null;
+                            Guid? lastGroupId = null;
+
+                            while (reader.Read())
+                            {
+                                var groupIdBinary = (OracleBinary)reader.GetOracleValue(0);
+                                var groupId = groupIdBinary.IsNull ? Guid.Empty : new Guid(groupIdBinary.Value);
+
+                                if (lastGroupId != groupId)
+                                {
+                                    currentGroup = new PlannerWithGroup
+                                    {
+                                        PlannerGroupId = groupId,
+                                        PlannerDate = reader.IsDBNull(1) ? DateTime.MinValue : reader.GetDateTime(1),
+                                        PlannerTitle = reader.IsDBNull(2) ? "(제목 없음)" : reader.GetString(2),
+                                    };
+                                    plannerGroups.Add(currentGroup);
+                                    lastGroupId = groupId;
+                                }
+
+                                var plannerIdBinary = (OracleBinary)reader.GetOracleValue(3);
+                                var exerciseInfoIdBinary = (OracleBinary)reader.GetOracleValue(4);
+
+                                var exercise = new PlannerExercise
+                                {
+                                    PlannerID = plannerIdBinary.IsNull ? Guid.Empty : new Guid(plannerIdBinary.Value),
+                                    Exercise_Info_ID = exerciseInfoIdBinary.IsNull ? Guid.Empty : new Guid(exerciseInfoIdBinary.Value),
+                                    Indexnum = reader.IsDBNull(5) ? 0 : reader.GetInt32(5),
+                                    Minutes = reader.IsDBNull(6) ? 0 : reader.GetInt32(6),
+                                    Calories = reader.IsDBNull(7) ? 0 : reader.GetInt32(7),
+                                    IsCompleted = reader.IsDBNull(8) ? false : reader.GetBoolean(8),
+                                    ExerciseName = reader.GetString(9)
+                                };
+
+                                currentGroup?.Exercises.Add(exercise);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("플래너 조회 오류: " + ex.Message);
+                }
+            }
+            return plannerGroups;
         }
 
         private byte[] ConvertGuidToOracleRaw(Guid guid)

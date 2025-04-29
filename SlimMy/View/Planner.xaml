@@ -9,110 +9,140 @@
       xmlns:dd="http://gong-wpf-dragdrop.com"
       mc:Ignorable="d" 
       Height="830" Width="1100" d:DataContext="{d:DesignInstance Type=ViewModel:PlannerViewModel}"
-      Title="Planner" Background="White">
+      Title="Planner" Background="White" Loaded="Planner_Loaded">
 
     <Page.DataContext>
         <ViewModel:PlannerViewModel/>
     </Page.DataContext>
 
-    <Grid>
-        <!-- Header -->
-        <TextBlock Text="Planner" FontSize="28" FontWeight="Bold" Margin="30,20,0,0"/>
+    <Page.Resources>
+        <ViewModel:DateHighlightConverter x:Key="DateHighlightConverter"/>
+    </Page.Resources>
 
-        <!-- Main Content 영역 -->
-        <Border BorderBrush="Black" BorderThickness="1" Margin="30,70,30,30" Background="White" CornerRadius="10">
+    <Grid>
+        <!-- 제목 및 플래너 선택 -->
+        <StackPanel Orientation="Vertical" Margin="30,20,30,0">
+            <TextBlock Text="Planner" FontSize="28" FontWeight="Bold" Margin="0,0,0,10"/>
+
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Label Grid.Column="0" Content="플래너 제목" VerticalAlignment="Center" FontSize="16" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="1" Height="35" FontSize="16" Text="{Binding PlannerTitle, UpdateSourceTrigger=PropertyChanged}" VerticalContentAlignment="Center" Padding="5" />
+
+                <Label Grid.Column="2" Content="플래너 선택" VerticalAlignment="Center" FontSize="16" Margin="20,0,10,0"/>
+                <ComboBox Grid.Column="3" 
+          ItemsSource="{Binding PlannerGroups}" 
+          DisplayMemberPath="PlannerTitle"
+          SelectedItem="{Binding SelectedPlannerGroup}" 
+          Height="40" FontSize="16" />
+
+                <!-- 플래너 새로 만들기 버튼 추가 -->
+                <Button Grid.Column="4"
+                Content="새로 만들기"
+                Width="130" Height="35" FontSize="14"
+                Margin="20,0,0,0"
+                Command="{Binding NewPlannerCommand}"
+                Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"
+                HorizontalAlignment="Left" VerticalAlignment="Center" />
+            </Grid>
+        </StackPanel>
+
+        <!-- 본문 -->
+        <Border BorderBrush="Black" BorderThickness="1" Margin="30,120,30,30" Background="White" CornerRadius="10">
             <Grid Margin="30">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <!-- 리스트 -->
-                    <ColumnDefinition Width="Auto"/>
-                    <!-- 위/아래 버튼 -->
-                </Grid.ColumnDefinitions>
-
-                <!-- 날짜 및 목표 설정 -->
+                <!-- 날짜 선택 및 목표 -->
                 <Grid Grid.Row="0" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <DatePicker x:Name="datePicker" 
-                                Width="220" Height="40" FontSize="18" 
-                                Padding="2" Background="White" 
-                                SelectedDate="{Binding SelectedDate}" />
-                    <Button Grid.Column="1" Content="목표 설정" 
-                            Width="130" Height="40" FontSize="18" 
-                            HorizontalAlignment="Right" 
-                            Margin="10,0,0,0"
-                            Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"/>
+                    <DatePicker SelectedDate="{Binding SelectedDate}">
+                        <DatePicker.CalendarStyle>
+                            <Style TargetType="Calendar">
+                                <Setter Property="CalendarDayButtonStyle">
+                                    <Setter.Value>
+                                        <Style TargetType="CalendarDayButton">
+                                            <!-- 기본 배경, 글자색 세팅 -->
+                                            <Setter Property="Background" Value="White"/>
+                                            <Setter Property="Foreground" Value="Black"/>
+                                            <Setter Property="FontWeight" Value="Normal"/>
+
+                                            <!-- 강조 날짜 스타일 변경 -->
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource DateHighlightConverter}">
+                                                            <Binding Path="." />
+                                                            <Binding Path="DataContext.HighlightDates" RelativeSource="{RelativeSource AncestorType=DatePicker}" />
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Background" Value="LightSalmon"/>
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+
+                                                <!-- 오늘 날짜 스타일 설정 -->
+                                                <DataTrigger Binding="{Binding IsToday, RelativeSource={RelativeSource Self}}" Value="True">
+                                                    <Setter Property="Background" Value="LightSkyBlue"/>
+                                                    <Setter Property="Foreground" Value="Black"/>
+                                                    <Setter Property="FontWeight" Value="Bold"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+
+                                        </Style>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </DatePicker.CalendarStyle>
+                    </DatePicker>
+                    <Button Grid.Column="1" Content="목표 설정" Width="130" Height="40" FontSize="18" HorizontalAlignment="Right" Margin="10,0,0,0" Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"/>
                 </Grid>
 
-                <!-- 몸무게 입력 및 운동 선택 버튼 -->
+                <!-- 몸무게 입력 및 운동 선택 -->
                 <Grid Grid.Row="1" Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- 몸무게 입력 -->
-                    <Border Background="White" Padding="10" Width="500" HorizontalAlignment="Left" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
+                    <Border Background="White" Padding="10" CornerRadius="5" BorderBrush="LightGray" BorderThickness="1">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Label Content="몸무게" FontSize="18" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <Grid Grid.Column="1" Margin="5,0">
-                                <TextBox Name="searchTextBox" 
-                                         Width="120" Height="35" FontSize="18" 
-                                         VerticalContentAlignment="Center"/>
-                                <TextBlock Text="몸무게 입력" IsHitTestVisible="False" 
-                                           FontSize="16" Margin="5,0,0,0" VerticalAlignment="Center" Foreground="Gray">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Hidden"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Text, ElementName=searchTextBox}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
+                            <TextBox Grid.Column="1" Name="searchTextBox" Width="120" Height="35" FontSize="18" VerticalContentAlignment="Center"/>
                             <Label Grid.Column="2" Content="kg" FontSize="18" VerticalAlignment="Center" Margin="5,0,0,0"/>
                         </Grid>
                     </Border>
 
-                    <!-- 운동 선택 버튼 -->
-                    <Button Grid.Column="2" Content="운동 선택" Foreground="Black"
-                            Width="130" Height="45" FontSize="16"
-                            Command="{Binding ExerciseCommand}"
-                            HorizontalAlignment="Right" VerticalAlignment="Center" 
-                            Cursor="Hand" Margin="10,0,0,0" Background="#FFEEEEEE"  BorderBrush="Gray"/>
+                    <Button Grid.Column="1" Content="운동 선택" Foreground="Black" Width="130" Height="45" FontSize="16" Command="{Binding ExerciseCommand}" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand" Margin="10,0,0,0" Background="#FFEEEEEE" BorderBrush="Gray"/>
                 </Grid>
 
-                <!-- 운동 리스트 + 위/아래 버튼 (Grid.Row=3) -->
-                <Grid Grid.Row="3" Margin="0,0,0,10">
+                <!-- 운동 리스트 및 관리 -->
+                <Grid Grid.Row="2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- 운동 리스트 -->
-                    <ListBox Grid.Column="0" x:Name="MyListBox" 
-             ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedPlannerData}"
-             BorderThickness="1" BorderBrush="LightGray"
-             Margin="0,0,10,0">
+                    <ListBox Grid.Column="0" x:Name="MyListBox" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedPlannerData}" BorderThickness="1" BorderBrush="LightGray" Margin="0,0,10,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid Width="500">
@@ -126,21 +156,13 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <CheckBox Grid.Column="0"
-                          IsChecked="{Binding IsCompleted, Mode=TwoWay}"
-                          VerticalAlignment="Center"
-                          Margin="0,0,10,0"/>
-
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                     <TextBlock Grid.Column="1" Text="[" />
                                     <TextBlock Grid.Column="2" Text="{Binding Minutes}" />
                                     <TextBlock Grid.Column="3" Text="분]" />
                                     <TextBlock Grid.Column="4" Text="{Binding Name}" />
-
-                                    <!-- 오른쪽 정렬 -->
-                                    <TextBlock Grid.Column="5" Text="{Binding Calories}" 
-                       HorizontalAlignment="Right" Margin="5,0" />
-                                    <TextBlock Grid.Column="6" Text="kcal" 
-                       HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="5" Text="{Binding Calories}" HorizontalAlignment="Right" Margin="5,0" />
+                                    <TextBlock Grid.Column="6" Text="kcal" HorizontalAlignment="Right" />
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -152,67 +174,23 @@
                         </i:Interaction.Triggers>
                     </ListBox>
 
-                    <!-- 위로 / 아래로 버튼 -->
-                    <Grid Grid.Column="1" VerticalAlignment="Stretch" Height="500">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <!-- 위로 버튼 -->
-                            <RowDefinition Height="Auto"/>
-                            <!-- 아래로 버튼 -->
-                            <RowDefinition Height="*"/>
-                            <!-- 빈 공간 -->
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <!-- 저장 버튼 -->
-                        </Grid.RowDefinitions>
-
-                        <!--  위로 이동 -->
-                        <Button Grid.Row="0" Content="위로" Width="60" Height="35" Margin="0,5" 
-            Background="#FFEFEFEF" Foreground="Black" 
-            Command="{Binding MoveUpCommand}" />
-
-                        <!--  아래로 이동 -->
-                        <Button Grid.Row="1" Content="아래로" Width="60" Height="35" Margin="0,5" 
-            Background="#FFEFEFEF" Foreground="Black"
-            Command="{Binding MoveDownCommand}" />
-
-                        <!-- 수정 버튼 -->
-                        <Button Grid.Row="3" Content="수정" Width="60" Height="35" Margin="0,5" 
-        Background="#FFEFEFEF" Foreground="Black"
-        Command="{Binding UpdateCommand}" />
-
-                        <!-- 선 역할 -->
-                        <Rectangle Grid.Row="4" Height="1" Fill="Gray" Margin="0,10"/>
-                        
-                        <!-- 삭제 버튼 -->
-                        <Button Grid.Row="5" Content="삭제" Width="60" Height="35" Margin="0,5" 
-        Background="#FFEFEFEF" Foreground="Black"
-        Command="{Binding DeleteCommand}" />
-
-                        <!-- 선 역할 -->
-                        <Rectangle Grid.Row="6" Height="1" Fill="Gray" Margin="0,10"/>
-
-                        <!-- 저장 버튼 -->
-                        <Button Grid.Row="7" Content="저장" Width="60" Height="35" Margin="0,5" 
-        Background="#FFEFEFEF" Foreground="Black"
-        Command="{Binding SaveCommand}" Cursor="Hand" />
-                    </Grid>
+                    <!-- 우측 관리 버튼 -->
+                    <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Top" Margin="0,0,0,0">
+                        <Button Content="위로" Width="60" Height="35" Margin="0,5" Command="{Binding MoveUpCommand}" />
+                        <Button Content="아래로" Width="60" Height="35" Margin="0,5" Command="{Binding MoveDownCommand}" />
+                        <Button Content="수정" Width="60" Height="35" Margin="0,5" Command="{Binding UpdateCommand}" />
+                        <Rectangle Height="1" Fill="Gray" Margin="0,10"/>
+                        <Button Content="삭제" Width="60" Height="35" Margin="0,5" Command="{Binding DeleteCommand}" />
+                        <Rectangle Height="1" Fill="Gray" Margin="0,10"/>
+                        <Button Content="저장" Width="60" Height="35" Margin="0,5" Command="{Binding SaveCommand}" Cursor="Hand" />
+                    </StackPanel>
                 </Grid>
 
                 <!-- 총 칼로리 -->
-                <Grid Grid.Row="4" HorizontalAlignment="Right">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="총 칼로리" FontSize="18" 
-                               VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBox Grid.Column="1" Width="200" Height="40" 
-                             FontSize="18" VerticalContentAlignment="Center"/>
-                </Grid>
+                <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+                    <TextBlock Text="총 칼로리" FontSize="18" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBox Width="200" Height="40" Text ="{Binding TotalCalories}" FontSize="18" VerticalContentAlignment="Center"/>
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>
