@@ -1,0 +1,71 @@
+<Page x:Class="SlimMy.View.MyPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:SlimMy.ViewModel" xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+      mc:Ignorable="d" 
+      Title="MyPage" Background="White" Width="1110" Height="850">
+
+    <Grid Margin="30">
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Top" Width="600" Height="450" >
+
+            <!-- 닉네임 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="닉네임" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <Button Content="변경" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- 비밀번호 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="비밀번호" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <Button Content="입력" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- 몸무게 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="몸무게" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <Button Content="진행" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
+                </Grid>
+            </Border>
+
+            <!-- 운동 기록 조회 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <TextBlock Text="운동 기록 조회" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 목표 히스토리 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <TextBlock Text="목표 히스토리" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 몸무게 변화 이력 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <TextBlock Text="몸무게 변화 이력" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- 피드백 -->
+            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
+                <TextBlock Text="문의 / 피드백 보내기" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Border>
+
+        </StackPanel>
+    </Grid>
+</Page>

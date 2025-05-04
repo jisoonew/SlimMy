@@ -1159,6 +1159,58 @@ namespace SlimMy
             }
         }
 
+        // 플래너 수정
+        public void UpdatePlanner(Guid plannerGroupId, string plannerTitle, List<PlanItem> items)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+                    using (OracleTransaction transaction = connection.BeginTransaction())
+                    {
+                        string insertGroupQuery = @"
+                    update PlannerGroup set plannertitle = :plannertitle where plannergroupid = :plannergroupid";
+
+                        using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                        {
+                            groupCmd.Transaction = transaction;
+                            groupCmd.Parameters.Add(new OracleParameter(":plannertitle", OracleDbType.Varchar2, plannerTitle, ParameterDirection.Input));
+                            groupCmd.Parameters.Add(new OracleParameter(":plannergroupid", OracleDbType.Raw, plannerGroupId.ToByteArray(), ParameterDirection.Input));
+                            groupCmd.ExecuteNonQuery();
+                        }
+
+                        // 2. Planner 리스트 저장
+                        string insertDetailQuery = @"
+                    update Planner set minutes = :minutes, calories = :calories, iscompleted = :iscompleted where plannerid = :plannerid";
+
+                        foreach (var item in items)
+                        {
+                            Guid plannerId = Guid.NewGuid();
+
+                            using (OracleCommand itemCmd = new OracleCommand(insertDetailQuery, connection))
+                            {
+                                itemCmd.Transaction = transaction;
+                                itemCmd.Parameters.Add(new OracleParameter(":minutes", OracleDbType.Int32, item.Minutes, ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":calories", OracleDbType.Int32, item.Calories, ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":isCompleted", OracleDbType.Char, item.IsCompleted ? 'Y' : 'N', ParameterDirection.Input));
+                                itemCmd.Parameters.Add(new OracleParameter(":plannerid", OracleDbType.Raw, item.PlannerID.ToByteArray(), ParameterDirection.Input));
+                                itemCmd.ExecuteNonQuery();
+                            }
+                        }
+
+                        // 커밋
+                        transaction.Commit();
+                        MessageBox.Show("플래너 수정이 완료되었습니다.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("UpdatePlanner 오류: " + ex.Message);
+                }
+            }
+        }
+
         // 플래너 출력
         public IEnumerable<PlannerWithGroup> ExerciseList(Guid userID, DateTime selectedDateTime)
         {
@@ -1235,6 +1287,384 @@ namespace SlimMy
                 }
             }
             return plannerGroups;
+        }
+
+        // 플래너 출력
+        public bool ExerciseCheck(Guid userID, DateTime selectedDateTime)
+        {
+            var plannerGroups = new List<PlannerWithGroup>();
+
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string sql = @"
+                SELECT 
+                    count(*)
+                FROM 
+                    plannerGroup
+                WHERE 
+                    userid = :userID 
+                AND 
+                    TRUNC(plannerdate) = :selectedDate";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter(":userID", OracleDbType.Raw, userID.ToByteArray(), ParameterDirection.Input));
+                        command.Parameters.Add(new OracleParameter(":selectedDate", OracleDbType.Date, selectedDateTime, ParameterDirection.Input));
+
+                        int count = Convert.ToInt32(command.ExecuteScalar());
+
+                        // 중복이라면 false, 중복이 아니라면 true
+                        if (count >= 1)
+                        {
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("ExerciseCheck 오류: " + ex.Message);
+
+                    return false;
+                }
+            }
+        }
+
+        // 플래너 전체 삭제
+        public void DeletePlanner(Guid plannerGroupID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string plannerSql = "delete from planner where plannergroupid = :plannergroupid";
+
+                    using (OracleCommand plannerCommand = new OracleCommand(plannerSql, connection))
+                    {
+                        plannerCommand.Parameters.Add(new OracleParameter("plannergroupid", OracleDbType.Raw, plannerGroupID.ToByteArray(), ParameterDirection.Input));
+
+                        plannerCommand.ExecuteNonQuery();
+                    }
+
+                    string sql = "delete from plannergroup where plannergroupid = :plannerGroupID";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("plannerGroupID", OracleDbType.Raw, plannerGroupID.ToByteArray(), ParameterDirection.Input));
+
+                        command.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("오류 : " + ex);
+                }
+            }
+        }
+
+        // 특정 플래너 목록 삭제
+        public void DeletePlannerList(Guid plannerID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string plannerSql = "delete from planner where plannerid = :plannerid";
+
+                    using (OracleCommand plannerCommand = new OracleCommand(plannerSql, connection))
+                    {
+                        plannerCommand.Parameters.Add(new OracleParameter("plannerid", OracleDbType.Raw, plannerID.ToByteArray(), ParameterDirection.Input));
+
+                        plannerCommand.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("DeletePlannerList 오류 : " + ex);
+                }
+            }
+        }
+
+        // 플래너의 목록 아이디 출력
+        public List<PlanItem> GetPlannerItemsByGroupId(Guid plannerGroupID)
+        {
+            var plannerItems = new List<PlanItem>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                connection.Open();
+
+                string sql = @"SELECT plannerid, exercise_info_id, minutes, calories, iscompleted 
+                       FROM planner 
+                       WHERE plannergroupid = :plannerGroupID";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("plannerGroupID", OracleDbType.Raw)).Value = plannerGroupID.ToByteArray();
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var item = new PlanItem
+                            {
+                                PlannerID = new Guid(reader.GetFieldValue<byte[]>(0))
+                            };
+
+                            plannerItems.Add(item);
+                        }
+                    }
+                }
+            }
+
+            return plannerItems;
+        }
+
+        // 오늘 소모한 총 칼로리 출력
+        public async Task<int> GetTodayCalories(DateTime now, Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select SUM(planner.calories) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where TRUNC(plannerdate) = :plannerdate and planner.iscompleted = 'Y' and plannergroup.UserID = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("plannerdate", OracleDbType.Date)).Value = now.Date;
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                totalCalories += reader.GetInt32(0);
+                        }
+                    }
+                }
+            }
+            return totalCalories;
+        }
+
+        // 오늘 운동 시간 출력
+        public async Task<int> GetTodayDuration(DateTime now, Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select SUM(planner.MINUTES) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where TRUNC(plannerdate) = :plannerdate and planner.iscompleted = 'Y' and plannergroup.UserID = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("plannerdate", OracleDbType.Date)).Value = now.Date;
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            if (!reader.IsDBNull(0))
+                                totalCalories += reader.GetInt32(0);
+                        }
+                    }
+                }
+            }
+            return totalCalories;
+        }
+
+        // 오늘의 운동 완료 수
+        public async Task<int> GetTodayCompleted(DateTime now, Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select count(*) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where TRUNC(plannerdate) = :plannerdate and planner.iscompleted = 'Y' and plannergroup.UserID = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("plannerdate", OracleDbType.Date)).Value = now.Date;
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+        // 오늘의 전체 운동 수
+        public async Task<int> GetTotalExercise(DateTime now, Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select count(*) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where TRUNC(plannerdate) = :plannerdate and plannergroup.UserID = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("plannerdate", OracleDbType.Date)).Value = now.Date;
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+        // 주간 칼로리 그래프
+        public async Task<List<DailyCalorie>> GetWeeklyCalories(DateTime now, Guid userID)
+        {
+            var result = new List<DailyCalorie>();
+
+            using (var conn = new OracleConnection(_connString))
+            {
+                await conn.OpenAsync();
+
+                string sql = @"
+            SELECT TRUNC(plannerdate) AS planner_day, SUM(planner.calories) AS calories
+    FROM planner
+    JOIN plannergroup ON planner.plannergroupid = plannergroup.plannergroupid
+    WHERE planner.iscompleted = 'Y' AND plannerdate >= :startDate and plannergroup.UserID = :userid
+    GROUP BY TRUNC(plannerdate)
+    ORDER BY planner_day";
+
+                using (var cmd = new OracleCommand(sql, conn))
+                {
+                    cmd.Parameters.Add(new OracleParameter("startDate", OracleDbType.Date)).Value = now.AddDays(-6).Date;
+                    cmd.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            result.Add(new DailyCalorie
+                            {
+                                Date = reader.GetDateTime(0),
+                                Calories = reader.IsDBNull(1) ? 0 : reader.GetInt32(1)
+                            });
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        // 누적 운동 횟수
+        public async Task<int> GetTotalSessions(Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select count(*) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where planner.iscompleted = 'Y' and plannerGroup.userid = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+        // 누적 칼로리
+        public async Task<int> GetTotalCalories(Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select sum(planner.CALORIES) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where planner.iscompleted = 'Y' and plannerGroup.userid = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+        // 누적 운동 시간 출력
+        public async Task<int> GetTotalTime(Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select SUM(planner.MINUTES) from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid where planner.iscompleted = 'Y' and plannergroup.UserID = :userid";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+
+        public async Task<List<string>> GetRecentWorkouts(Guid userID)
+        {
+            var result = new List<string>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select exercise_info.EXERCISENAME, plannerGroup.plannerdate from planner join plannergroup ON planner.plannergroupid = plannergroup.plannergroupid join exercise_info ON planner.EXERCISE_INFO_ID = EXERCISE_INFO.EXERCISE_INFO_ID where planner.iscompleted = 'Y' and plannergroup.UserID = :userid order by plannergroup.plannerdate desc";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw)).Value = userID.ToByteArray();
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            string name = reader.GetString(0);
+                            DateTime date = reader.GetDateTime(1);
+                            result.Add($"[{date:yyyy/MM/dd}] {name}");
+                        }
+                    }
+                }
+            }
+            if (result.Count == 0)
+                result.Add("등록된 운동이 없습니다.");
+
+            return result;
         }
 
         private byte[] ConvertGuidToOracleRaw(Guid guid)

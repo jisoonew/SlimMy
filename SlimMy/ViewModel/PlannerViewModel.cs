@@ -24,11 +24,16 @@ namespace SlimMy.ViewModel
 
         public ICommand SelectedPlnnaerCommand { get; set; }
 
+        public ICommand DeletePlannerGroupCommand { get; set; }
+
         public int UpdateIndex { get; set; }
 
         public ICommand DeleteCommand { get; set; }
 
         public ICommand SaveCommand { get; set; }
+
+        // 새로 만들기
+        public ICommand NewPlannerCommand { get; set; }
 
         private PlanItem _selectedPlnnerData;
         public PlanItem SelectedPlannerData
@@ -124,6 +129,7 @@ namespace SlimMy.ViewModel
                             _selectedPlannerGroup.Exercises.Select(ex => new PlanItem
                             {
                                 ExerciseID = ex.Exercise_Info_ID,
+                                PlannerID = ex.PlannerID,
                                 IsCompleted = ex.IsCompleted,
                                 Name = ex.ExerciseName,
                                 Minutes = ex.Minutes,
@@ -164,6 +170,10 @@ namespace SlimMy.ViewModel
             DeleteCommand = new RelayCommand(DeletePlannerPrint);
 
             SaveCommand = new RelayCommand(InsertPlannerPrint);
+
+            DeletePlannerGroupCommand = new RelayCommand(AllDeletePlanner);
+
+            NewPlannerCommand = new RelayCommand(CleanPlanner);
 
             SelectedDate = DateTime.Now;
 
@@ -211,23 +221,32 @@ namespace SlimMy.ViewModel
                 Items[UpdateIndex].ExerciseID = exerciseData.ExerciseID;
                 Items[UpdateIndex].Name = exerciseData.ExerciseName;
                 Items[UpdateIndex].Minutes = minutes;
-                Items[UpdateIndex].Calories = double.Parse(calories);
+                Items[UpdateIndex].Calories = int.Parse(calories);
+
+                TotalCaloriesCalculate();
             }
         }
 
-        // 플래너 삭제
+        // 플래너 목록(리스트) 삭제
         public void DeletePlannerPrint(object parameter)
         {
-            string msg = string.Format("{0}를 삭제하시겠습니까?", SelectedPlannerData.Name);
-            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (messageBoxResult == MessageBoxResult.No)
+            if(SelectedPlannerData != null)
             {
-                return;
+                string msg = string.Format("{0}를 삭제하시겠습니까?", SelectedPlannerData.Name);
+                MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (messageBoxResult == MessageBoxResult.No)
+                {
+                    return;
+                }
+                else
+                {
+                    Items.Remove(SelectedPlannerData);
+                    SelectedPlannerData = null;
+                }
             }
             else
             {
-                Items.Remove(SelectedPlannerData);
-                SelectedPlannerData = null;
+                MessageBox.Show("운동 항목을 선택해주세요.");
             }
         }
 
@@ -244,8 +263,40 @@ namespace SlimMy.ViewModel
             {
                 User currentUser = UserSession.Instance.CurrentUser;
 
-                _repo.InsertPlanner(currentUser.UserId, PlannerTitle, SelectedDate, Items.ToList());
-                
+                // 선택된 플래너가 있다면
+                if (SelectedPlannerGroup != null)
+                {
+                    // 해당 플래너가 존재하는가?
+                    var originalListFromDb = _repo.GetPlannerItemsByGroupId(SelectedPlannerGroup.PlannerGroupId);
+
+                    // 현재 플래너 목록의 플래너 아이디를 가져온다
+                    var currentItemIds = new HashSet<Guid>(Items.Select(i => i.PlannerID));
+
+                    // 현재 플래너 목록의 플래너 아이디에 DB에 존재하는 데이터와 일치하지 않는 아이디
+                    // 즉, DB에는 있고, 현재 플래너 목록에는 없는 플래너 아이디를 추출
+                    var deletedItems = originalListFromDb.Where(dbItem => !currentItemIds.Contains(dbItem.PlannerID));
+
+                    if (deletedItems != null)
+                    {
+                        foreach (var a in deletedItems)
+                        {
+                            // 현재 플래너 목록에 없는 플래너 아이디는 모두 삭제
+                            _repo.DeletePlannerList(a.PlannerID);
+                        }
+                    }
+                }
+               
+                if (_repo.ExerciseCheck(currentUser.UserId, SelectedDate))
+                {
+                    // 플래너 리스트 수정
+                    _repo.UpdatePlanner(SelectedPlannerGroup.PlannerGroupId, PlannerTitle, Items.ToList());
+                }
+                else
+                {
+                    // 플래너 저장
+                    _repo.InsertPlanner(currentUser.UserId, PlannerTitle, SelectedDate, Items.ToList());
+                }
+
             }
         }
 
@@ -283,7 +334,7 @@ namespace SlimMy.ViewModel
         {
             int totalCalorieSum;
 
-            if (SelectedPlannerGroup != null) // ⭐️ null 체크 추가
+            if (SelectedPlannerGroup != null)
             {
                 totalCalorieSum = 0;
 
@@ -300,6 +351,44 @@ namespace SlimMy.ViewModel
             TotalCalories = totalCalorieSum.ToString();
         }
 
+        // 플래너 목록을 수정 이후의 칼로리 계산
+        public void TotalCaloriesCalculate()
+        {
+            int totalCalorieSum;
+
+            if (Items != null)
+            {
+                totalCalorieSum = 0;
+
+                foreach (var result in Items)
+                {
+                    totalCalorieSum += result.Calories;
+                }
+            }
+            else
+            {
+                totalCalorieSum = 0;
+            }
+
+            TotalCalories = totalCalorieSum.ToString();
+        }
+
+        // 해당 플래너 전체 삭제
+        public void AllDeletePlanner(object parameter)
+        {
+            string msg = string.Format("영구 삭제하시겠습니까?");
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                // 플래너 전체 삭제
+                _repo.DeletePlanner(SelectedPlannerGroup.PlannerGroupId);
+            }
+        }
+
         // 운동 선택 이후에 데이터를 리스트 박스에 출력
         public void SelectedPlannerPrint(Exercise exerciseData, string calories, int minutes)
         {
@@ -308,8 +397,30 @@ namespace SlimMy.ViewModel
                 ExerciseID = exerciseData.ExerciseID,
                 Name = exerciseData.ExerciseName,
                 Minutes = minutes,
-                Calories = double.Parse(calories)
+                Calories = int.Parse(calories)
             });
+
+            // 선택한 플래너의 총 칼로리
+            TotalCaloriesCalculate();
+        }
+
+        // 새로 만들기
+        public void CleanPlanner(object parameter)
+        {
+            string msg = string.Format("새로 플래너를 작성하시겠습니까? \n" + "기존의 데이터는 저장되지 않습니다.");
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                Items.Clear();
+                PlannerGroups.Clear();
+                PlannerTitle = null;
+                SelectedDate = DateTime.Now;
+                TotalCalories = null;
+            }
         }
     }
 }

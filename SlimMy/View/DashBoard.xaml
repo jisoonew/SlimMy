@@ -3,68 +3,210 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-      xmlns:local="clr-namespace:SlimMy.View"
+      xmlns:local="clr-namespace:SlimMy.ViewModel"
       xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
       mc:Ignorable="d" 
       Title="DashBoard" Background="White" Width="1110" Height="850">
-    <Grid>
-        <!-- 오른쪽 핫한 채팅 그룹 -->
-        <Grid Width="400" Margin="160,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Stretch">
-            <Border BorderBrush="Black" BorderThickness="1" Margin="30,30,20,0" VerticalAlignment="Stretch" Width="320" Height="780">
-                <StackPanel Width="300" VerticalAlignment="Stretch" Height="800">
-                </StackPanel>
-            </Border>
-        </Grid>
 
-        <!-- 목표 체중 섹션 -->
-        <Grid Width="307" Margin="70,50,0,470" VerticalAlignment="Top" Height="300">
-            <Border BorderBrush="Black" BorderThickness="1" Height="300" VerticalAlignment="Stretch" Width="255">
-                <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <Label Content="목표 체중" FontSize="30" Padding="35,10,35,10" Margin="10,30,10,10" HorizontalContentAlignment="Center"/>
-                    <Label Content="현재 체중" FontSize="30" Padding="35,10,35,10" Margin="10,10,10,10" HorizontalContentAlignment="Center"/>
-                    <Button x:Name="dietGoalBtn" Content="목표 설정" FontSize="30" Padding="35,10,35,10" Margin="10,10,10,10" Click="DietGoalBtn_Click" Height="70"></Button>
-                </StackPanel>
-            </Border>
-        </Grid>
+    <Page.DataContext>
+        <local:DashBoardViewModel/>
+    </Page.DataContext>
+    
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- 날짜 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 오늘의 요약 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 그래프 -->
+            <RowDefinition Height="Auto"/>
+            <!-- 목표 & 누적 -->
+            <RowDefinition Height="*"/>
+            <!-- 최근/추천/동기 -->
+        </Grid.RowDefinitions>
 
-        <!-- 소모 칼로리 섹션 -->
-        <Grid Width="440" Height="320" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,30,0,470">
-            <Grid Width="400" Height="290" Margin="20,0,20,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <TextBlock Grid.Row="0" Margin="10" HorizontalAlignment="Center" FontSize="20" Text="소모 칼로리"/>
-                <lvc:CartesianChart Grid.Row="1" Series="{Binding SeriesData}" LegendLocation="Top" Width="400" BorderBrush="#000000" BorderThickness="1" Height="250">
-                    <lvc:CartesianChart.AxisX>
-                        <lvc:Axis Title="Seller" Labels="{Binding XLabel}">
-                            <lvc:Axis.Separator>
-                                <lvc:Separator Step="1"/>
-                            </lvc:Axis.Separator>
-                        </lvc:Axis>
-                    </lvc:CartesianChart.AxisX>
-                    <lvc:CartesianChart.AxisY>
-                        <lvc:Axis Title="Sales" Labels="{Binding Values}" Width="0"/>
-                    </lvc:CartesianChart.AxisY>
-                </lvc:CartesianChart>
-            </Grid>
+        <!-- 오늘 날짜 -->
+        <TextBlock Grid.Row="0"
+               Text="{Binding TodayDisplay}"
+               FontSize="22"
+               FontWeight="Bold"
+               Foreground="#333"
+               HorizontalAlignment="Left"
+               Margin="0,0,0,20"/>
 
-            <!-- 하단 누적 정보 섹션 -->
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Margin="20,10,0,0">
-                <StackPanel Width="125">
-                    <Label Content="누적 운동 날짜" FontSize="15" BorderBrush="#000000" BorderThickness="1" Padding="10,10,10,10"/>
-                </StackPanel>
-                <StackPanel Width="125" Margin="12,0,0,0">
-                    <Label Content="누적 운동 시간" FontSize="15" Padding="10,10,10,10" BorderBrush="#000000" BorderThickness="1"/>
-                </StackPanel>
-                <StackPanel Width="125" Margin="12,0,0,0">
-                    <Label Content="총 감량" FontSize="15" HorizontalContentAlignment="Center" Padding="10,10,10,10" BorderBrush="#000000" BorderThickness="1"/>
-                </StackPanel>
+        <!-- 오늘의 요약 -->
+        <Border Grid.Row="1" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="오늘의 요약" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                <UniformGrid Columns="4">
+                    <StackPanel>
+                        <TextBlock Text="🔥 총 칼로리" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TodayCalories}" FontSize="16"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="🕒 운동 시간" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TodayDuration}" FontSize="16"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="✅ 완료 운동 수" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding TodayCompleted}" FontSize="16"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="🎯 목표 달성률" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding GoalRate}" FontSize="16"/>
+                    </StackPanel>
+                </UniformGrid>
             </StackPanel>
+        </Border>
+
+        <!-- 그래프 & 체중 변화 -->
+        <Grid Grid.Row="2" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 주간 그래프 -->
+            <Border Grid.Column="0" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="📊 주간 추세 그래프" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <lvc:CartesianChart Series="{Binding WeeklySeries}" Height="150">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="날짜" Labels="{Binding Labels}"/>
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="칼로리(kcal)"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </StackPanel>
+            </Border>
+
+            <!-- 체중 변화 -->
+            <Border Grid.Column="1" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="⚖ 체중 변화 (30일)" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <lvc:CartesianChart Series="{Binding WeightTrendSeries}" Height="150"/>
+                </StackPanel>
+            </Border>
         </Grid>
 
-        <!-- 하단 정보 섹션 -->
-        <Grid Background="#FF002980" Width="700" Height="450" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="20,0,0,20">
+        <!-- 개인 목표 & 누적 통계 -->
+        <Grid Grid.Row="3" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 개인 목표 -->
+            <Border Grid.Column="0" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,10,0">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 왼쪽: 텍스트 -->
+                        <TextBlock Text="🏁 개인 목표"
+               FontSize="20"
+               FontWeight="Bold"
+               VerticalAlignment="Center"
+               HorizontalAlignment="Left"
+               Grid.Column="0" />
+
+                        <!-- 오른쪽: 버튼 -->
+                        <Button Content="목표 설정"
+            Width="120"
+            Height="30"
+            Command="{Binding SetGoalCommand}"
+            Background="#EEEEEE"
+            HorizontalAlignment="Right"
+            Grid.Column="1" Foreground="#FF303030" />
+                    </Grid>
+                    <UniformGrid Columns="2">
+                        <StackPanel>
+                            <TextBlock Text="목표 체중" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding TargetWeight}" FontSize="16"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="현재 체중" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding CurrentWeight}" FontSize="16"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <!-- 누적 통계 -->
+            <Border Grid.Column="1" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="📈 누적 통계" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <UniformGrid Columns="3">
+                        <!-- 운동 횟수 -->
+                        <StackPanel>
+                            <TextBlock Text="총 운동 횟수" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalSessions}" FontSize="16" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- 총 칼로리 -->
+                        <StackPanel>
+                            <TextBlock Text="총 칼로리" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalCalories}" FontSize="16" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- 총 시간 -->
+                        <StackPanel>
+                            <TextBlock Text="총 시간" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding TotalTime}" FontSize="16" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 최근 운동 & 추천 & 동기부여 -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1.5*"/>
+                <ColumnDefinition Width="1.5*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 최근 완료한 운동 -->
+            <Border Grid.Column="0" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="📌 최근 완료된 운동" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <ItemsControl ItemsSource="{Binding RecentWorkouts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" FontSize="14"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- 추천 -->
+            <Border Grid.Column="1" Background="#F5F5F5" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,10,0">
+                <StackPanel>
+                    <TextBlock Text="💡 추천 운동" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock Text="{Binding RecommendedWorkout}" FontSize="16" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 동기부여 -->
+            <Border Grid.Column="2" Background="#FFF9C4" Padding="15" CornerRadius="10" BorderBrush="#DDD" BorderThickness="1">
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="✨ 동기부여" FontSize="20" FontWeight="Bold" Margin="0,0,0,10" Height="30" VerticalAlignment="Top" Width="150" HorizontalAlignment="Left"/>
+                    <Button Content="문구 설정" Width="100" Height="30" HorizontalAlignment="Right"
+                Command="{Binding SetMotivationCommand}" Background="#FFF176" VerticalAlignment="Top" Foreground="#FF303030"/>
+                    <ListBox ItemsSource="{Binding MotivationQuotes}" Height="80" ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </Page>

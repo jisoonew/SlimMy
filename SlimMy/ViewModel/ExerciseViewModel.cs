@@ -290,9 +290,9 @@ namespace SlimMy.ViewModel
             double userWeight = _repo.SelectUserWeight(currentUser.UserId);
             double met = (double)SelectedChatRoomData.Met;
             minutes = Convert.ToInt32(PlannedMinutes);
-            double result = (met * userWeight * 3.5 / 200) * minutes;
+            int result = (int)(met * userWeight * 3.5 / 200) * minutes;
 
-            Calories = Math.Round(result, 1).ToString();
+            Calories = result.ToString();
         }
 
         // 페이지에 따른 운동 목록 출력

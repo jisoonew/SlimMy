@@ -33,7 +33,7 @@
 
             <!-- 버튼 리스트 -->
             <StackPanel Grid.Row="2" Orientation="Vertical">
-                <Button FontSize="25" Padding="10,5,10,5" Height="50" Margin="5,0,5,10">
+                <Button FontSize="25" Padding="10,5,10,5" Height="50" Margin="5,0,5,10" Command="{Binding DashBoardCommand}">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <materialDesign:PackIcon Kind="ViewDashboard" Width="20" Height="20" Margin="0,0,5,0" VerticalAlignment="Stretch"/>
                         <TextBlock Text="DashBoard" VerticalAlignment="Center"/>

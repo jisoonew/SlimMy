@@ -9,11 +9,18 @@ namespace SlimMy.Model
 {
     public class PlanItem : BaseViewModel
     {
+        private Guid plannerID;
         private Guid exerciseID;
         private string name;
         private int minutes;
-        private double calories;
+        private int calories;
         private bool isCompleted;
+
+        public Guid PlannerID
+        {
+            get { return plannerID; }
+            set { plannerID = value; OnPropertyChanged(nameof(PlannerID)); }
+        }
 
         public Guid ExerciseID
         {
@@ -33,7 +40,7 @@ namespace SlimMy.Model
             set { minutes = value; OnPropertyChanged(nameof(Minutes)); }
         }
 
-        public double Calories
+        public int Calories
         {
             get { return calories; }
             set { calories = value; OnPropertyChanged(nameof(Calories)); }

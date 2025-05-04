@@ -263,6 +263,8 @@ namespace SlimMy.ViewModel
             MyChatsCommand = new AsyncRelayCommand(MyChatsBtn);
 
             CommunityCommand = new AsyncRelayCommand(CommunityBtn);
+
+            DashBoardCommand = new AsyncRelayCommand(DashBoardBtn);
         }
 
         public Command PlannerCommand { get; set; }
@@ -371,10 +373,10 @@ namespace SlimMy.ViewModel
             await _navigationService.NavigateToFrameAsync(typeof(View.MyChats));
         }
 
-        //public async Task DashBoardBtn(object parameter)
-        //{
-        //    await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
-        //}
+        public async Task DashBoardBtn(object parameter)
+        {
+            await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
+        }
 
 
         // 사용자 채팅

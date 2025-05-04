@@ -116,35 +116,35 @@ namespace SlimMy.Service
             }
         }
 
-        //public async Task NavigateToDashBoardFrameAsync(Type pageType)
-        //{
-        //    if (_frame == null)
-        //    {
-        //        MessageBox.Show("Navigation Frame이 설정되지 않았습니다.");
-        //        return;
-        //    }
+        public async Task NavigateToDashBoardFrameAsync(Type pageType)
+        {
+            if (_frame == null)
+            {
+                MessageBox.Show("Navigation Frame이 설정되지 않았습니다.");
+                return;
+            }
 
-        //    object pageInstance = null;
+            object pageInstance = null;
 
-        //    if (pageType == typeof(View.DashBoard))
-        //    {
-        //        var myChatsViewModel = await ViewModel.DashBoard.CreateAsync();
-        //        pageInstance = new View.DashBoard { DataContext = myChatsViewModel };
-        //    }
-        //    else if (pageType.IsSubclassOf(typeof(Page)))
-        //    {
-        //        pageInstance = Activator.CreateInstance(pageType);
-        //    }
+            if (pageType == typeof(View.DashBoard))
+            {
+                var myChatsViewModel = await ViewModel.DashBoardViewModel.CreateAsync();
+                pageInstance = new View.DashBoard { DataContext = myChatsViewModel };
+            }
+            else if (pageType.IsSubclassOf(typeof(Page)))
+            {
+                pageInstance = Activator.CreateInstance(pageType);
+            }
 
-        //    if (pageInstance is Page page)
-        //    {
-        //        _frame.Navigate(page);
-        //    }
-        //    else
-        //    {
-        //        MessageBox.Show("올바른 Page 타입이 아닙니다.");
-        //    }
-        //}
+            if (pageInstance is Page page)
+            {
+                _frame.Navigate(page);
+            }
+            else
+            {
+                MessageBox.Show("올바른 Page 타입이 아닙니다.");
+            }
+        }
 
         // 로그인 -> 메인 화면
         public void NavigateToMainWindow(MainPageViewModel mainPageViewModel)
