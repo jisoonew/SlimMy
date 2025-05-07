@@ -105,6 +105,7 @@ namespace SlimMy.ViewModel
         public AsyncRelayCommand MyChatsCommand { get; set; }
         public AsyncRelayCommand CommunityCommand { get; set; }
         public AsyncRelayCommand DashBoardCommand { get; set; }
+        public AsyncRelayCommand ExerciseHistoryCommand { get; set; }
 
         private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
 
@@ -265,6 +266,8 @@ namespace SlimMy.ViewModel
             CommunityCommand = new AsyncRelayCommand(CommunityBtn);
 
             DashBoardCommand = new AsyncRelayCommand(DashBoardBtn);
+
+            ExerciseHistoryCommand = new AsyncRelayCommand(NavigateToExerciseHistory);
         }
 
         public Command PlannerCommand { get; set; }
@@ -274,6 +277,11 @@ namespace SlimMy.ViewModel
         private void NavigateToPlanner(object parameter)
         {
             _navigationService.NavigateToFrame(typeof(Planner));
+        }
+
+        public async Task NavigateToExerciseHistory(object parameter)
+        {
+            await _navigationService.NavigateToExerciseHistoryFrameAsync(typeof(ExerciseHistory));
         }
 
         // 프레임 지정

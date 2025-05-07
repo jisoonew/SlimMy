@@ -1,0 +1,131 @@
+<Page x:Class="SlimMy.View.ExerciseHistory"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:SlimMy.ViewModel"
+xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+      mc:Ignorable="d"
+      Title="ExerciseHistory" Width="1110" Height="850" Background="White">
+
+    <Page.DataContext>
+        <local:ExerciseHistoryViewModel/>
+    </Page.DataContext>
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 페이지 제목 -->
+        <TextBlock Text="운동 기록" FontSize="28" FontWeight="Bold" Grid.Row="0" Margin="0,0,0,20"/>
+
+        <!-- 필터 및 검색 영역 -->
+        <StackPanel Orientation="Vertical" Grid.Row="1" Margin="0,0,0,30">
+            <!-- 하단: 필터 + 내보내기 형식 옵션 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Label Content="기간:" VerticalAlignment="Center"/>
+                <DatePicker SelectedDate="{Binding StartDate}" Width="130"/>
+                <TextBlock Text="~" VerticalAlignment="Center" Margin="5,0"/>
+                <DatePicker SelectedDate="{Binding EndDate}" Width="130"/>
+                <Label Content="운동명:" VerticalAlignment="Center"/>
+                <TextBox Width="150" Text="{Binding SearchKeyword}"/>
+                <Button Content="검색" Width="80" Command="{Binding SearchCommand}" Margin="5,0,0,0"/>
+
+                <!-- 내보내기 형식 선택 -->
+                <ComboBox Width="100" SelectedItem="{Binding SelectedExportFormat}" Margin="10,0,0,0"
+                  ItemsSource="{Binding ExportFormatOptions}" />
+                <Button Content="내보내기" Width="100" Command="{Binding ExportCommand}" Margin="5,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- 메인 내용 -->
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="3*"/>
+            </Grid.RowDefinitions>
+            
+            <!-- 상단: 평균 통계 -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="🔥 평균 칼로리:" FontWeight="Bold"/>
+                <TextBlock Text="{Binding AverageCalories}" Margin="5,0,20,0"/>
+                <TextBlock Text="⏱ 평균 시간:" FontWeight="Bold"/>
+                <TextBlock Text="{Binding AverageDuration}" Margin="5,0,0,0"/>
+            </StackPanel>
+            
+            <!-- 운동 기록 리스트 -->
+            <DataGrid Grid.Row="1" ItemsSource="{Binding FilteredExerciseLogs}" AutoGenerateColumns="False"
+                      CanUserAddRows="False" Margin="0,0,0,10" HeadersVisibility="Column" FontSize="14" Height="320">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="날짜" Binding="{Binding PlannerDate, StringFormat=yyyy-MM-dd}" Width="*"/>
+                    <DataGridTextColumn Header="운동명" Binding="{Binding ExerciseName}" Width="*"/>
+                    <DataGridTextColumn Header="시간(분)" Binding="{Binding Minutes}" Width="*"/>
+                    <DataGridTextColumn Header="칼로리" Binding="{Binding Calories}" Width="*"/>
+                    <DataGridTextColumn Header="운동 종류" Binding="{Binding Category}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- 하단 그래프 -->
+            <Grid Grid.Row="2" Height="220">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <!-- 칼로리 소모 추세 -->
+                <Border BorderBrush="#DDD" Grid.Column="0" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
+                    <StackPanel>
+                        <TextBlock Text="📉 칼로리 소모 추세" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <lvc:CartesianChart Series="{Binding CalorieTrendSeries}" Height="150">
+                            <lvc:CartesianChart.AxisX>
+                                <lvc:Axis Labels="{Binding Labels}" Title="날짜"/>
+                            </lvc:CartesianChart.AxisX>
+                            <lvc:CartesianChart.AxisY>
+                                <lvc:Axis Title="칼로리(kcal)"/>
+                            </lvc:CartesianChart.AxisY>
+                        </lvc:CartesianChart>
+                    </StackPanel>
+                </Border>
+
+                <!-- 운동 종류별 비율 -->
+                <Border BorderBrush="#DDD" Grid.Column="1" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
+                    <StackPanel>
+                        <TextBlock Text="📊 운동 종류별 비율" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <lvc:PieChart Series="{Binding CategoryDistributionSeries}" Height="150"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 운동 시간 추세 -->
+                <Border BorderBrush="#DDD" Grid.Column="2" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
+                    <StackPanel>
+                        <TextBlock Text="⏱ 운동 시간 추세" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <lvc:CartesianChart Series="{Binding DurationTrendSeries}" Height="150">
+                            <lvc:CartesianChart.AxisX>
+                                <lvc:Axis Labels="{Binding Labels}" Title="날짜"/>
+                            </lvc:CartesianChart.AxisX>
+                            <lvc:CartesianChart.AxisY>
+                                <lvc:Axis Title="운동 시간"/>
+                            </lvc:CartesianChart.AxisY>
+                        </lvc:CartesianChart>
+                    </StackPanel>
+                </Border>
+
+                <Border BorderBrush="#DDD" Grid.Row="1" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
+                    <StackPanel>
+                        <TextBlock Text="⏱ 운동 시간 추세" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</Page>

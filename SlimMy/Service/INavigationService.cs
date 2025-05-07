@@ -24,5 +24,7 @@ namespace SlimMy.Service
         void NavigateToExerciseWindow();
 
         Task NavigateToDashBoardFrameAsync(Type pageType);
+
+        Task NavigateToExerciseHistoryFrameAsync(Type pageType);
     }
 }
