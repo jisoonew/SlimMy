@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -19,6 +20,11 @@ namespace SlimMy
     public partial class App : Application
     {
         private readonly IDataService _dataService = new DataService();
+
+        public App()
+        {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {

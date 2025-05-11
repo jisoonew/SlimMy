@@ -51,7 +51,6 @@ join exercise_info exin on pln.exercise_info_id = exin.exercise_info_id where pl
                     }
                 }
             }
-
             return plannerItems;
         }
     }

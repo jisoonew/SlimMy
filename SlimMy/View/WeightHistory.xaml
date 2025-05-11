@@ -1,0 +1,124 @@
+<Page x:Class="SlimMy.View.WeightHistory"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:SlimMy.ViewModel"
+xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
+      mc:Ignorable="d"
+      Title="WeightHistory" Width="1110" Height="850" Background="White">
+
+    <Page.DataContext>
+        <local:WeightHistoryViewModel/>
+    </Page.DataContext>
+
+    <Grid Margin="20">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="2*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 몸무게 입력 영역 -->
+        <Border Grid.Column="0" Grid.ColumnSpan="2" BorderBrush="LightGray" BorderThickness="1" Padding="10" CornerRadius="10" VerticalAlignment="Top">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <!-- 왼쪽: 날짜/몸무게 입력 -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 오른쪽: 검색창 -->
+                </Grid.ColumnDefinitions>
+
+                <!-- 입력 영역 -->
+                <StackPanel Orientation="Horizontal" Grid.Column="0">
+                    <TextBlock Text="날짜:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <DatePicker SelectedDate="{Binding InputDate}" Width="130" Margin="0,0,10,0"/>
+
+                    <TextBlock Text="몸무게 (kg):" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    <TextBox Text="{Binding InputWeight}" Width="80" Margin="5,0"/>
+
+                    <TextBlock Text="목표 몸무게:" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    <TextBox Text="{Binding TargetWeight}" Width="80" Margin="5,0"/>
+                    
+                    <CheckBox Content="키 수정" IsChecked="{Binding IsEditingHeight}" Margin="10,0"/>
+                    <TextBox Text="{Binding InputHeight}" Width="80" 
+         IsEnabled="{Binding IsEditingHeight}" />
+                </StackPanel>
+
+                <!-- 검색 영역 -->
+                <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
+                    <TextBox Text="{Binding MemoSearchKeyword}" Width="300" Margin="20,0,10,0"/>
+                    <Button Content="검색" Command="{Binding SearchMemoCommand}" Width="70"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- DataGrid + 그래프 -->
+        <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,80,0,0">
+            <!-- 기록 테이블 -->
+            <DataGrid ItemsSource="{Binding WeightRecords}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectedItem="{Binding SelectedRecord}" SelectionUnit="FullRow"
+                  CanUserAddRows="False" HeadersVisibility="Column" RowHeight="30"
+                  Margin="0,0,0,10" Height="350">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="날짜" Binding="{Binding Date, StringFormat=\{0:yyyy-MM-dd\}}" Width="120"/>
+                    <DataGridTextColumn Header="몸무게 (kg)" Binding="{Binding Weight}" Width="100"/>
+                    <DataGridTextColumn Header="목표 몸무게 (kg)" Binding="{Binding Weight}" Width="150"/>
+                    <DataGridTextColumn Header="변화량" Binding="{Binding WeightDiffFromPrevious, StringFormat=+#.0;-#.0;0}" Width="100"/>
+                    <DataGridTextColumn Header="BMI" Binding="{Binding BMI}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Button Content="기록 삭제" Command="{Binding DeleteRecordCommand}" 
+            Width="100" HorizontalAlignment="Right" Margin="0,0,0,10"/>
+
+            <!-- 몸무게 그래프 -->
+            <Border BorderBrush="LightGray" BorderThickness="1" Padding="10" CornerRadius="10" Height="350">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
+                        <Button Content="몸무게 추세" Command="{Binding ShowWeightTrendCommand}" Margin="5"/>
+                        <Button Content="평균 추세" Command="{Binding ShowAverageTrendCommand}" Margin="5"/>
+                    </StackPanel>
+                    <ContentControl Content="{Binding SelectedChart}" />
+
+                    <lvc:CartesianChart Series="{Binding WeightTrendSeries}" Height="250">
+                        <lvc:CartesianChart.AxisX>
+                            <lvc:Axis Title="날짜" Labels="{Binding WeightTrendLabels}" LabelsRotation="45"/>
+                        </lvc:CartesianChart.AxisX>
+                        <lvc:CartesianChart.AxisY>
+                            <lvc:Axis Title="몸무게 (kg)"/>
+                        </lvc:CartesianChart.AxisY>
+                    </lvc:CartesianChart>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- 메모 + 검색 + 통계 + 달력 -->
+        <StackPanel Grid.Column="1" Margin="10,80,0,0">
+            <!-- 메모장 -->
+            <Border BorderBrush="LightGray" BorderThickness="1" Padding="10" CornerRadius="10" Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock Text="선택한 날짜 메모" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBox Text="{Binding NoteContent}" AcceptsReturn="True" 
+                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                 Height="200" FontFamily="Consolas" FontSize="13"/>
+                    <Button Content="메모 지우기" Command="{Binding DeleteMemoCommand}" 
+                Width="100" HorizontalAlignment="Right" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- 왼쪽: 날짜/몸무게 입력 -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- 오른쪽: 검색창 -->
+                </Grid.ColumnDefinitions>
+                <Button Content="CSV 저장" Grid.Column="0" Command="{Binding ExportCsvCommand}" Width="90" Margin="5"/>
+                <Button Content="Excel 저장" Grid.Column="1" Command="{Binding ExportExcelCommand}" Width="90" Margin="5"/>
+
+                <Button Content="저장" Grid.Column="2" Command="{Binding SaveCommand}" Width="80" Margin="5" HorizontalAlignment="Right"/>
+            </Grid>
+        </StackPanel>
+    </Grid>
+</Page>

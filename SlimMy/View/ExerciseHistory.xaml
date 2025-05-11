@@ -37,7 +37,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <!-- 내보내기 형식 선택 -->
                 <ComboBox Width="100" SelectedItem="{Binding SelectedExportFormat}" Margin="10,0,0,0"
                   ItemsSource="{Binding ExportFormatOptions}" />
-                <Button Content="내보내기" Width="100" Command="{Binding ExportCommand}" Margin="5,0,0,0"/>
+                <Button Content="내보내기" Width="100" Margin="5,0,0,0" Click="ExportButton_Click"/>
             </StackPanel>
         </StackPanel>
 
@@ -86,7 +86,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <Border BorderBrush="#DDD" Grid.Column="0" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
                     <StackPanel>
                         <TextBlock Text="📉 칼로리 소모 추세" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <lvc:CartesianChart Series="{Binding CalorieTrendSeries}" Height="150">
+                        <lvc:CartesianChart x:Name="CalorieTrendChart" Series="{Binding CalorieTrendSeries}" Height="150">
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis Labels="{Binding Labels}" Title="날짜"/>
                             </lvc:CartesianChart.AxisX>
@@ -101,7 +101,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <Border BorderBrush="#DDD" Grid.Column="1" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
                     <StackPanel>
                         <TextBlock Text="📊 운동 종류별 비율" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <lvc:PieChart Series="{Binding CategoryDistributionSeries}" Height="150"/>
+                        <lvc:PieChart x:Name="CategoryDistributionChart" Series="{Binding CategoryDistributionSeries}" Height="150"/>
                     </StackPanel>
                 </Border>
 
@@ -109,7 +109,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <Border BorderBrush="#DDD" Grid.Column="2" Grid.Row="0" BorderThickness="1" CornerRadius="10" Padding="10" Margin="5">
                     <StackPanel>
                         <TextBlock Text="⏱ 운동 시간 추세" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-                        <lvc:CartesianChart Series="{Binding DurationTrendSeries}" Height="150">
+                        <lvc:CartesianChart x:Name="DurationTrendChart" Series="{Binding DurationTrendSeries}" Height="150">
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis Labels="{Binding Labels}" Title="날짜"/>
                             </lvc:CartesianChart.AxisX>

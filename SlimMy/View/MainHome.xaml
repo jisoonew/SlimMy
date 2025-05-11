@@ -41,6 +41,7 @@
                 </Button>
                 <Button Content="Planner" FontSize="25" Command="{Binding PlannerCommand}" Padding="1,5,1,5" Height="50" Margin="5,0,5,10"/>
                 <Button Content="Exercise History" FontSize="25" Command="{Binding ExerciseHistoryCommand}" Padding="1,5,1,5" Height="50" Margin="5,0,5,10"/>
+                <Button Content="Weight History" FontSize="25" Command="{Binding WeightHistoryCommand}" Padding="1,5,1,5" Height="50" Margin="5,0,5,10"/>
                 <Button x:Name="community" Content="Community" FontSize="25" Padding="1,5,1,5" Command="{Binding CommunityCommand}" Height="50" Margin="5,0,5,10"/>
                 <Button x:Name="MyChats" Content="MyChats" FontSize="25" Padding="1,5,1,5" Command="{Binding MyChatsCommand}" Height="50" Margin="5,0,5,10"/>
                 <Button Content="My Page" FontSize="25" Padding="1,5,1,5" Height="50" Margin="5,0,5,0"/>

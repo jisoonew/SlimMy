@@ -106,6 +106,7 @@ namespace SlimMy.ViewModel
         public AsyncRelayCommand CommunityCommand { get; set; }
         public AsyncRelayCommand DashBoardCommand { get; set; }
         public AsyncRelayCommand ExerciseHistoryCommand { get; set; }
+        public AsyncRelayCommand WeightHistoryCommand { get; set; }
 
         private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
 
@@ -268,6 +269,8 @@ namespace SlimMy.ViewModel
             DashBoardCommand = new AsyncRelayCommand(DashBoardBtn);
 
             ExerciseHistoryCommand = new AsyncRelayCommand(NavigateToExerciseHistory);
+
+            WeightHistoryCommand = new AsyncRelayCommand(NavigateToWeightHistory);
         }
 
         public Command PlannerCommand { get; set; }
@@ -282,6 +285,12 @@ namespace SlimMy.ViewModel
         public async Task NavigateToExerciseHistory(object parameter)
         {
             await _navigationService.NavigateToExerciseHistoryFrameAsync(typeof(ExerciseHistory));
+        }
+
+        // 몸무게
+        public async Task NavigateToWeightHistory(object parameter)
+        {
+            await _navigationService.NavigateToWeightHistoryFrameAsync(typeof(WeightHistory));
         }
 
         // 프레임 지정

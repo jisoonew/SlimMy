@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Model
 {
-    class WorkoutHistoryItem : BaseViewModel
+    public class WorkoutHistoryItem : BaseViewModel
     {
         private DateTime _plannerDate;
         private string _exerciseName;

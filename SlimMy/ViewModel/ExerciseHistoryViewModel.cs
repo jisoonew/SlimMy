@@ -12,6 +12,13 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using PdfSharp.Pdf;
+using PdfSharp.Drawing;
+using System.Diagnostics;
+using System.Windows.Media.Imaging;
+using System.Windows.Controls;
+using Microsoft.Win32;
+using ClosedXML.Excel;
 
 namespace SlimMy.ViewModel
 {
@@ -402,25 +409,271 @@ namespace SlimMy.ViewModel
         // 내보내기
         private void ExecuteExport(object parameter)
         {
-            var dialog = new Microsoft.Win32.SaveFileDialog
+            if(SelectedExportFormat == "CSV")
             {
-                FileName = "운동기록",
-                DefaultExt = ".csv",
-                Filter = "CSV 파일 (*.csv)|*.csv"
-            };
+                var dialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    FileName = "운동기록",
+                    DefaultExt = ".csv",
+                    Filter = "CSV 파일 (*.csv)|*.csv"
+                };
 
-            if (dialog.ShowDialog() == true)
+                if (dialog.ShowDialog() == true)
+                {
+                    try
+                    {
+                        ExportToCsv(dialog.FileName);
+                        MessageBox.Show("CSV 내보내기가 완료되었습니다.", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"내보내기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
+
+            else if (SelectedExportFormat == "PDF")
             {
+                if (parameter is not ExportChartParameter chartParam)
+                {
+                    MessageBox.Show("그래프 데이터가 유효하지 않습니다.");
+                    return;
+                }
+
                 try
                 {
-                    ExportToCsv(dialog.FileName);
-                    MessageBox.Show("CSV 내보내기가 완료되었습니다.", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ExportToPdf(chartParam.FilePath, chartParam.ChartInfos);
+                    MessageBox.Show("PDF 내보내기가 완료되었습니다.", "성공", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show($"내보내기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
+
+            else if (SelectedExportFormat == "Excel")
+            {
+                var dialog = new SaveFileDialog
+                {
+                    FileName = "운동기록",
+                    DefaultExt = ".xlsx",
+                    Filter = "Excel 파일 (*.xlsx)|*.xlsx"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    ExportToExcel(dialog.FileName);
+                    MessageBox.Show("Excel로 내보내기가 완료되었습니다.");
+                }
+            }
+        }
+
+        // 운동 기록 PDF 내보내기
+        public void ExportToPdf(string filePath, (FrameworkElement Chart, string Title, IEnumerable<(string Label, string Value)> DataTable)[] chartInfos)
+        {
+            PdfDocument document = new PdfDocument();
+            document.Info.Title = "운동 기록";
+
+            PdfPage page = document.AddPage();
+            XGraphics gfx = XGraphics.FromPdfPage(page);
+            XFont font = new XFont("맑은 고딕", 12, XFontStyle.Regular);
+            XFont titleFont = new XFont("맑은 고딕", 14, XFontStyle.Bold);
+
+            double y = 40;
+
+            // 제목
+            gfx.DrawString("운동 기록 내역", new XFont("맑은 고딕", 16, XFontStyle.Bold), XBrushes.Black, new XRect(0, y, page.Width, 30), XStringFormats.TopCenter);
+            y += 40;
+
+            // 표 헤더
+            gfx.DrawString("날짜", font, XBrushes.Black, new XPoint(40, y));
+            gfx.DrawString("운동명", font, XBrushes.Black, new XPoint(120, y));
+            gfx.DrawString("시간(분)", font, XBrushes.Black, new XPoint(250, y));
+            gfx.DrawString("칼로리", font, XBrushes.Black, new XPoint(330, y));
+            gfx.DrawString("운동 종류", font, XBrushes.Black, new XPoint(400, y));
+
+            y += 25;
+
+            // 데이터 출력
+            foreach (var item in FilteredExerciseLogs)
+            {
+                gfx.DrawString(item.PlannerDate.ToString("yyyy-MM-dd"), font, XBrushes.Black, new XPoint(40, y));
+                gfx.DrawString(item.ExerciseName, font, XBrushes.Black, new XPoint(120, y));
+                gfx.DrawString(item.Minutes.ToString(), font, XBrushes.Black, new XPoint(250, y));
+                gfx.DrawString(item.Calories.ToString(), font, XBrushes.Black, new XPoint(330, y));
+                gfx.DrawString(item.Category, font, XBrushes.Black, new XPoint(400, y));
+                y += 20;
+
+                if (y > page.Height - 50)
+                {
+                    page = document.AddPage();
+                    gfx = XGraphics.FromPdfPage(page);
+                    y = 40;
+                }
+            }
+
+            // 차트 + 수치 데이터 출력
+            foreach (var (chartElement, chartTitle, chartData) in chartInfos)
+            {
+                if (y > page.Height - 350)
+                {
+                    page = document.AddPage();
+                    gfx = XGraphics.FromPdfPage(page);
+                    y = 40;
+                }
+
+                gfx.DrawString(chartTitle, titleFont, XBrushes.Black, new XPoint(40, y));
+                y += 25;
+
+                var chartImageSource = RenderChartToBitmap(chartElement, 500, 300);
+                var chartImage = ConvertBitmapSourceToXImage(chartImageSource);
+                gfx.DrawImage(chartImage, 40, y);
+                y += 310;
+
+                if (chartData != null)
+                {
+                    gfx.DrawString("• 수치 요약", font, XBrushes.Black, new XPoint(40, y));
+                    y += 20;
+
+                    foreach (var (label, value) in chartData)
+                    {
+                        gfx.DrawString(label, font, XBrushes.Black, new XPoint(60, y));
+                        gfx.DrawString(value, font, XBrushes.Black, new XPoint(250, y));
+                        y += 18;
+
+                        if (y > page.Height - 50)
+                        {
+                            page = document.AddPage();
+                            gfx = XGraphics.FromPdfPage(page);
+                            y = 40;
+                        }
+                    }
+
+                    y += 15;
+                }
+            }
+
+            document.Save(filePath);
+        }
+
+        public static BitmapSource RenderChartToBitmap(FrameworkElement chartElement, int width, int height)
+        {
+            var drawingVisual = new DrawingVisual();
+            using (var context = drawingVisual.RenderOpen())
+            {
+                var visualBrush = new VisualBrush(chartElement);
+                context.DrawRectangle(visualBrush, null, new Rect(0, 0, width, height));
+            }
+
+            var renderBitmap = new RenderTargetBitmap(
+                width, height, 96d, 96d, PixelFormats.Pbgra32);
+            renderBitmap.Render(drawingVisual);
+            return renderBitmap;
+        }
+
+        private XImage ConvertBitmapSourceToXImage(BitmapSource bitmapSource)
+        {
+            using (var ms = new MemoryStream())
+            {
+                BitmapEncoder encoder = new PngBitmapEncoder();
+                encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+                encoder.Save(ms);
+                ms.Position = 0;
+                return XImage.FromStream(ms);
+            }
+        }
+
+        public void ExportToExcel(string filePath)
+        {
+            var workbook = new XLWorkbook();
+            var sheet = workbook.Worksheets.Add("운동 기록");
+
+            // 1. 운동 기록 표
+            sheet.Cell(1, 1).Value = "날짜";
+            sheet.Cell(1, 2).Value = "운동명";
+            sheet.Cell(1, 3).Value = "시간(분)";
+            sheet.Cell(1, 4).Value = "칼로리";
+            sheet.Cell(1, 5).Value = "운동 종류";
+
+            int row = 2;
+            foreach (var item in FilteredExerciseLogs)
+            {
+                sheet.Cell(row, 1).Value = item.PlannerDate.ToString("yyyy-MM-dd");
+                sheet.Cell(row, 2).Value = item.ExerciseName;
+                sheet.Cell(row, 3).Value = item.Minutes;
+                sheet.Cell(row, 4).Value = item.Calories;
+                sheet.Cell(row, 5).Value = item.Category;
+                row++;
+            }
+
+            sheet.Columns().AdjustToContents();
+
+            // 2. 운동 종류별 비율 (PieChart 데이터)
+            var categoryGroup = FilteredExerciseLogs
+                .GroupBy(x => x.Category)
+                .Select(g => new { Category = g.Key, Count = g.Count(), Percentage = Math.Round((double)g.Count() / FilteredExerciseLogs.Count * 100, 1) })
+                .ToList();
+
+            var categorySheet = workbook.Worksheets.Add("운동 종류 비율");
+            categorySheet.Cell(1, 1).Value = "운동 종류";
+            categorySheet.Cell(1, 2).Value = "횟수";
+            categorySheet.Cell(1, 3).Value = "비율 (%)";
+
+            int catRow = 2;
+            foreach (var c in categoryGroup)
+            {
+                categorySheet.Cell(catRow, 1).Value = c.Category;
+                categorySheet.Cell(catRow, 2).Value = c.Count;
+                categorySheet.Cell(catRow, 3).Value = c.Percentage;
+                catRow++;
+            }
+
+            categorySheet.Columns().AdjustToContents();
+
+            // 3. 칼로리 소모 추세
+            var calorieTrend = FilteredExerciseLogs
+                .GroupBy(x => x.PlannerDate.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key, TotalCalories = g.Sum(x => x.Calories) })
+                .ToList();
+
+            var calSheet = workbook.Worksheets.Add("칼로리 추세");
+            calSheet.Cell(1, 1).Value = "날짜";
+            calSheet.Cell(1, 2).Value = "총 칼로리";
+
+            int calRow = 2;
+            foreach (var c in calorieTrend)
+            {
+                calSheet.Cell(calRow, 1).Value = c.Date.ToString("yyyy-MM-dd");
+                calSheet.Cell(calRow, 2).Value = c.TotalCalories;
+                calRow++;
+            }
+
+            calSheet.Columns().AdjustToContents();
+
+            // 4. 운동 시간 추세
+            var timeTrend = FilteredExerciseLogs
+                .GroupBy(x => x.PlannerDate.Date)
+                .OrderBy(g => g.Key)
+                .Select(g => new { Date = g.Key, TotalMinutes = g.Sum(x => x.Minutes) })
+                .ToList();
+
+            var timeSheet = workbook.Worksheets.Add("운동 시간 추세");
+            timeSheet.Cell(1, 1).Value = "날짜";
+            timeSheet.Cell(1, 2).Value = "총 운동 시간(분)";
+
+            int timeRow = 2;
+            foreach (var t in timeTrend)
+            {
+                timeSheet.Cell(timeRow, 1).Value = t.Date.ToString("yyyy-MM-dd");
+                timeSheet.Cell(timeRow, 2).Value = t.TotalMinutes;
+                timeRow++;
+            }
+
+            timeSheet.Columns().AdjustToContents();
+
+            // 저장
+            workbook.SaveAs(filePath);
         }
     }
 }
