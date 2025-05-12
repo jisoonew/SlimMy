@@ -62,7 +62,7 @@ namespace SlimMy.Repository
             return plannerItems;
         }
 
-        // 몸무게 정보 저장하기
+        // 몸무게 정보 저장
         public async Task InsertWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi, double targetWeight, string memo)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
@@ -72,7 +72,6 @@ namespace SlimMy.Repository
                     await connection.OpenAsync();
                     using (OracleTransaction transaction = connection.BeginTransaction())
                     {
-                        // 1. PlannerGroup 저장
                         Guid plannerGroupId = Guid.NewGuid();
                         byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
 
@@ -91,7 +90,6 @@ namespace SlimMy.Repository
                             await groupCmd.ExecuteNonQueryAsync();
                         }
 
-                        // 1. PlannerGroup 저장
                         Guid WeightMemoId = Guid.NewGuid();
                         byte[] WeightMemoIdBytes = WeightMemoId.ToByteArray();
 
@@ -116,6 +114,158 @@ namespace SlimMy.Repository
                 catch (Exception ex)
                 {
                     MessageBox.Show("InsertWeight 저장 오류: " + ex.Message);
+                }
+            }
+        }
+
+        // 몸무게 정보 여부
+        public async Task<int> GetTodayWeightCompleted(DateTime now, Guid userID)
+        {
+            int totalCalories = 0;
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select count(*) from body_log where user_id = :user_id and log_date = :log_date";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+
+                    command.Parameters.Add(new OracleParameter("user_id", OracleDbType.Raw)).Value = userID.ToByteArray();
+                    command.Parameters.Add(new OracleParameter("log_date", OracleDbType.Date)).Value = now.Date;
+
+                    totalCalories = Convert.ToInt32(await command.ExecuteScalarAsync());
+                }
+            }
+            return totalCalories;
+        }
+
+        // 몸무게 정보 수정
+        public async Task UpdatetWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi, double targetWeight, string memo)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
+                    using (OracleTransaction transaction = connection.BeginTransaction())
+                    {
+                        Guid plannerGroupId = Guid.NewGuid();
+                        byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
+
+                        string insertGroupQuery = @"update body_log set weight = :weight, height = :height, bmi = :bmi, target_Weight = :target_Weight where user_id = :user_id and log_date = :log_date";
+
+                        using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                        {
+                            groupCmd.Transaction = transaction;
+                            groupCmd.Parameters.Add("weight", OracleDbType.Double).Value = weight;
+                            groupCmd.Parameters.Add("height", OracleDbType.Double).Value = height;
+                            groupCmd.Parameters.Add("bmi", OracleDbType.Double).Value = bmi;
+                            groupCmd.Parameters.Add("targetWeight", OracleDbType.Double).Value = targetWeight;
+                            groupCmd.Parameters.Add("user_id", OracleDbType.Raw).Value = userID.ToByteArray();
+                            groupCmd.Parameters.Add("log_date", OracleDbType.Date).Value = plannerDate.Date;
+                            await groupCmd.ExecuteNonQueryAsync();
+                        }
+
+                        Guid WeightMemoId = Guid.NewGuid();
+                        byte[] WeightMemoIdBytes = WeightMemoId.ToByteArray();
+
+                        DateTime dateTime = DateTime.Now;
+
+                        string insertMemoQuery = @"update memo set content = :content, updated_at = :updated_at where user_id = :user_id and log_date = :log_date";
+
+                        using (OracleCommand memoCmd = new OracleCommand(insertMemoQuery, connection))
+                        {
+                            memoCmd.Transaction = transaction;
+
+                            memoCmd.Parameters.Add("content", OracleDbType.Clob).Value = string.IsNullOrEmpty(memo) ? DBNull.Value : memo;
+                            memoCmd.Parameters.Add("updated_at", OracleDbType.TimeStamp).Value = dateTime;
+                            memoCmd.Parameters.Add("user_id", OracleDbType.Raw).Value = userID.ToByteArray();
+                            memoCmd.Parameters.Add("log_date", OracleDbType.Date).Value = plannerDate.Date;
+
+                            await memoCmd.ExecuteNonQueryAsync();
+                        }
+
+                        // 커밋
+                        await transaction.CommitAsync();
+                        MessageBox.Show("몸무게 수정이 완료되었습니다.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("UpdateWeight 저장 오류: " + ex.Message);
+                }
+            }
+        }
+
+        // 메모장 내용 가져오기
+        public async Task<WeightMemoItem> GetMemoContent(DateTime now, Guid userID)
+        {
+            var weightMemoItems = new List<WeightMemoItem>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"select memo_id, content from memo where user_id = :user_id and log_date = :log_date";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("user_id", OracleDbType.Raw)).Value = userID.ToByteArray();
+                    command.Parameters.Add("log_date", OracleDbType.Date).Value = now.Date;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var groupIdBinary = (OracleBinary)reader.GetOracleValue(0);
+                            var groupId = groupIdBinary.IsNull ? Guid.Empty : new Guid(groupIdBinary.Value);
+
+                            return new WeightMemoItem
+                            {
+                                MemoID = groupId,
+                                Content = reader.GetString(1)
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 몸무게 이력 삭제
+        public async Task DeleteWeight(Guid bodyLogID, Guid memoID)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
+
+                    string sql = "delete from body_log where body_log_id = :bodyLogID";
+
+                    using (OracleCommand command = new OracleCommand(sql, connection))
+                    {
+                        command.Parameters.Add(new OracleParameter("bodyLogID", OracleDbType.Raw, bodyLogID.ToByteArray(), ParameterDirection.Input));
+
+                        await command.ExecuteNonQueryAsync();
+                    }
+
+                    string memoSQL = "delete from memo where memo_id = :memo_id";
+
+                    using (OracleCommand memoCommand = new OracleCommand(memoSQL, connection))
+                    {
+                        memoCommand.Parameters.Add(new OracleParameter("memo_id", OracleDbType.Raw, memoID.ToByteArray(), ParameterDirection.Input));
+
+                        await memoCommand.ExecuteNonQueryAsync();
+                    }
+
+                    MessageBox.Show("몸무게 이력이 삭제되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("DeleteWeight 오류 : " + ex);
                 }
             }
         }
