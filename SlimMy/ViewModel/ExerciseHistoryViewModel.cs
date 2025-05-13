@@ -588,7 +588,7 @@ namespace SlimMy.ViewModel
             var workbook = new XLWorkbook();
             var sheet = workbook.Worksheets.Add("운동 기록");
 
-            // 1. 운동 기록 표
+            // 운동 기록 표
             sheet.Cell(1, 1).Value = "날짜";
             sheet.Cell(1, 2).Value = "운동명";
             sheet.Cell(1, 3).Value = "시간(분)";
@@ -608,7 +608,7 @@ namespace SlimMy.ViewModel
 
             sheet.Columns().AdjustToContents();
 
-            // 2. 운동 종류별 비율 (PieChart 데이터)
+            // 운동 종류별 비율 (PieChart 데이터)
             var categoryGroup = FilteredExerciseLogs
                 .GroupBy(x => x.Category)
                 .Select(g => new { Category = g.Key, Count = g.Count(), Percentage = Math.Round((double)g.Count() / FilteredExerciseLogs.Count * 100, 1) })
@@ -630,7 +630,7 @@ namespace SlimMy.ViewModel
 
             categorySheet.Columns().AdjustToContents();
 
-            // 3. 칼로리 소모 추세
+            // 칼로리 소모 추세
             var calorieTrend = FilteredExerciseLogs
                 .GroupBy(x => x.PlannerDate.Date)
                 .OrderBy(g => g.Key)
@@ -651,7 +651,7 @@ namespace SlimMy.ViewModel
 
             calSheet.Columns().AdjustToContents();
 
-            // 4. 운동 시간 추세
+            // 운동 시간 추세
             var timeTrend = FilteredExerciseLogs
                 .GroupBy(x => x.PlannerDate.Date)
                 .OrderBy(g => g.Key)

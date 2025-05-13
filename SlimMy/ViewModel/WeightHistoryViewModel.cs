@@ -1,3 +1,4 @@
+using ClosedXML.Excel;
 using LiveCharts;
 using LiveCharts.Wpf;
 using SlimMy.Model;
@@ -6,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,6 +31,7 @@ namespace SlimMy.ViewModel
             set { _weightRecords = value; OnPropertyChanged(nameof(WeightRecords)); }
         }
 
+        // 몸무게 내역 선택
         private WeightRecordItem _selectedRecord;
         public WeightRecordItem SelectedRecord
         {
@@ -43,6 +46,7 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 날짜
         private DateTime _inputDate;
         public DateTime InputDate
         {
@@ -90,6 +94,7 @@ namespace SlimMy.ViewModel
             set { _targetWeight = value; OnPropertyChanged(nameof(TargetWeight)); }
         }
 
+        // BMI 그래프
         private SeriesCollection _bmiSeries = new SeriesCollection();
         public SeriesCollection BmiSeries
         {
@@ -97,6 +102,7 @@ namespace SlimMy.ViewModel
             set { _bmiSeries = value; OnPropertyChanged(nameof(BmiSeries)); }
         }
 
+        // BMI 그래프 날짜
         private List<string> _bmiLabels = new List<string>();
         public List<string> BmiLabels
         {
@@ -104,11 +110,61 @@ namespace SlimMy.ViewModel
             set { _bmiLabels = value; OnPropertyChanged(nameof(BmiLabels)); }
         }
 
+        // 몸무게 그래프
+        private SeriesCollection _weightTrendSeries = new SeriesCollection();
+        public SeriesCollection WeightTrendSeries
+        {
+            get => _weightTrendSeries;
+            set { _weightTrendSeries = value; OnPropertyChanged(nameof(WeightTrendSeries)); }
+        }
+
+        // 몸무게 그래프 날짜
+        private List<string> _weightTrendLabels = new List<string>();
+        public List<string> WeightTrendLabels
+        {
+            get => _weightTrendLabels;
+            set { _weightTrendLabels = value; OnPropertyChanged(nameof(WeightTrendLabels)); }
+        }
+
+        // 검색어 카테고리
+        private string _selectedSearchValue;
+        public string SelectedSearchValue
+        {
+            get { return _selectedSearchValue; }
+            set { _selectedSearchValue = value; OnPropertyChanged(nameof(SelectedSearchValue)); }
+        }
+
+        // 검색어
+        private string _searchKeyword;
+        public string SearchKeyword
+        {
+            get { return _searchKeyword; }
+            set { _searchKeyword = value; OnPropertyChanged(nameof(SearchKeyword)); }
+        }
+
+        private double _weightDiffFromPrevious;
+        public double WeightDiffFromPrevious
+        {
+            get => _weightDiffFromPrevious;
+            set { _weightDiffFromPrevious = value; OnPropertyChanged(nameof(WeightDiffFromPrevious)); }
+        }
+
         public Func<double, string> BmiValueFormatter { get; set; } = value => value.ToString("F2");
 
         public ICommand SaveCommand { get; set; }
 
         public ICommand DeleteRecordCommand { get; set; }
+
+        public ICommand SearchCommand { get; set; }
+
+        public ICommand ExportCsvCommand { get; set; }
+
+        public event Action ExportPdfRequested;
+        public event Action ExportExcelRequested;
+
+        public ICommand ExportPdfCommand { get; set; }
+
+        public ICommand ExportExcelCommand { get; set; }
 
         public WeightHistoryViewModel()
         {
@@ -130,10 +186,27 @@ namespace SlimMy.ViewModel
             // BMI 그래프
             UpdateBmiChart();
 
+            // 몸무게 내역 그래프
+            UpdateWeightChart();
+
+            // 몸무게 변화량
+            CalculateWeightDiff();
+
             // 저장
             SaveCommand = new AsyncRelayCommand(WeightSaveFunction);
 
             DeleteRecordCommand = new AsyncRelayCommand(DeleteWeightRecord);
+
+            SearchCommand = new AsyncRelayCommand(SelectedSearchCategoryPrint);
+
+            // CSV
+            ExportCsvCommand = new RelayCommand(_ => ExportToCsv());
+
+            // PDF
+            ExportPdfCommand = new RelayCommand(_ => ExportPdfRequested?.Invoke());
+
+            // Excel
+            ExportExcelCommand = new RelayCommand(_ => ExportExcelRequested?.Invoke());
         }
 
         public static async Task<WeightHistoryViewModel> CreateAsync()
@@ -166,6 +239,25 @@ namespace SlimMy.ViewModel
             InputHeight = WeightRecords.Last().Height.ToString();
             InputWeight = WeightRecords.Last().Weight.ToString();
             TargetWeight = WeightRecords.Last().TargetWeight.ToString();
+        }
+
+        // 몸무게 변화량
+        private void CalculateWeightDiff()
+        {
+            var sorted = WeightRecords.OrderBy(r => r.Date).ToList();
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                if (i == 0)
+                {
+                    sorted[i].WeightDiffFromPrevious = "0";
+                }
+                else
+                {
+                    double diff = Math.Round(sorted[i].Weight - sorted[i - 1].Weight, 1);
+                    sorted[i].WeightDiffFromPrevious = diff.ToString();
+                }
+            }
         }
 
 
@@ -269,7 +361,13 @@ namespace SlimMy.ViewModel
                 var bmiValues = new ChartValues<double>();
                 var labels = new List<string>();
 
-                foreach (var record in WeightRecords)
+                // 그래프에 10개의 데이터만 출력
+                int maxBMICount = 10;
+
+                // 날짜 오름차순으로 정렬된 복사본 사용
+                var sortedRecords = WeightRecords.OrderBy(r => r.Date).TakeLast(maxBMICount).ToList();
+
+                foreach (var record in sortedRecords)
                 {
                     bmiValues.Add(Math.Round(record.BMI, 2));
                     labels.Add(record.Date.ToString("yyyy-MM-dd"));
@@ -305,6 +403,140 @@ namespace SlimMy.ViewModel
             else if (bmi < 25.0) return "과체중";
             else if (bmi < 30.0) return "비만";
             else return "고도비만";
+        }
+
+        // 몸무게 그래프
+        private void UpdateWeightChart()
+        {
+            if (InputHeight != null && InputWeight != null)
+            {
+                var weightValues = new ChartValues<double>();
+                var weightlabels = new List<string>();
+
+                // 그래프에 10개의 데이터만 출력
+                int maxWeightCount = 30;
+
+                // 날짜 오름차순으로 정렬된 복사본 사용
+                var sortedRecords = WeightRecords.OrderBy(r => r.Date).TakeLast(maxWeightCount).ToList();
+
+                foreach (var record in sortedRecords)
+                {
+                    weightValues.Add(Math.Round(record.Weight, 2));
+                    weightlabels.Add(record.Date.ToString("yyyy-MM-dd"));
+                }
+
+                WeightTrendSeries = new SeriesCollection
+    {
+        new LineSeries
+        {
+            Title = "몸무게 ",
+            Values = weightValues,
+            DataLabels = true
+        }
+    };
+
+                WeightTrendLabels = weightlabels;
+                OnPropertyChanged(nameof(WeightTrendSeries));
+                OnPropertyChanged(nameof(WeightTrendLabels));
+            }
+        }
+
+        // 검색
+        public async Task SelectedSearchCategoryPrint(object parameter)
+        {
+            User userData = UserSession.Instance.CurrentUser;
+
+            if (SelectedSearchValue == "메모")
+            {
+                try
+                {
+                    var searchMomoResult = await _repo.GetSearchedMemoContent(userData.UserId, SearchKeyword);
+                    WeightRecords.Clear();
+                    WeightRecords.Add(searchMomoResult.Record);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("해당 내용은 존재하지 않습니다.");
+                }
+            }
+
+            if (SelectedSearchValue == "날짜")
+            {
+                try
+                {
+                    if (!DateTime.TryParseExact(SearchKeyword, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out DateTime parsedDate))
+                    {
+                        MessageBox.Show("날짜 형식은 yyyy-MM-dd 형식으로 입력하세요. 예: 2025-05-13");
+                        return;
+                    }
+
+                    var results = await _repo.GetSearchedDate(userData.UserId, parsedDate);
+
+                    WeightRecords.Clear();
+                    WeightRecords.Add(results.Record);
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show("해당 날짜는 존재하지 않습니다.");
+                }
+
+            }
+
+            if(SelectedSearchValue == "몸무게")
+            {
+                try
+                {
+                    var results = await _repo.GetSearchedWeight(userData.UserId, double.Parse(SearchKeyword));
+
+                    WeightRecords.Clear();
+                    WeightRecords.Add(results.Record);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("해당 몸무게 내역은 존재하지 않습니다.");
+                }
+            }
+        }
+
+        // CSV
+        private void ExportToCsv()
+        {
+            if (WeightRecords == null || WeightRecords.Count == 0)
+            {
+                MessageBox.Show("저장할 데이터가 없습니다.");
+                return;
+            }
+
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "CSV 파일 (*.csv)|*.csv",
+                FileName = "WeightHistory.csv"
+            };
+
+            if (saveDialog.ShowDialog() == true)
+            {
+                try
+                {
+                    var csvLines = new List<string>
+            {
+                "==== [몸무게 & BMI 내역] ====",
+                "날짜,몸무게(kg),목표 몸무게(kg),변화량,BMI"
+            };
+
+                    foreach (var record in WeightRecords.OrderBy(r => r.Date))
+                    {
+                        string line = $"{record.Date:yyyy-MM-dd},{record.Weight},{record.TargetWeight},{record.WeightDiffFromPrevious:+0.0;-0.0;0},{record.BMI:F2}";
+                        csvLines.Add(line);
+                    }
+
+                    File.WriteAllLines(saveDialog.FileName, csvLines, Encoding.UTF8);
+                    MessageBox.Show("CSV 저장이 완료되었습니다.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("CSV 저장 중 오류 발생: " + ex.Message);
+                }
+            }
         }
     }
 }

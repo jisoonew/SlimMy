@@ -6,7 +6,7 @@
       xmlns:local="clr-namespace:SlimMy.ViewModel"
 xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
       mc:Ignorable="d"
-      Title="WeightHistory" Width="1110" Height="850" Background="White">
+      Title="WeightHistory" Width="1110" Height="850" Background="White" Loaded="WeightHistory_Loaded">
 
     <Page.DataContext>
         <local:WeightHistoryViewModel/>
@@ -23,9 +23,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <!-- 왼쪽: 날짜/몸무게 입력 -->
                     <ColumnDefinition Width="Auto"/>
-                    <!-- 오른쪽: 검색창 -->
                 </Grid.ColumnDefinitions>
 
                 <!-- 입력 영역 -->
@@ -36,13 +34,15 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
 
                 <!-- 검색 영역 -->
                 <StackPanel Orientation="Horizontal" Grid.Column="1" HorizontalAlignment="Right">
-                    <ComboBox SelectedItem="{Binding SelectedSearchCategory}" Width="100" Margin="10,0,10,0">
+                    <ComboBox SelectedValuePath="Content"
+          SelectedValue="{Binding SelectedSearchValue}" 
+          Width="100" Margin="10,0,10,0">
                         <ComboBoxItem Content="메모" />
                         <ComboBoxItem Content="날짜" />
                         <ComboBoxItem Content="몸무게" />
                     </ComboBox>
-                    <TextBox Text="{Binding MemoSearchKeyword}" Width="300" Margin="20,0,10,0"/>
-                    <Button Content="검색" Command="{Binding SearchMemoCommand}" Width="70"/>
+                    <TextBox Text="{Binding SearchKeyword}" ToolTip="날짜 검색 시 yyyy-MM-dd 형식으로 입력하세요" Width="300" Margin="20,0,10,0"/>
+                    <Button Content="검색" Command="{Binding SearchCommand}" Width="70"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -50,7 +50,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
         <!-- DataGrid + 그래프 -->
         <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,80,0,0">
             <!-- 기록 테이블 -->
-            <DataGrid ItemsSource="{Binding WeightRecords}" AutoGenerateColumns="False" IsReadOnly="True"
+            <DataGrid x:Name="WeightRecords" ItemsSource="{Binding WeightRecords}" AutoGenerateColumns="False" IsReadOnly="True"
                   SelectedItem="{Binding SelectedRecord}" SelectionUnit="FullRow"
                   CanUserAddRows="False" HeadersVisibility="Column" RowHeight="30"
                   Margin="0,0,0,10" Height="340">
@@ -81,7 +81,7 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                     </StackPanel>
                     <ContentControl Content="{Binding SelectedChart}" />
 
-                    <lvc:CartesianChart Series="{Binding WeightTrendSeries}" Height="250">
+                    <lvc:CartesianChart x:Name="WeightChartElement" Series="{Binding WeightTrendSeries}" Height="250">
                         <lvc:CartesianChart.AxisX>
                             <lvc:Axis Title="날짜" Labels="{Binding WeightTrendLabels}" LabelsRotation="45"/>
                         </lvc:CartesianChart.AxisX>
@@ -119,14 +119,14 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                         <TextBox Text="{Binding TargetWeight}" Grid.Row="1" Grid.Column="1" Width="120" Margin="5"/>
 
                         <!-- 키 수정 -->
-                        <CheckBox Content="키 수정" IsChecked="{Binding IsEditingHeight}" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0" HorizontalAlignment="Right"/>
+                        <CheckBox Content="키 수정:" IsChecked="{Binding IsEditingHeight}" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                         <TextBox Text="{Binding InputHeight}" Width="120" Grid.Row="2" Grid.Column="1" IsEnabled="{Binding IsEditingHeight}" />
                     </Grid>
 
                     <!-- BMI 그래프 -->
                     <StackPanel Margin="0,20,0,0">
                         <TextBlock Text="BMI 상황" FontSize="14" FontWeight="Bold" Margin="0,0,0,5"/>
-                        <lvc:CartesianChart Series="{Binding BmiSeries}" Height="220">
+                        <lvc:CartesianChart x:Name="BmiChartElement" Series="{Binding BmiSeries}" Height="220">
                             <lvc:CartesianChart.AxisX>
                                 <lvc:Axis Title="구간" Labels="{Binding BmiLabels}" LabelsRotation="45"/>
                             </lvc:CartesianChart.AxisX>
@@ -152,14 +152,16 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <!-- 왼쪽: 날짜/몸무게 입력 -->
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
-                    <!-- 오른쪽: 검색창 -->
                 </Grid.ColumnDefinitions>
-                <Button Content="CSV 저장" Grid.Column="0" Command="{Binding ExportCsvCommand}" Width="90" Margin="5"/>
-                <Button Content="Excel 저장" Grid.Column="1" Command="{Binding ExportExcelCommand}" Width="90" Margin="5"/>
+                <Button Content="CSV" Grid.Column="0" Command="{Binding ExportCsvCommand}" Width="90" Margin="5"/>
 
-                <Button Content="저장" Grid.Column="2" Command="{Binding SaveCommand}" Width="80" Margin="5" HorizontalAlignment="Right"/>
+                <Button Content="Excel" Grid.Column="1" Command="{Binding ExportExcelCommand}" Width="90" Margin="5"/>
+
+                <Button Content="PDF" Grid.Column="2" Command="{Binding ExportPdfCommand}" Width="90" Margin="5"/>
+
+                <Button Content="저장" Grid.Column="3" Command="{Binding SaveCommand}" Width="80" Margin="5" HorizontalAlignment="Right"/>
             </Grid>
         </StackPanel>
     </Grid>

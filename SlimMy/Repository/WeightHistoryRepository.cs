@@ -29,7 +29,7 @@ namespace SlimMy.Repository
             {
                 await connection.OpenAsync();
 
-                string sql = @"select body_log_id, log_date, height, weight, bmi, target_weight from body_log where user_id = :user_id";
+                string sql = @"select body_log_id, log_date, height, weight, bmi, target_weight from body_log where user_id = :user_id order by log_date desc";
 
                 using (var command = new OracleCommand(sql, connection))
                 {
@@ -268,6 +268,189 @@ namespace SlimMy.Repository
                     MessageBox.Show("DeleteWeight 오류 : " + ex);
                 }
             }
+        }
+
+        // 메모장 내용 검색
+        public async Task<WeightMemoRecord> GetSearchedMemoContent(Guid userID, string searchMemo)
+        {
+            var weightMemoItems = new List<WeightMemoItem>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"SELECT bl.body_log_id, bl.log_date, bl.height, bl.weight, bl.bmi, bl.target_weight, mm.memo_id, mm.content 
+FROM body_log bl
+JOIN memo mm ON bl.user_id = mm.user_id
+WHERE mm.user_id = :user_id and mm.log_date = bl.log_date
+  AND mm.content LIKE '%' || :content || '%'";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("user_id", OracleDbType.Raw)).Value = userID.ToByteArray();
+                    command.Parameters.Add("content", OracleDbType.Clob).Value = string.IsNullOrEmpty(searchMemo) ? DBNull.Value : searchMemo;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var groupIdBinary = (OracleBinary)reader.GetOracleValue(0);
+                            var bodyId = groupIdBinary.IsNull ? Guid.Empty : new Guid(groupIdBinary.Value);
+
+                            var targetWeightVal = reader.GetOracleDecimal(5);
+
+
+                            var memoIdBinary = (OracleBinary)reader.GetOracleValue(6);
+                            var memoId = memoIdBinary.IsNull ? Guid.Empty : new Guid(memoIdBinary.Value);
+
+                            var record = new WeightRecordItem
+                            {
+                                BodyID = bodyId,
+                                Date = reader.GetDateTime(1),
+                                Height = reader.GetDouble(2),
+                                Weight = reader.GetDouble(3),
+                                BMI = reader.GetDouble(4),
+                                TargetWeight = targetWeightVal.IsNull ? (double?)null : (double)targetWeightVal.Value
+                            };
+
+                            var memoItem = new WeightMemoItem
+                            {
+                                MemoID = memoId,
+                                Content = reader.GetString(7)
+                            };
+
+                            return new WeightMemoRecord
+                            {
+                                Record = record,
+                                Memo = memoItem
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 메모장 내용 검색
+        public async Task<WeightMemoRecord> GetSearchedDate(Guid userID, DateTime now)
+        {
+            var weightMemoItems = new List<WeightMemoItem>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"SELECT bl.body_log_id, bl.log_date, bl.height, bl.weight, bl.bmi, bl.target_weight, mm.memo_id, mm.content 
+FROM body_log bl
+JOIN memo mm ON bl.user_id = mm.user_id
+WHERE mm.user_id = :user_id 
+  AND TRUNC(bl.log_date) = TRUNC(:log_date)
+  AND TRUNC(mm.log_date) = TRUNC(:log_date)";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("user_id", OracleDbType.Raw)).Value = userID.ToByteArray();
+                    command.Parameters.Add("log_date", OracleDbType.Date).Value = now.Date;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var groupIdBinary = (OracleBinary)reader.GetOracleValue(0);
+                            var bodyId = groupIdBinary.IsNull ? Guid.Empty : new Guid(groupIdBinary.Value);
+
+                            var targetWeightVal = reader.GetOracleDecimal(5);
+
+
+                            var memoIdBinary = (OracleBinary)reader.GetOracleValue(6);
+                            var memoId = memoIdBinary.IsNull ? Guid.Empty : new Guid(memoIdBinary.Value);
+
+                            var record = new WeightRecordItem
+                            {
+                                BodyID = bodyId,
+                                Date = reader.GetDateTime(1),
+                                Height = reader.GetDouble(2),
+                                Weight = reader.GetDouble(3),
+                                BMI = reader.GetDouble(4),
+                                TargetWeight = targetWeightVal.IsNull ? (double?)null : (double)targetWeightVal.Value
+                            };
+
+                            var memoItem = new WeightMemoItem
+                            {
+                                MemoID = memoId,
+                                Content = reader.GetString(7)
+                            };
+
+                            return new WeightMemoRecord
+                            {
+                                Record = record,
+                                Memo = memoItem
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+
+        // 몸무게 검색
+        public async Task<WeightMemoRecord> GetSearchedWeight(Guid userID, double weight)
+        {
+            var weightMemoItems = new List<WeightMemoItem>();
+
+            using (var connection = new OracleConnection(_connString))
+            {
+                await connection.OpenAsync();
+
+                string sql = @"SELECT bl.body_log_id, bl.log_date, bl.height, bl.weight, bl.bmi, bl.target_weight, mm.memo_id, mm.content 
+FROM body_log bl
+JOIN memo mm ON bl.user_id = mm.user_id
+WHERE mm.user_id = :user_id and bl.weight = :weight and bl.log_date = mm.log_date";
+
+                using (var command = new OracleCommand(sql, connection))
+                {
+                    command.Parameters.Add(new OracleParameter("user_id", OracleDbType.Raw)).Value = userID.ToByteArray();
+                    command.Parameters.Add("weight", OracleDbType.Double).Value = weight;
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var groupIdBinary = (OracleBinary)reader.GetOracleValue(0);
+                            var bodyId = groupIdBinary.IsNull ? Guid.Empty : new Guid(groupIdBinary.Value);
+
+                            var targetWeightVal = reader.GetOracleDecimal(5);
+
+
+                            var memoIdBinary = (OracleBinary)reader.GetOracleValue(6);
+                            var memoId = memoIdBinary.IsNull ? Guid.Empty : new Guid(memoIdBinary.Value);
+
+                            var record = new WeightRecordItem
+                            {
+                                BodyID = bodyId,
+                                Date = reader.GetDateTime(1),
+                                Height = reader.GetDouble(2),
+                                Weight = reader.GetDouble(3),
+                                BMI = reader.GetDouble(4),
+                                TargetWeight = targetWeightVal.IsNull ? (double?)null : (double)targetWeightVal.Value
+                            };
+
+                            var memoItem = new WeightMemoItem
+                            {
+                                MemoID = memoId,
+                                Content = reader.GetString(7)
+                            };
+
+                            return new WeightMemoRecord
+                            {
+                                Record = record,
+                                Memo = memoItem
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
         }
     }
 }
