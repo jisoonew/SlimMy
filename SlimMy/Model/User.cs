@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -25,8 +25,8 @@ namespace SlimMy.Model
         private string password; // 비밀번호
         private string passwordCheck;
         private DateTime birthDate; // 생년월일
-        private int height; // 키
-        private int weight; // 몸무게
+        private double height; // 키
+        private double weight; // 몸무게
         private string dietGoal; // 다이어트 목표
         private string ipNum; // 아이피
         private Guid userId;
@@ -99,13 +99,13 @@ namespace SlimMy.Model
             set { birthDate = value; }
         }
 
-        public int Height
+        public double Height
         {
             get { return height; }
             set { height = value; }
         }
 
-        public int Weight
+        public double Weight
         {
             get { return weight; }
             set { weight = value; }

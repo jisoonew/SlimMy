@@ -75,12 +75,6 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
             <!-- 몸무게 그래프 -->
             <Border BorderBrush="LightGray" BorderThickness="1" Padding="10" CornerRadius="10" Height="320">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,5">
-                        <Button Content="몸무게 현황" Command="{Binding ShowWeightTrendCommand}" Margin="5"/>
-                        <Button Content="평균 현황" Command="{Binding ShowAverageTrendCommand}" Margin="5"/>
-                    </StackPanel>
-                    <ContentControl Content="{Binding SelectedChart}" />
-
                     <lvc:CartesianChart x:Name="WeightChartElement" Series="{Binding WeightTrendSeries}" Height="250">
                         <lvc:CartesianChart.AxisX>
                             <lvc:Axis Title="날짜" Labels="{Binding WeightTrendLabels}" LabelsRotation="45"/>

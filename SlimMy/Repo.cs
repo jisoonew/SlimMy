@@ -101,18 +101,20 @@ namespace SlimMy
         }
 
         // 회원가입
-        public async Task InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, int height, int weight, string dietGoal)
+        public async Task InsertUser(string name, string gender, string nickName, string email, string password, DateTime birthDate, double height, double weight, string dietGoal)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
                     await connection.OpenAsync();
-                    string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, weight, diet_goal) " +
-            "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :weight, :dietGoal)";
+                    string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, diet_goal, created_at) " +
+            "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :dietGoal, :CreatedAt)";
 
                     Guid userId = Guid.NewGuid(); // 새로운 GUID 생성
                     byte[] userIdBytes = userId.ToByteArray(); // GUID를 바이트 배열로 변환
+
+                    DateTime now = DateTime.Now;
 
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
@@ -123,12 +125,35 @@ namespace SlimMy
                         command.Parameters.Add(new OracleParameter("nickName", nickName));
                         command.Parameters.Add(new OracleParameter("password", password));
                         command.Parameters.Add(new OracleParameter("birthDate", birthDate));
-                        command.Parameters.Add(new OracleParameter("height", height));
-                        command.Parameters.Add(new OracleParameter("weight", weight));
-                        command.Parameters.Add(new OracleParameter("dietGoal", dietGoal));
+                        command.Parameters.Add("height", OracleDbType.Double).Value = height;
+                        command.Parameters.Add(new OracleParameter("dietGoal", dietGoal.Split(':')[1].Trim()));
+                        command.Parameters.Add(new OracleParameter("CreatedAt", OracleDbType.TimeStamp, now, ParameterDirection.Input));
 
                         await command.ExecuteNonQueryAsync();
                     }
+
+                    Guid plannerGroupId = Guid.NewGuid();
+                    byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
+
+                    string insertGroupQuery = @"INSERT INTO body_log (body_log_id, user_id, log_date, weight, height, bmi) VALUES (:body_log_id, :user_id, :log_date, :weight, :height, :bmi)";
+
+                    using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                    {
+                        groupCmd.Parameters.Add("body_log_id", OracleDbType.Raw).Value = plannerGroupIdBytes;
+                        groupCmd.Parameters.Add("user_id", OracleDbType.Raw).Value = userIdBytes;
+                        groupCmd.Parameters.Add("log_date", OracleDbType.Date).Value = now.Date;
+                        groupCmd.Parameters.Add("weight", OracleDbType.Double).Value = weight;
+                        groupCmd.Parameters.Add("height", OracleDbType.Double).Value = height;
+
+                        double heightValue = height / 100.0;
+
+                        double bmiValue = weight / (heightValue * heightValue);
+                        groupCmd.Parameters.Add("bmi", OracleDbType.Double).Value = bmiValue;
+
+                        await groupCmd.ExecuteNonQueryAsync();
+                    }
+
+                    MessageBox.Show("회원가입이 완료되었습니다.");
                 }
                 catch (Exception ex)
                 {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -125,13 +125,13 @@ namespace SlimMy.Validator
         }
 
         // 키
-        public static bool ValidateHeight(int height)
+        public static bool ValidateHeight(double height)
         {
             // IsMatch는 string을 사용
             string heightstr = height.ToString();
 
             // 만약 키 입력으로 3자가 아니라면
-            if (!Regex.IsMatch(heightstr, @"^\d{3}$"))
+            if (!Regex.IsMatch(heightstr, @"^\d{3}(\.\d)?$"))
             {
                 MessageBox.Show("키는 3자리까지 입력 가능합니다.");
                 return false;
@@ -147,11 +147,11 @@ namespace SlimMy.Validator
         }
 
         // 몸무게
-        public static bool ValidateWeight(int weight)
+        public static bool ValidateWeight(double weight)
         {
             string weightstr = weight.ToString();
 
-            if (!Regex.IsMatch(weightstr, @"^\d{2,3}$"))
+            if (!Regex.IsMatch(weightstr, @"^\d{2,3}(\.\d)?"))
             {
                 MessageBox.Show("몸무게는 2-3자리까지 입력 가능합니다.");
                 return false;

@@ -107,6 +107,7 @@ namespace SlimMy.ViewModel
         public AsyncRelayCommand DashBoardCommand { get; set; }
         public AsyncRelayCommand ExerciseHistoryCommand { get; set; }
         public AsyncRelayCommand WeightHistoryCommand { get; set; }
+        public AsyncRelayCommand MyPageCommand { get; set; }
 
         private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
 
@@ -271,6 +272,8 @@ namespace SlimMy.ViewModel
             ExerciseHistoryCommand = new AsyncRelayCommand(NavigateToExerciseHistory);
 
             WeightHistoryCommand = new AsyncRelayCommand(NavigateToWeightHistory);
+
+            MyPageCommand = new AsyncRelayCommand(NavigateToMyPage);
         }
 
         public Command PlannerCommand { get; set; }
@@ -282,9 +285,16 @@ namespace SlimMy.ViewModel
             _navigationService.NavigateToFrame(typeof(Planner));
         }
 
+        // 몸무게 내역
         public async Task NavigateToExerciseHistory(object parameter)
         {
             await _navigationService.NavigateToExerciseHistoryFrameAsync(typeof(ExerciseHistory));
+        }
+
+        // 내 정보 수정
+        public async Task NavigateToMyPage(object parameter)
+        {
+            await _navigationService.NavigateToMyPageFrameAsync(typeof(MyPage));
         }
 
         // 몸무게
@@ -356,6 +366,16 @@ namespace SlimMy.ViewModel
                     var mainView = new MainHome(this); // this = MainPageViewModel 인스턴스
                     mainView.Show();
                 });
+
+                // 로그인 창 닫기
+                foreach (Window window in Application.Current.Windows)
+                {
+                    if (window is View.Login)
+                    {
+                        window.Close();
+                        break;
+                    }
+                }
             }
             else
             {

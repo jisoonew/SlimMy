@@ -1,0 +1,67 @@
+<Window x:Class="SlimMy.View.NicknameChange"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:SlimMy.ViewModel"
+        mc:Ignorable="d"
+        Title="닉네임 변경" Height="220" Width="400" WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+
+    <Window.DataContext>
+        <local:NicknameChangeViewModel />
+    </Window.DataContext>
+
+    <Window.Resources>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 제목 -->
+        <TextBlock Grid.Row="0"
+                   Text="새 닉네임 입력"
+                   FontWeight="Bold"
+                   FontSize="14"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,10"/>
+
+        <!-- 입력 필드 + 중복 확인 -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,10">
+            <TextBox Width="220"
+                     Height="28"
+                     Text="{Binding NewNickname, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,0,10,0"/>
+            <Button Content="중복 확인"
+                    Width="95"
+                    Height="28"
+                    Command="{Binding CheckNicknameCommand}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2"
+                    HorizontalAlignment="Center"
+                    Margin="0,10,0,10">
+            <Label Content="사용 가능한 닉네임입니다." Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NickNameCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5" />
+            <Label Content="사용 불가능한 닉네임입니다." Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NickNameNoCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
+        </StackPanel>
+
+        <!-- 저장 버튼 -->
+        <StackPanel Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center">
+            <Button Content="저장"
+                    Width="80"
+                    Height="30"
+                    Command="{Binding SaveCommand}"/>
+        </StackPanel>
+    </Grid>
+</Window>

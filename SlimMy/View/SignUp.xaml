@@ -7,7 +7,7 @@
     xmlns:local="clr-namespace:SlimMy.Model"
     xmlns:ViewModel="clr-namespace:SlimMy.ViewModel" x:Class="SlimMy.View.SignUp"
     mc:Ignorable="d"
-    Title="SignUp" Height="650" Width="320"
+    Title="SignUp" Height="650" Width="420"
     WindowStartupLocation="CenterScreen">
 
     <Window.DataContext>
@@ -17,7 +17,7 @@
     <StackPanel Width="280" HorizontalAlignment="Stretch" Margin="0,10,0,0" VerticalAlignment="Top" Height="600">
         <Label Width="200" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" FontSize="15" Content="회원가입"/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Width="280">
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Width="350">
             <StackPanel Width="85" Margin="5,0,0,0" HorizontalAlignment="Stretch">
                 <Label Content="이름"/>
                 <Label Margin="0,15,0,0" Content="성별"/>
@@ -32,7 +32,7 @@
                 <Label Margin="0,15,0,0" Content="다이어트 목표"/>
             </StackPanel>
 
-            <StackPanel Width="170" Margin="10,0,0,0">
+            <StackPanel Width="250" Margin="10,0,0,0">
                 <!-- 이름 -->
                 <TextBox FontSize="15" Text="{Binding User.Name, UpdateSourceTrigger=PropertyChanged}"/>
 
@@ -48,7 +48,7 @@
                 <!-- 이메일 -->
                 <StackPanel Orientation="Horizontal">
                     <TextBox Margin="0,19,0,0" x:Name="email" FontSize="15" Text="{Binding User.Email}" Width="125" HorizontalAlignment="Left"/>
-                    <Button Width="40" Content="발송" Margin="5,19,0,0" HorizontalAlignment="Right" Click="Button_Click_1"/>
+                    <Button Width="40" Content="발송" Margin="5,19,0,0" HorizontalAlignment="Right" Click="Button_Click_1" Cursor="Hand"/>
                 </StackPanel>
 
                 <!-- 인증 확인 -->

@@ -36,6 +36,47 @@ namespace SlimMy.Service
             });
         }
 
+        public void NavigateToNickName()
+        {
+            MessageBox.Show("옴?");
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                var exerciseWindow = new NicknameChange();
+                exerciseWindow.Show();
+            });
+        }
+
+        public async Task NavigateToMyPageFrameAsync(Type pageType)
+        {
+            if (_frame == null)
+            {
+                MessageBox.Show("Navigation Frame이 설정되지 않았습니다.");
+                return;
+            }
+
+            object pageInstance = null;
+
+            if (pageType == typeof(View.MyPage))
+            {
+                var myChatsViewModel = await ViewModel.MyPageViewModel.CreateAsync();
+                pageInstance = new View.MyPage { DataContext = myChatsViewModel };
+            }
+            else if (pageType.IsSubclassOf(typeof(Page)))
+            {
+                pageInstance = Activator.CreateInstance(pageType);
+            }
+
+            if (pageInstance is Page page)
+            {
+                _frame.Navigate(page);
+            }
+            else
+            {
+                MessageBox.Show("올바른 Page 타입이 아닙니다.");
+            }
+        }
+
         private Frame _frame;
 
         public NavigationService(Frame frame)

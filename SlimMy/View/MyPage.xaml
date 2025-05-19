@@ -4,68 +4,83 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:SlimMy.ViewModel" xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
-      mc:Ignorable="d" 
+      mc:Ignorable="d"
+      xmlns:Helper="clr-namespace:SlimMy.Helper"
       Title="MyPage" Background="White" Width="1110" Height="850">
 
-    <Grid Margin="30">
-        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Top" Width="600" Height="450" >
+    <Page.DataContext>
+        <local:MyPageViewModel/>
+    </Page.DataContext>
 
-            <!-- 닉네임 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="닉네임" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <Button Content="변경" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
-                </Grid>
-            </Border>
+    <Page.Resources>
+        <!-- Binding Proxy 생성 -->
+        <Helper:BindingProxy x:Key="PasswordProxy" Data="{Binding Password}" />
+        <Helper:BindingProxy x:Key="PasswordConfirmProxy" Data="{Binding PasswordConfirm}" />
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </Page.Resources>
 
-            <!-- 비밀번호 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="비밀번호" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <Button Content="입력" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
-                </Grid>
-            </Border>
+    <Grid Margin="40,5,40,15" HorizontalAlignment="Center" VerticalAlignment="Top">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <!-- 몸무게 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="몸무게" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <Button Content="진행" Width="70" Height="30" Grid.Column="1" Margin="10,0,0,0"/>
-                </Grid>
-            </Border>
+        <Border BorderBrush="LightGray" BorderThickness="1" Padding="30,10,30,10" CornerRadius="10">
+            <StackPanel Grid.Row="1" Orientation="Vertical" HorizontalAlignment="Center">
+                <TextBlock Text="내 정보 수정" FontSize="25" FontWeight="Bold" Margin="0,0,0,5" HorizontalAlignment="Center"/>
 
-            <!-- 운동 기록 조회 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <TextBlock Text="운동 기록 조회" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-            </Border>
+                <TextBlock Text="닉네임"/>
+                <StackPanel Orientation="Horizontal" Margin="0,5,0,15">
+                    <TextBox Text="{Binding NickName}" Width="200" Margin="0,0,10,0"/>
+                    <Button Content="중복 확인" Command="{Binding NickNameChangedCommand}" Width="95"/>
+                </StackPanel>
+                
+                <TextBlock Text="이메일 주소"/>
+                <TextBox Margin="0,5,0,15" Text="{Binding UserData.Email}" Width="300" IsReadOnly="True"/>
 
-            <!-- 목표 히스토리 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <TextBlock Text="목표 히스토리" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-            </Border>
+                <TextBlock Text="현재 비밀번호"/>
+                <PasswordBox Margin="0,5,0,5"
+             x:Name="currentPasswordBox"
+             Width="300"
+             Helper:PasswordHelper.BoundPassword="{Binding CurrentPassword, Mode=TwoWay}" />
 
-            <!-- 몸무게 변화 이력 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <TextBlock Text="몸무게 변화 이력" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-            </Border>
+                <!-- 기존 비밀번호 일치/불일치 결과 -->
+                <Label Content="기존 비밀번호가 일치합니다." x:Name="NickCheck" Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding PasswordCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5" />
+                <Label Content="기존 비밀번호가 일치하지 않습니다." x:Name="NickNameNoCheck" Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding PasswordNoCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
 
-            <!-- 피드백 -->
-            <Border BorderBrush="#CCC" BorderThickness="1" CornerRadius="6" Padding="15">
-                <TextBlock Text="문의 / 피드백 보내기" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-            </Border>
+                <TextBlock Text="새 비밀번호"/>
+                <PasswordBox Margin="0,5,0,15" Helper:PasswordHelper.BoundPassword="{Binding Password, Mode=TwoWay}" Width="300" />
 
-        </StackPanel>
+                <TextBlock Text="새 비밀번호 확인"/>
+                <PasswordBox Margin="0,5,0,5"
+             x:Name="passwordConfirmBox"
+             Width="300"
+             Helper:PasswordHelper.BoundPassword="{Binding PasswordConfirm, Mode=TwoWay}" />
+
+                <!-- 새 비밀번호 일치/불일치 결과 -->
+                <Label Content="새 비밀번호가 일치합니다." x:Name="newPasswordCheck" Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NewPasswordCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
+                <Label Content="새 비밀번호가 일치하지 않습니다." x:Name="newPasswordNoCheck" Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NewPasswordCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
+
+                <TextBlock Text="성별"/>
+                <TextBox Margin="0,5,0,15" IsReadOnly="True" Text ="{Binding UserData.Gender}" Width="300" />
+
+                <TextBlock Text="생년월일"/>
+                <DatePicker Margin="0,5,0,15" SelectedDate="{Binding UserData.BirthDate}" Width="300" IsHitTestVisible="False"
+            Focusable="False"/>
+
+                <TextBlock Text="키 (cm)"/>
+                <TextBox Margin="0,5,0,15" Text="{Binding UserData.Height}" Width="300"/>
+
+                <TextBlock Text="몸무게 (kg)"/>
+                <TextBox Margin="0,5,0,15" Text="{Binding UserData.Weight}" Width="300"/>
+
+                <TextBlock Text="목표"/>
+                <ComboBox Margin="0,5,0,15" ItemsSource="{Binding DietGoalList}" SelectedItem="{Binding UserData.DietGoal}" Width="300">
+                </ComboBox>
+
+                <Button Content="정보 저장" Width="300" Height="40" Command="{Binding UserDataSaveCommand}" Background="#4CAF50" Foreground="White" FontWeight="Bold" Margin="0,0,0,10"/>
+                <Button Content="회원 탈퇴" Width="300" Height="40" Command="{Binding UserDataSaveCommand}" Background="#f44336" Foreground="White" FontWeight="Bold"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

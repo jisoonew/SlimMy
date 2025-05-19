@@ -28,5 +28,9 @@ namespace SlimMy.Service
         Task NavigateToExerciseHistoryFrameAsync(Type pageType);
 
         Task NavigateToWeightHistoryFrameAsync(Type pageType);
+
+        Task NavigateToMyPageFrameAsync(Type pageType);
+
+        void NavigateToNickName();
     }
 }

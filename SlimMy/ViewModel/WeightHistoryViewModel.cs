@@ -413,7 +413,7 @@ namespace SlimMy.ViewModel
                 var weightValues = new ChartValues<double>();
                 var weightlabels = new List<string>();
 
-                // 그래프에 10개의 데이터만 출력
+                // 그래프에 30개의 데이터만 출력
                 int maxWeightCount = 30;
 
                 // 날짜 오름차순으로 정렬된 복사본 사용
