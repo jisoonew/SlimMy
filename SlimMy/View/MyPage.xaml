@@ -5,12 +5,8 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:SlimMy.ViewModel" xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
       mc:Ignorable="d"
-      xmlns:Helper="clr-namespace:SlimMy.Helper"
+      xmlns:Helper="clr-namespace:SlimMy.Helper" d:DataContext="{d:DesignInstance Type=local:MyPageViewModel}"
       Title="MyPage" Background="White" Width="1110" Height="850">
-
-    <Page.DataContext>
-        <local:MyPageViewModel/>
-    </Page.DataContext>
 
     <Page.Resources>
         <!-- Binding Proxy 생성 -->
@@ -31,8 +27,8 @@
 
                 <TextBlock Text="닉네임"/>
                 <StackPanel Orientation="Horizontal" Margin="0,5,0,15">
-                    <TextBox Text="{Binding NickName}" Width="200" Margin="0,0,10,0"/>
-                    <Button Content="중복 확인" Command="{Binding NickNameChangedCommand}" Width="95"/>
+                    <TextBox Text="{Binding NickName, Mode=TwoWay}" IsReadOnly="True" Width="200" Margin="0,0,10,0"/>
+                    <Button Content="변경" Command="{Binding NickNameChangedCommand}" Width="95"/>
                 </StackPanel>
                 
                 <TextBlock Text="이메일 주소"/>
@@ -59,7 +55,7 @@
 
                 <!-- 새 비밀번호 일치/불일치 결과 -->
                 <Label Content="새 비밀번호가 일치합니다." x:Name="newPasswordCheck" Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NewPasswordCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
-                <Label Content="새 비밀번호가 일치하지 않습니다." x:Name="newPasswordNoCheck" Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NewPasswordCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
+                <Label Content="새 비밀번호가 일치하지 않습니다." x:Name="newPasswordNoCheck" Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NewPasswordNoCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
 
                 <TextBlock Text="성별"/>
                 <TextBox Margin="0,5,0,15" IsReadOnly="True" Text ="{Binding UserData.Gender}" Width="300" />
@@ -69,17 +65,17 @@
             Focusable="False"/>
 
                 <TextBlock Text="키 (cm)"/>
-                <TextBox Margin="0,5,0,15" Text="{Binding UserData.Height}" Width="300"/>
+                <TextBox Margin="0,5,0,15" Text="{Binding Height}" Width="300"/>
 
                 <TextBlock Text="몸무게 (kg)"/>
-                <TextBox Margin="0,5,0,15" Text="{Binding UserData.Weight}" Width="300"/>
+                <TextBox Margin="0,5,0,15" Text="{Binding Weight}" Width="300"/>
 
                 <TextBlock Text="목표"/>
-                <ComboBox Margin="0,5,0,15" ItemsSource="{Binding DietGoalList}" SelectedItem="{Binding UserData.DietGoal}" Width="300">
+                <ComboBox Margin="0,5,0,15" ItemsSource="{Binding DietGoalList}" SelectedItem="{Binding DietGoal}" Width="300">
                 </ComboBox>
 
                 <Button Content="정보 저장" Width="300" Height="40" Command="{Binding UserDataSaveCommand}" Background="#4CAF50" Foreground="White" FontWeight="Bold" Margin="0,0,0,10"/>
-                <Button Content="회원 탈퇴" Width="300" Height="40" Command="{Binding UserDataSaveCommand}" Background="#f44336" Foreground="White" FontWeight="Bold"/>
+                <Button Content="회원 탈퇴" Width="300" Height="40" Command="{Binding DeleteAccountViewCommand}" Background="#f44336" Foreground="White" FontWeight="Bold"/>
             </StackPanel>
         </Border>
     </Grid>

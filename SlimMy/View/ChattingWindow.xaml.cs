@@ -24,9 +24,25 @@ namespace SlimMy.View
     /// </summary>
     public partial class ChattingWindow : Window, IView
     {
+        public TaskCompletionSource<bool> WindowReadySource = new();
+
         public ChattingWindow()
         {
             InitializeComponent();
+
+            if (Application.Current.MainWindow == null)
+            {
+                Application.Current.MainWindow = this;
+            }
+
+
+            this.Loaded += (s, e) =>
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    WindowReadySource.TrySetResult(true);
+                }), DispatcherPriority.Loaded);
+            };
         }
     }
 }

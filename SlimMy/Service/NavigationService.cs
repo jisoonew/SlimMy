@@ -12,6 +12,8 @@ namespace SlimMy.Service
 {
     public class NavigationService : INavigationService
     {
+        private readonly IDataService _dataService = new DataService();
+
         public NavigationService() { }
 
         public void NavigateToClose(string viewCloseName)
@@ -36,15 +38,63 @@ namespace SlimMy.Service
             });
         }
 
-        public void NavigateToNickName()
+        // 닉네임 변경 화면 전환
+        public async Task NavigateToNickName()
         {
-            MessageBox.Show("옴?");
+            var myChatsViewModel = await ViewModel.NicknameChangeViewModel.CreateAsync();
+            var pageInstance = new View.NicknameChange { DataContext = myChatsViewModel };
+            pageInstance.Show();
+        }
 
-            Application.Current.Dispatcher.Invoke(() =>
+        // 로그인 화면
+        public async Task NavigateToCloseAndLoginAsync(string viewCloseName)
+        {
+            Window currentWindow = Application.Current.Windows
+                .OfType<Window>()
+                .FirstOrDefault(w => w.GetType().Name == viewCloseName);
+
+            if (currentWindow != null)
             {
-                var exerciseWindow = new NicknameChange();
-                exerciseWindow.Show();
-            });
+                currentWindow.Close();
+                await Task.Delay(200); // 창 닫힐 시간 확보
+
+                var loginView = new View.Login();
+                var loginViewModel = new MainPageViewModel(_dataService, loginView);
+                loginView.DataContext = loginViewModel;
+                loginView.Show();
+            }
+        }
+
+        // 닉네임 변경 화면 닫기
+        public async Task NavigateToNickNameClose()
+        {
+            // 닉네임 변경 창 닫기
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is View.NicknameChange)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+
+            // 메인 홈 포커싱 + 새 데이터 로딩
+            foreach (Window window in Application.Current.Windows)
+            {
+                if (window is MainHome main)
+                {
+                    var newVm = await MyPageViewModel.CreateAsync();
+
+                    // 새 MyPage에 ViewModel을 직접 주입
+                    var newPage = new MyPage();
+                    newPage.DataContext = newVm;
+
+                    // Frame에 직접 페이지 삽입
+                    main.MainFrame.Navigate(newPage);
+
+                    break;
+                }
+            }
         }
 
         public async Task NavigateToMyPageFrameAsync(Type pageType)

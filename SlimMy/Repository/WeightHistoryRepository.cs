@@ -199,6 +199,81 @@ namespace SlimMy.Repository
             }
         }
 
+        // MyPage : 몸무게 정보 수정
+        public async Task UpdatetMyPageWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
+                    using (OracleTransaction transaction = connection.BeginTransaction())
+                    {
+                        Guid plannerGroupId = Guid.NewGuid();
+                        byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
+
+                        string insertGroupQuery = @"update body_log set weight = :weight, height = :height, bmi = :bmi where user_id = :user_id and log_date = :log_date";
+
+                        using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                        {
+                            groupCmd.Transaction = transaction;
+                            groupCmd.Parameters.Add("weight", OracleDbType.Double).Value = weight;
+                            groupCmd.Parameters.Add("height", OracleDbType.Double).Value = height;
+                            groupCmd.Parameters.Add("bmi", OracleDbType.Double).Value = bmi;
+                            groupCmd.Parameters.Add("user_id", OracleDbType.Raw).Value = userID.ToByteArray();
+                            groupCmd.Parameters.Add("log_date", OracleDbType.Date).Value = plannerDate.Date;
+                            await groupCmd.ExecuteNonQueryAsync();
+                        }
+
+                        // 커밋
+                        await transaction.CommitAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("MyPage > UpdateWeight 저장 오류: " + ex.Message);
+                }
+            }
+        }
+
+        // MyPage : 몸무게 정보 저장
+        public async Task InsertMyPageWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi)
+        {
+            using (OracleConnection connection = new OracleConnection(_connString))
+            {
+                try
+                {
+                    await connection.OpenAsync();
+                    using (OracleTransaction transaction = connection.BeginTransaction())
+                    {
+                        Guid plannerGroupId = Guid.NewGuid();
+                        byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
+
+                        string insertGroupQuery = @"INSERT INTO body_log (body_log_id, user_id, log_date, weight, height, bmi) VALUES (:body_log_id, :user_id, :log_date, :weight, :height, :bmi)";
+
+                        using (OracleCommand groupCmd = new OracleCommand(insertGroupQuery, connection))
+                        {
+                            groupCmd.Transaction = transaction;
+                            groupCmd.Parameters.Add("body_log_id", OracleDbType.Raw).Value = plannerGroupIdBytes;
+                            groupCmd.Parameters.Add("user_id", OracleDbType.Raw).Value = userID.ToByteArray();
+                            groupCmd.Parameters.Add("log_date", OracleDbType.Date).Value = plannerDate.Date;
+                            groupCmd.Parameters.Add("weight", OracleDbType.Double).Value = weight;
+                            groupCmd.Parameters.Add("height", OracleDbType.Double).Value = height;
+                            groupCmd.Parameters.Add("bmi", OracleDbType.Double).Value = bmi;
+                            await groupCmd.ExecuteNonQueryAsync();
+                        }
+
+                        // 커밋
+                        await transaction.CommitAsync();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("MyPage > InsertWeight 저장 오류: " + ex.Message);
+                }
+            }
+        }
+
         // 메모장 내용 가져오기
         public async Task<WeightMemoItem> GetMemoContent(DateTime now, Guid userID)
         {

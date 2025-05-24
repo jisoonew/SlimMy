@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:SlimMy.ViewModel"
         mc:Ignorable="d"
         Title="닉네임 변경" Height="220" Width="400" WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize">
+        ResizeMode="NoResize" SizeToContent="WidthAndHeight">
 
     <Window.DataContext>
         <local:NicknameChangeViewModel />
@@ -16,7 +16,7 @@
         <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Window.Resources>
 
-    <Grid Margin="20">
+    <Grid Margin="20" Height="180">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -49,19 +49,21 @@
 
         <StackPanel Grid.Row="2"
                     HorizontalAlignment="Center"
-                    Margin="0,10,0,10">
+                    Margin="0,10,0,10" Height="40">
             <Label Content="사용 가능한 닉네임입니다." Foreground="#FF0017FF" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NickNameCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5" />
             <Label Content="사용 불가능한 닉네임입니다." Foreground="#FFBD0000" FontWeight="Bold" Padding="0,5,5,5" Visibility="{Binding NickNameNoCheck, Converter={StaticResource BoolToVisibilityConverter} , Mode=TwoWay}" Margin="0,0,0,5"/>
         </StackPanel>
 
         <!-- 저장 버튼 -->
         <StackPanel Grid.Row="3"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Center">
+                Orientation="Horizontal"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Bottom"
+                Margin="0,5,0,0">
             <Button Content="저장"
-                    Width="80"
-                    Height="30"
-                    Command="{Binding SaveCommand}"/>
+                Width="80"
+                Height="30"
+                Command="{Binding SaveCommand}"/>
         </StackPanel>
     </Grid>
 </Window>

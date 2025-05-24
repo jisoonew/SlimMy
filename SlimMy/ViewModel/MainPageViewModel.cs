@@ -37,13 +37,11 @@ namespace SlimMy.ViewModel
         static TcpClient client = null;
         Thread ReceiveThread = null;
         ChattingWindowViewModel chattingWindow = null;
-        Dictionary<string, ChattingThreadData> chattingThreadDic = new Dictionary<string, ChattingThreadData>();
-        Dictionary<int, ChattingThreadData> groupChattingThreadDic = new Dictionary<int, ChattingThreadData>();
 
         private INavigationService _navigationService;
 
         // 테스트 코드
-        Dictionary<string, ChattingThreadData> groupChattingThreadDicTest = new Dictionary<string, ChattingThreadData>();
+        Dictionary<string, ChattingThreadData> chattingThreadDic = new Dictionary<string, ChattingThreadData>();
 
         // 여성 혹은 남성중 어떤 선택을 할 것인지
         private bool _isMaleChecked;
@@ -367,6 +365,8 @@ namespace SlimMy.ViewModel
                     mainView.Show();
                 });
 
+                await MainHome.MainHomeLoaded.Task;
+
                 // 로그인 창 닫기
                 foreach (Window window in Application.Current.Windows)
                 {
@@ -448,7 +448,7 @@ namespace SlimMy.ViewModel
                 }
                 catch (Exception e)
                 {
-                    MessageBox.Show("서버와의 연결이 끊어졌습니다.", "Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    // MessageBox.Show("서버와의 연결이 끊어졌습니다.", "Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     // MessageBox.Show(e.Message);
                     // MessageBox.Show(e.StackTrace);
                     Environment.Exit(1);
@@ -498,7 +498,7 @@ namespace SlimMy.ViewModel
                         }
 
                         // 사용자 목록을 출력하기 위한 ChangeUserListView에 데이터 전송
-                        await Application.Current.Dispatcher.InvokeAsync(async() =>
+                        await Application.Current.Dispatcher.InvokeAsync(async () =>
                         {
                             await CommunityViewModel.ChangeUserListView(tempUserList);
                         });
@@ -534,7 +534,7 @@ namespace SlimMy.ViewModel
                     if (chattingPartner.Contains("+"))
                     {
                         await HandleUserBundleChanged(chattingPartner, message);
-                        
+
                         // 처리한 메시지 리스트를 비우기
                         messageList.Clear();
                         return;
@@ -562,39 +562,39 @@ namespace SlimMy.ViewModel
             List<string> chattingPartners = splitedChattingPartner.Where(el => !string.IsNullOrEmpty(el)).ToList();
 
             string sender = chattingPartners[1];
-            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners);
+            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
             Debug.WriteLine($"[CLIENT] GetChattingRoomNumTest returned: {chattingRoomNum}");
 
             if (chattingRoomNum == "-1")
             {
                 ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
+                if (currentChatRoom == null)
+                {
+                    Debug.WriteLine("[ERROR] 채팅방 데이터가 없습니다.");
+                    return;
+                }
+
+                await MainHome.MainHomeLoaded.Task;
+
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     Thread groupChattingThread = new Thread(() =>
                     {
-                        try
-                        {
-                            ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine($"Error in ThreadStartingPointTest: {ex.Message}");
-                        }
+                        ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]);
                     });
-
                     groupChattingThread.SetApartmentState(ApartmentState.STA);
                     groupChattingThread.IsBackground = true;
                     groupChattingThread.Start();
-                });
+                }, DispatcherPriority.ContextIdle);
             }
             else
             {
-                if (groupChattingThreadDicTest.ContainsKey(chattingRoomNum) &&
-                    groupChattingThreadDicTest[chattingRoomNum].chattingThread.IsAlive)
+                if (chattingThreadDic.ContainsKey(chattingRoomNum) &&
+                    chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
                 {
 
-                    await groupChattingThreadDicTest[chattingRoomNum].chattingWindow.ReceiveAddRoomMessage(sender, message);
+                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveAddRoomMessage(sender, message);
                 }
             }
         }
@@ -607,14 +607,14 @@ namespace SlimMy.ViewModel
             string sender = chattingPartners[1];
             string messageContent = message;
 
-            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners);
+            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
 
             if (chattingRoomNum != "-1")
             {
-                if (groupChattingThreadDicTest.ContainsKey(chattingRoomNum) &&
-                    groupChattingThreadDicTest[chattingRoomNum].chattingThread.IsAlive)
+                if (chattingThreadDic.ContainsKey(chattingRoomNum) &&
+                    chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
                 {
-                    await groupChattingThreadDicTest[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
+                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
                 }
             }
         }
@@ -628,18 +628,16 @@ namespace SlimMy.ViewModel
 
             if (hostChangedChattingRoomNum != "-1")
             {
-                if (groupChattingThreadDicTest.ContainsKey(hostChangedChattingRoomNum) &&
-                    groupChattingThreadDicTest[hostChangedChattingRoomNum].chattingThread.IsAlive)
+                if (chattingThreadDic.ContainsKey(hostChangedChattingRoomNum) &&
+                    chattingThreadDic[hostChangedChattingRoomNum].chattingThread.IsAlive)
                 {
-                    await groupChattingThreadDicTest[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
+                    await chattingThreadDic[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
                 }
             }
         }
 
         private async Task HandleUserBundleChanged(string chattingPartner, string message)
         {
-            //MessageBox.Show("그룹 채팅 시작 메시지를 받았습니다!");
-
             // '#' 기준으로 수신자들을 분리
             // 상대 사용자가 전송한 메시지
             string[] splitedChattingPartner = chattingPartner.Split("+");
@@ -659,9 +657,11 @@ namespace SlimMy.ViewModel
             string messageContent = chattingPartners[1];
 
             // 채팅 방 번호 가져오기
-            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners);
+            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
 
             // Debug.WriteLine("+chattingPartner+ : " + splitedChattingPartner[0] + "\n" + splitedChattingPartner[1] + "\n" + splitedChattingPartner[2] + "\n" + splitedChattingPartner[3]);
+
+            string reqMember = string.Join(",", chattingPartners);
 
             // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
             // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
@@ -672,7 +672,7 @@ namespace SlimMy.ViewModel
 
                 // 람다식을 사용하여 메서드 호출을 스레드의 실행 단위로 전달
                 // Thread groupChattingThread = new Thread(() => ThreadStartingPoint(chattingPartners));
-                Thread groupChattingThread = new Thread(() => ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]));
+                Thread groupChattingThread = new Thread(() => ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), reqMember));
                 // WPF 애플리케이션의 UI 요소는 STA 상태에서 실행
                 groupChattingThread.SetApartmentState(ApartmentState.STA);
                 // 백그라운드 스레드는 애플리케이션이 종료되면 자동으로 종료
@@ -682,21 +682,21 @@ namespace SlimMy.ViewModel
             else
             {
                 // 이미 존재하는 채팅 스레드가 활성화된 경우 메시지를 전달
-                if (groupChattingThreadDicTest[chattingRoomNum].chattingThread.IsAlive)
+                if (chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
                 {
-                    await groupChattingThreadDicTest[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
+                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
                 }
             }
         }
 
         // 테스트 코드
-        private string GetChattingRoomNumTest(List<string> chattingPartners)
+        private string GetChattingRoomNumTest(string chattingPartners)
         {
             // 요청한 채팅 방 멤버를 문자열로 변환
-            string reqMember = $"{string.Join(",", chattingPartners[0])}";
+            string reqMember = $"{string.Join(",", chattingPartners)}";
 
             // 기존 채팅방 멤버와 비교하여 존재하는 채팅 방 번호를 찾음
-            foreach (var item in groupChattingThreadDicTest)
+            foreach (var item in chattingThreadDic)
             {
                 string originMember = item.Value.chattingRoomNumStr;
 
@@ -718,7 +718,7 @@ namespace SlimMy.ViewModel
         {
             string reqMember = $"{string.Join(",", chattingPartners[0])}";
 
-            foreach (var item in groupChattingThreadDicTest)
+            foreach (var item in chattingThreadDic)
             {
                 string originMember = item.Value.chattingRoomNumStr;
                 // 채팅 방 번호가 요청한 채팅 방 멤버와 일치하는지 확인
@@ -730,78 +730,51 @@ namespace SlimMy.ViewModel
             return "-1";
         }
 
-        private readonly Dispatcher _dispatcher = Application.Current.Dispatcher;
-
+        private readonly Dictionary<string, TaskCompletionSource<bool>> chatWindowReadyMap = new();
 
         // 테스트 코드
-        private void ThreadStartingPointTest(string chattingPartners, string chattingPartnersBundle)
+        private async Task ThreadStartingPointTest(string chattingPartners, string chattingPartnersBundle)
         {
-            string currentUser = UserSession.Instance.CurrentUser.NickName; // 현재 로그인한 사용자의 닉네임
-            string chatRoomKey = $"{string.Join(",", chattingPartners)}"; // 고유 키 생성
+            var normalizedList = chattingPartners.Split(',').ToList();
+            normalizedList.Sort();
+            string chatRoomKey = string.Join(",", normalizedList);
 
-            Debug.WriteLine("chatRoomKey : " + chatRoomKey);
-
-            _dispatcher.Invoke(() =>
+            if (chatWindowReadyMap.TryGetValue(chatRoomKey, out var existingReadyTcs))
             {
-                // IsLoaded 속성: ChattingWindow 객체의 속성으로, 윈도우가 UI 스레드에서 완전히 로드되었는지 확인, 창이 로드되지 않았거나 닫혀 있는 경우 IsLoaded는 false
-                // 창이 없거나 닫혔다면 조건문 내부로 진입하여 새 창을 생성
-                if (!chattingWindows.ContainsKey(chatRoomKey) || !chattingWindows[chatRoomKey].IsVisible)
+                await existingReadyTcs.Task;
+                return;
+            }
+
+            var readyTcs = new TaskCompletionSource<bool>();
+            chatWindowReadyMap[chatRoomKey] = readyTcs;
+
+            await MainHome.MainHomeLoaded.Task;
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                var viewModel = new ChattingWindowViewModel(client, chattingPartnersBundle);
+                var newChatWindow = new View.ChattingWindow { DataContext = viewModel };
+
+                newChatWindow.Closed += (s, e) =>
                 {
-                    Debug.WriteLine($"[CLIENT] Creating new ChattingWindow for {chatRoomKey}");
+                    chattingWindows.Remove(chatRoomKey);
+                    chatWindowReadyMap.Remove(chatRoomKey);
+                    chattingThreadDic.Remove(chatRoomKey);
+                };
 
-                    // 창이 닫혔거나 존재하지 않으면 새 창 생성
-                    var viewModel = new ChattingWindowViewModel(client, chattingPartnersBundle);
-                    var newChatWindow = new View.ChattingWindow
-                    {
-                        DataContext = viewModel
-                    };
+                chattingWindows[chatRoomKey] = newChatWindow;
+                newChatWindow.Show();
 
-                    chattingWindows[chatRoomKey] = newChatWindow;
-
-                    // ChattingThreadData 저장
-                    ChattingThreadData tempThreadData = new ChattingThreadData(Thread.CurrentThread, viewModel, chattingPartners);
-                    if (!groupChattingThreadDicTest.ContainsKey(tempThreadData.chattingRoomNumStr))
-                    {
-                        groupChattingThreadDicTest.Add(tempThreadData.chattingRoomNumStr, tempThreadData);
-                    }
-
-                    // 창이 닫힐 때(Closed 이벤트 발생) chattingWindows 딕셔너리에서 해당 키를 제거
-                    // 창 닫힘 이벤트 연결
-                    newChatWindow.Closed += async (s, e) =>
-                    {
-                        await Task.Delay(100); // UI가 완전히 반영될 시간을 확보
-                        await _dispatcher.InvokeAsync(() =>
-                        {
-                            if (chattingWindows.ContainsKey(chatRoomKey))
-                            {
-                                Debug.WriteLine($"[CLIENT] Key {chatRoomKey} already exists in chattingWindows");
-                                chattingWindows.Remove(chatRoomKey);
-                            }
-
-                            // groupChattingThreadDicTest에서 제거
-                            var keysToRemove = groupChattingThreadDicTest
-                                .Where(pair => pair.Value.chattingWindow == viewModel)
-                                .Select(pair => pair.Key)
-                                .ToList();
-
-                            foreach (var key in keysToRemove)
-                            {
-                                groupChattingThreadDicTest.Remove(key);
-                            }
-                        });
-                    };
-
-                    newChatWindow.Show();
-                }
-                else
+                newChatWindow.Loaded += (s, e) =>
                 {
-                    if (chattingWindows[chatRoomKey].WindowState == WindowState.Minimized)
-                    {
-                        chattingWindows[chatRoomKey].WindowState = WindowState.Normal;
-                    }
-                    chattingWindows[chatRoomKey].Activate();
-                }
-            });
+                    readyTcs.TrySetResult(true);
+                };
+
+                chattingThreadDic[chatRoomKey] = new ChattingThreadData(Thread.CurrentThread, viewModel, chatRoomKey);
+
+            }, DispatcherPriority.ContextIdle);
+
+            await readyTcs.Task;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -1,10 +1,13 @@
+using SlimMy.Model;
 using SlimMy.Repository;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace SlimMy.ViewModel
 {
@@ -12,6 +15,16 @@ namespace SlimMy.ViewModel
     {
         private UserRepository _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
+
+        // 화면 전환
+        private INavigationService _navigationService;
+
+        private Guid _userID;
+        public Guid UserID
+        {
+            get { return _userID; }
+            set { _userID = value; OnPropertyChanged(nameof(UserID)); }
+        }
 
         private string _newNickname;
         public string NewNickname
@@ -40,6 +53,12 @@ namespace SlimMy.ViewModel
             set { _nickNameNoCheck = value; OnPropertyChanged(nameof(NickNameNoCheck)); }
         }
 
+        // 닉네임 중복 확인
+        public ICommand CheckNicknameCommand { get; set; }
+
+        // 닉네임 저장
+        public ICommand SaveCommand { get; set; }
+
         public NicknameChangeViewModel(string initialNickname)
         {
             NewNickname = initialNickname;
@@ -50,6 +69,11 @@ namespace SlimMy.ViewModel
         private async Task Initialize()
         {
             _repo = new UserRepository(_connstring); // Repo 초기화
+            _navigationService = new NavigationService();
+
+            CheckNicknameCommand = new AsyncRelayCommand(NickNameCheckPrint);
+
+            SaveCommand = new AsyncRelayCommand(NickNameSave);
         }
 
         public static async Task<NicknameChangeViewModel> CreateAsync()
@@ -68,25 +92,56 @@ namespace SlimMy.ViewModel
         }
 
         // 닉네임 여부
-        public async Task NickNameCheckPrint(string nickName)
+        public async Task NickNameCheckPrint(object parameter)
         {
-            MessageBox.Show("왔닝? : " + nickName);
+            var allUserNickName = await _repo.AllNickName();
 
-            //var allUserNickName = await _repo.AllNickName();
+            bool isDuplicate = allUserNickName.Any(name => name.Equals(NewNickname));
 
-            //foreach (var nickNameList in allUserNickName)
-            //{
-            //    if (nickNameList.Equals(nickName))
-            //    {
-            //        NickNameCheck = false;
-            //        NickNameNoCheck = true;
-            //    }
-            //    else
-            //    {
-            //        NickNameCheck = true;
-            //        NickNameNoCheck = false;
-            //    }
-            //}
+            // 닉네임 중복
+            if (isDuplicate)
+            {
+                NickNameCheck = false;
+                NickNameNoCheck = true;
+            }
+            else
+            {
+                if (Validator.Validator.ValidateNickName(NewNickname))
+                {
+                    NickNameCheck = true;
+                    NickNameNoCheck = false;
+                }
+            }
+        }
+
+        // 닉네임 지정
+        public async Task NickNameSave(object parameter)
+        {
+            User userData = UserSession.Instance.CurrentUser;
+
+            string msg = string.Format("'{0}'로 닉네임을 변경하시겠습니까?", NewNickname);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                // 닉네임 중복
+                if (NickNameNoCheck)
+                {
+                    return;
+                }
+
+                // 닉네임 지정
+                if (NickNameCheck)
+                {
+                    await _repo.NickNameSave(userData.UserId, NewNickname);
+
+                    // 닉네임 화면 닫기
+                    await _navigationService.NavigateToNickNameClose();
+                }
+            }
         }
     }
 }

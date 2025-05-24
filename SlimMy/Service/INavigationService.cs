@@ -31,6 +31,13 @@ namespace SlimMy.Service
 
         Task NavigateToMyPageFrameAsync(Type pageType);
 
-        void NavigateToNickName();
+        // 닉네임 변경 화면 전환
+        Task NavigateToNickName();
+
+        // 닉네임 변경 화면 닫기
+        Task NavigateToNickNameClose();
+
+        // 로그인 화면
+        Task NavigateToCloseAndLoginAsync(string viewCloseName);
     }
 }

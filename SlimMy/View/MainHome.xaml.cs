@@ -39,19 +39,21 @@ namespace SlimMy.View
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            MessageBoxResult messageBoxResult = MessageBox.Show("채팅프로그램을 종료하시겠습니까?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            MessageBoxResult messageBoxResult = MessageBox.Show("SlimMy를 종료하시겠습니까?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (messageBoxResult == MessageBoxResult.No)
             {
                 e.Cancel = true;
                 return;
             }
 
-            Environment.Exit(1);
+            Application.Current.Shutdown();
         }
+
+        public static TaskCompletionSource<bool> MainHomeLoaded = new TaskCompletionSource<bool>();
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-
+            MainHomeLoaded.TrySetResult(true); // 로딩 완료 신호
         }
     }
 }

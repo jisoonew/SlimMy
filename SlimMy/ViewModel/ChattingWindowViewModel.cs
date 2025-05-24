@@ -184,11 +184,11 @@ namespace SlimMy.ViewModel
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
             Application.Current.Dispatcher.Invoke(() =>
             {
-                var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
-                if (listView != null)
-                {
-                    listView.ItemsSource = MessageList;
-                }
+                // var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
+                //if (listView != null)
+                //{
+                //    listView.ItemsSource = MessageList;
+                //}
 
                 // 내가 참가한 순간부터의 메시지를 가져온다
                 var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
@@ -441,10 +441,13 @@ namespace SlimMy.ViewModel
                     // _repo.InsertMessage(currentChatRooms.ChatRoomId, myUid, message);
                 }
 
-                MessageList.Add(new ChatMessage
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Message = $"나: {message}",
-                    Alignment = TextAlignment.Right
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"나: {message}",
+                        Alignment = TextAlignment.Right
+                    });
                 });
 
                 // 메시지 전송 후 초기화
@@ -522,10 +525,13 @@ namespace SlimMy.ViewModel
             {
                 string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
 
-                MessageList.Add(new ChatMessage
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Message = $"{sender}님이 채팅방을 나갔습니다.",
-                    Alignment = TextAlignment.Left
+                    MessageList.Add(new ChatMessage
+                    {
+                        Message = $"{sender}님이 채팅방을 나갔습니다.",
+                        Alignment = TextAlignment.Left
+                    });
                 });
 
                 await ScrollToBot();
