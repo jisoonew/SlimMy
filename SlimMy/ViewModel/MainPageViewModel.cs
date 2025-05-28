@@ -97,6 +97,18 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private string _userId;
+
+        public string UserId
+        {
+            get => _userId;
+            set
+            {
+                _userId = value;
+                OnPropertyChanged(nameof(UserId));
+            }
+        }
+
         //public ICommand LoginCommand { get; }
         public Command NickNameCommand { get; set; }
         public AsyncRelayCommand CommunityBtnCommand { get; set; }
@@ -106,6 +118,7 @@ namespace SlimMy.ViewModel
         public AsyncRelayCommand ExerciseHistoryCommand { get; set; }
         public AsyncRelayCommand WeightHistoryCommand { get; set; }
         public AsyncRelayCommand MyPageCommand { get; set; }
+        public AsyncRelayCommand LogoutCommand { get; set; }
 
         private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
 
@@ -229,18 +242,6 @@ namespace SlimMy.ViewModel
         private readonly IDataService _dataService;
         private readonly IView _view;
 
-        private string _userId;
-
-        public string UserId
-        {
-            get => _userId;
-            set
-            {
-                _userId = value;
-                OnPropertyChanged(nameof(UserId));
-            }
-        }
-
         public ICommand LoginCommand { get; }
 
         public MainPageViewModel(IDataService dataService, IView view)
@@ -272,6 +273,8 @@ namespace SlimMy.ViewModel
             WeightHistoryCommand = new AsyncRelayCommand(NavigateToWeightHistory);
 
             MyPageCommand = new AsyncRelayCommand(NavigateToMyPage);
+
+            LogoutCommand = new AsyncRelayCommand(LogoutBtn);
         }
 
         public Command PlannerCommand { get; set; }
@@ -413,6 +416,35 @@ namespace SlimMy.ViewModel
         public async Task DashBoardBtn(object parameter)
         {
             await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
+        }
+
+        // 로그아웃
+        public async Task LogoutBtn(object parameter)
+        {
+            // 서버 연결 해제
+            if (UserSession.Instance.CurrentUser?.Client != null)
+            {
+                UserSession.Instance.CurrentUser.Client.Close();
+                UserSession.Instance.CurrentUser.Client = null;
+            }
+
+            // 세션 제거
+            UserSession.Instance.CurrentUser = null;
+
+            // 현재 모든 창 닫기 (MainHome 등)
+            foreach (Window window in Application.Current.Windows.OfType<Window>().ToList())
+            {
+                if (window is not View.Login)
+                    window.Close();
+            }
+
+            // 로그인 창 새로 열기
+            var loginView = new View.Login();
+            var loginViewModel = new MainPageViewModel(new DataService(), loginView);
+            loginView.DataContext = loginViewModel;
+
+            Application.Current.MainWindow = loginView;
+            loginView.Show();
         }
 
 

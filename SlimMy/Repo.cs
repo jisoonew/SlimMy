@@ -108,8 +108,8 @@ namespace SlimMy
                 try
                 {
                     await connection.OpenAsync();
-                    string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, diet_goal, created_at) " +
-            "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :dietGoal, :CreatedAt)";
+                    string sql = "insert into Users (userid, email, name, gender, nickname, password, birth_date, height, diet_goal, created_at, status) " +
+            "values(:userid, :email, :name, :gender, :nickName, :password, :birthDate, :height, :dietGoal, :CreatedAt, 'ACTIVE')";
 
                     Guid userId = Guid.NewGuid(); // 새로운 GUID 생성
                     byte[] userIdBytes = userId.ToByteArray(); // GUID를 바이트 배열로 변환

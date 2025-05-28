@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace SlimMy.Service
 {
@@ -49,20 +50,26 @@ namespace SlimMy.Service
         // 로그인 화면
         public async Task NavigateToCloseAndLoginAsync(string viewCloseName)
         {
+            // 1. 로그인 뷰 먼저 생성
+            var loginView = new View.Login();
+            var loginViewModel = new MainPageViewModel(_dataService, loginView);
+            loginView.DataContext = loginViewModel;
+
+            // 2. MainWindow 교체 먼저 (Shutdown 방지)
+            Application.Current.MainWindow = loginView;
+
+            // 3. 로그인 창 표시
+            loginView.Show();
+
+            // 4. 약간의 딜레이를 주어 WPF 내부 루프가 안정화되도록 함
+            await Task.Delay(200);  // 중요! 렌더링 시점 보장
+
+            // 5. 기존 창 닫기 (MainHome 등)
             Window currentWindow = Application.Current.Windows
                 .OfType<Window>()
                 .FirstOrDefault(w => w.GetType().Name == viewCloseName);
 
-            if (currentWindow != null)
-            {
-                currentWindow.Close();
-                await Task.Delay(200); // 창 닫힐 시간 확보
-
-                var loginView = new View.Login();
-                var loginViewModel = new MainPageViewModel(_dataService, loginView);
-                loginView.DataContext = loginViewModel;
-                loginView.Show();
-            }
+            currentWindow?.Close();
         }
 
         // 닉네임 변경 화면 닫기

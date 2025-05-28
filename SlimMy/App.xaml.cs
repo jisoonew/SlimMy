@@ -30,12 +30,14 @@ namespace SlimMy
         {
             base.OnStartup(e);
 
-            // 로그인 뷰 표시
+            // 로그인 뷰 모델과 뷰 생성
             var loginView = new View.Login();
             var loginViewModel = new MainPageViewModel(_dataService, loginView);
             loginView.DataContext = loginViewModel;
 
-            loginView.ShowDialog();
+            // 로그인 창을 MainWindow로 지정하려면 이쪽 사용
+            Application.Current.MainWindow = loginView;
+            loginView.Show();
         }
     }
 }

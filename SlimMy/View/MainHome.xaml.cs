@@ -31,11 +31,13 @@ namespace SlimMy.View
             _navigationService = new NavigationService(MainFrame);
             _navigationService.SetFrame(MainFrame);
 
-            // ViewModel에게 NavigationService를 주입하거나 초기화할 수 있다면 여기서 하면 됨
             viewModel.SetNavigationService(_navigationService);
 
             this.DataContext = viewModel;
+
+            MainHomeLoaded.TrySetResult(true);
         }
+
 
         protected override void OnClosing(CancelEventArgs e)
         {

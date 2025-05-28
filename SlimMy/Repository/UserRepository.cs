@@ -244,14 +244,14 @@ namespace SlimMy.Repository
 
                             string[] updateQueries = new string[]
                             {
-                                "UPDATE users SET deleted_at = SYSDATE WHERE userid = :user_id",
-            "UPDATE chatrooms SET deleted_at = SYSDATE WHERE chatroomid in (select chatroomid from userchatrooms where userid = :user_id and isowner = 1)",
-            "UPDATE userchatrooms SET deleted_at = SYSDATE WHERE userid = :user_id",
-            "UPDATE body_log SET deleted_at = SYSDATE WHERE user_id = :user_id",
-            "UPDATE plannergroup SET deleted_at = SYSDATE WHERE userid = :user_id",
-            "UPDATE memo SET deleted_at = SYSDATE WHERE user_id = :user_id",
-            "UPDATE message SET deleted_at = SYSDATE WHERE userid = :user_id",
-            "UPDATE userconnections SET deleted_at = SYSDATE WHERE userid = :user_id"
+                                "UPDATE users SET status = 'INACTIVE', deleted_at = SYSTIMESTAMP WHERE userid = :user_id",
+            "UPDATE chatrooms SET deleted_at = SYSTIMESTAMP WHERE chatroomid in (select chatroomid from userchatrooms where userid = :user_id and isowner = 1)",
+            "UPDATE userchatrooms SET deleted_at = SYSTIMESTAMP WHERE userid = :user_id",
+            "UPDATE body_log SET deleted_at = SYSTIMESTAMP WHERE user_id = :user_id",
+            "UPDATE plannergroup SET deleted_at = SYSTIMESTAMP WHERE userid = :user_id",
+            "UPDATE memo SET deleted_at = SYSTIMESTAMP WHERE user_id = :user_id",
+            "UPDATE message SET deleted_at = SYSTIMESTAMP WHERE userid = :user_id",
+            "UPDATE userconnections SET deleted_at = SYSTIMESTAMP WHERE userid = :user_id"
                             };
 
                             foreach (var query in updateQueries)

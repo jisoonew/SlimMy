@@ -48,7 +48,7 @@
             </StackPanel>
 
             <!-- 로그아웃 버튼 -->
-            <Button Content="Logout" FontSize="25" VerticalAlignment="Bottom" Padding="1,5,1,5" Grid.Row="3" Height="50" Margin="5,0,5,10"/>
+            <Button Content="Logout" FontSize="25" Command="{Binding LogoutCommand}" VerticalAlignment="Bottom" Padding="1,5,1,5" Grid.Row="3" Height="50" Margin="5,0,5,10"/>
         </Grid>
 
         <!-- 메인 콘텐츠 영역 -->
