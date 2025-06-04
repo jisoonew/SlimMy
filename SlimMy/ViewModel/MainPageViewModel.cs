@@ -395,7 +395,6 @@ namespace SlimMy.ViewModel
         // 커뮤니티 버튼 기능
         public async Task CommunityBtn(object parameter)
         {
-
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 선택된 그룹 채팅 참여자들의 정보를 문자열
@@ -562,7 +561,7 @@ namespace SlimMy.ViewModel
                         return;
                     }
 
-                    // 테스트 코드
+                    // 사용자 메시지 송수신
                     if (chattingPartner.Contains("+"))
                     {
                         await HandleUserBundleChanged(chattingPartner, message);
@@ -586,17 +585,26 @@ namespace SlimMy.ViewModel
             messageList.Clear();
         }
 
+        // 사용자 채팅방 참여 메시지
         private async Task HandleGroupChattingUserStart(string chattingPartner, string message)
         {
             Debug.WriteLine($"[CLIENT] Received GroupChattingUserStart from {chattingPartner} with message: {message}");
 
             string[] splitedChattingPartner = chattingPartner.Split("#");
+
+            // 채팅방 아이디와 사용자 아이디 담기
             List<string> chattingPartners = splitedChattingPartner.Where(el => !string.IsNullOrEmpty(el)).ToList();
 
+            // 사용자 아이디
             string sender = chattingPartners[1];
+
+            // 현재 사용자가 채팅방을 실행하고 있는지 확인
+            // 채팅방을 실행하고 있다면 "사용자 아이디:채팅방 아이디" 리턴
             string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
+
             Debug.WriteLine($"[CLIENT] GetChattingRoomNumTest returned: {chattingRoomNum}");
 
+            // 사용자가 해당 채팅방을 실행하고 있지 않다면
             if (chattingRoomNum == "-1")
             {
                 ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
@@ -607,13 +615,14 @@ namespace SlimMy.ViewModel
                     return;
                 }
 
+                // 메인 화면 로딩 완료 대기
                 await MainHome.MainHomeLoaded.Task;
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    Thread groupChattingThread = new Thread(() =>
+                    Thread groupChattingThread = new Thread(async () =>
                     {
-                        ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]);
+                        await ThreadStartingPoint(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]);
                     });
                     groupChattingThread.SetApartmentState(ApartmentState.STA);
                     groupChattingThread.IsBackground = true;
@@ -670,77 +679,38 @@ namespace SlimMy.ViewModel
 
         private async Task HandleUserBundleChanged(string chattingPartner, string message)
         {
-            // '#' 기준으로 수신자들을 분리
-            // 상대 사용자가 전송한 메시지
-            string[] splitedChattingPartner = chattingPartner.Split("+");
-            List<string> chattingPartners = new List<string>();
+            var parts = chattingPartner.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 4) return;
 
-            foreach (var el in splitedChattingPartner)
+            string roomId = parts[0];
+            string messageContent = parts[1];
+            string sender = parts[3];
+
+            // 지금부터 쭉 같은 키를 씁니다
+            var userId = UserSession.Instance.CurrentUser.UserId.ToString();
+            var chatKey = $"{userId}:{roomId}";
+
+            if (chattingThreadDic.TryGetValue(chatKey, out var data) && data.chattingThread.IsAlive)
+                await data.chattingWindow.ReceiveMessage(sender, messageContent);
+
+            // 아직 창이 열려 있지 않으면
+            if (!chattingThreadDic.ContainsKey(chatKey))
             {
-                if (string.IsNullOrEmpty(el))
-                    continue;
-                chattingPartners.Add(el);
-            }
-
-            // 메시지를 발송한 발신자는 리스트의 첫번째 요소
-            string sender = chattingPartners[3];
-
-            // 메시지 내용
-            string messageContent = chattingPartners[1];
-
-            // 채팅 방 번호 가져오기
-            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
-
-            // Debug.WriteLine("+chattingPartner+ : " + splitedChattingPartner[0] + "\n" + splitedChattingPartner[1] + "\n" + splitedChattingPartner[2] + "\n" + splitedChattingPartner[3]);
-
-            string reqMember = string.Join(",", chattingPartners);
-
-            // 채팅 방 번호가 음수인 경우 새로운 스레드를 생성하여 처리
-            // 현재 사용자가 참여하고 있는 그룹 채팅 방이 존재하지 않음을 의미
-            if (chattingRoomNum == "-1")
-            {
-                // 현재 채팅방 데이터
-                ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
-
-                // 람다식을 사용하여 메서드 호출을 스레드의 실행 단위로 전달
-                // Thread groupChattingThread = new Thread(() => ThreadStartingPoint(chattingPartners));
-                Thread groupChattingThread = new Thread(() => ThreadStartingPointTest(currentChatRoom.ChatRoomId.ToString(), reqMember));
-                // WPF 애플리케이션의 UI 요소는 STA 상태에서 실행
-                groupChattingThread.SetApartmentState(ApartmentState.STA);
-                // 백그라운드 스레드는 애플리케이션이 종료되면 자동으로 종료
-                groupChattingThread.IsBackground = true;
-                groupChattingThread.Start();
-            }
-            else
-            {
-                // 이미 존재하는 채팅 스레드가 활성화된 경우 메시지를 전달
-                if (chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
-                {
-                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
-                }
+                var t = new Thread(async () => await ThreadStartingPoint(roomId, string.Join(",", parts)));
+                t.SetApartmentState(ApartmentState.STA);
+                t.IsBackground = true;
+                t.Start();
+                return;
             }
         }
 
         // 테스트 코드
-        private string GetChattingRoomNumTest(string chattingPartners)
+        private string GetChattingRoomNumTest(string chatRoomId)
         {
-            // 요청한 채팅 방 멤버를 문자열로 변환
-            string reqMember = $"{string.Join(",", chattingPartners)}";
+            string currentUserId = UserSession.Instance.CurrentUser.UserId.ToString();
+            string reqKey = $"{currentUserId}:{chatRoomId}";
 
-            // 기존 채팅방 멤버와 비교하여 존재하는 채팅 방 번호를 찾음
-            foreach (var item in chattingThreadDic)
-            {
-                string originMember = item.Value.chattingRoomNumStr;
-
-                // 요청한 멤버와 기존 채팅방의 멤버가 동일하면 채팅방 번호 반환
-                if (originMember == reqMember)
-                {
-                    string roomKey = $"{item.Value.chattingRoomNumStr}";
-                    return roomKey;
-                }
-            }
-
-            return "-1"; // 채팅방이 없으면 -1 반환
+            return chattingThreadDic.ContainsKey(reqKey) ? reqKey : "-1";
         }
 
 
@@ -764,46 +734,58 @@ namespace SlimMy.ViewModel
 
         private readonly Dictionary<string, TaskCompletionSource<bool>> chatWindowReadyMap = new();
 
-        // 테스트 코드
-        private async Task ThreadStartingPointTest(string chattingPartners, string chattingPartnersBundle)
+        // 채팅창을 생성하면서 각 채팅창의 키 값을 부여하여 사용자끼리의 소통이 가능하게 함
+        private async Task ThreadStartingPoint(string chatroomID, string chattingPartnersBundle)
         {
-            var normalizedList = chattingPartners.Split(',').ToList();
-            normalizedList.Sort();
-            string chatRoomKey = string.Join(",", normalizedList);
+            var userId = UserSession.Instance.CurrentUser.UserId.ToString();
+            var chatKey = $"{userId}:{chatroomID}";
 
-            if (chatWindowReadyMap.TryGetValue(chatRoomKey, out var existingReadyTcs))
-            {
-                await existingReadyTcs.Task;
+            // 이미 한 번 열어 놓았으면 바로 리턴
+            if (chatWindowReadyMap.ContainsKey(chatKey))
                 return;
-            }
 
             var readyTcs = new TaskCompletionSource<bool>();
-            chatWindowReadyMap[chatRoomKey] = readyTcs;
+            chatWindowReadyMap[chatKey] = readyTcs;
 
             await MainHome.MainHomeLoaded.Task;
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                var viewModel = new ChattingWindowViewModel(client, chattingPartnersBundle);
-                var newChatWindow = new View.ChattingWindow { DataContext = viewModel };
+                var vm = new ChattingWindowViewModel(client, chattingPartnersBundle);
+                var win = new ChattingWindow { DataContext = vm };
 
-                newChatWindow.Closed += (s, e) =>
+                // 닫힐 때도 동일한 chatKey 로 제거
+                win.Closed += async (s, e) =>
                 {
-                    chattingWindows.Remove(chatRoomKey);
-                    chatWindowReadyMap.Remove(chatRoomKey);
-                    chattingThreadDic.Remove(chatRoomKey);
+                    chattingThreadDic.Remove(chatKey);
+                    chatWindowReadyMap.Remove(chatKey);
+                    // var leaveMsg = $"{chatroomID}:{userId}<leaveRoom>";
+
+                    string leaveRoomData = $"{chatroomID}:{userId}";
+                    byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
+
+                    int leavePayLoad = 1 + leaveRoomData.Length;
+                    byte[] leavePayLoadData = BitConverter.GetBytes(leavePayLoad);
+
+                    byte leaveMsgType = (byte)MessageType.UserLeaveRoom;
+
+                    await client.GetStream().WriteAsync(leavePayLoadData, 0, leavePayLoadData.Length);
+
+                    await client.GetStream().WriteAsync(new byte[] { leaveMsgType }, 0, 1);
+
+                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
+
+                    await client.GetStream().FlushAsync();
+
+                    //var data = Encoding.UTF8.GetBytes(leaveMsg);
+                    //await client.GetStream().WriteAsync(data, 0, data.Length);
                 };
 
-                chattingWindows[chatRoomKey] = newChatWindow;
-                newChatWindow.Show();
+                // 열 때, 동일한 chatKey 로 저장
+                chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey);
+                win.Show();
 
-                newChatWindow.Loaded += (s, e) =>
-                {
-                    readyTcs.TrySetResult(true);
-                };
-
-                chattingThreadDic[chatRoomKey] = new ChattingThreadData(Thread.CurrentThread, viewModel, chatRoomKey);
-
+                win.Loaded += (s2, e2) => readyTcs.TrySetResult(true);
             }, DispatcherPriority.ContextIdle);
 
             await readyTcs.Task;

@@ -320,7 +320,7 @@ namespace SlimMy
         }
 
         // 채팅방 아이디로 채팅방 생성한 사용자 아이디 찾기
-        public async Task<Guid> GetHostUserIdByRoomId(String chatRoomId)
+        public async Task<Guid> GetHostUserIdByRoomId(string chatRoomId)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {

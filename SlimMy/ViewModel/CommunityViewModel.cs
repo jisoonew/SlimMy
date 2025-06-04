@@ -388,13 +388,34 @@ namespace SlimMy.ViewModel
                     }
                 }
 
-                string chattingStartMessage = $"{myUid}:{selectedChatRoom.ChatRoomId}<UserJoinChatRoom>";
+                //User userData = UserSession.Instance.CurrentUser;
+                //var joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}<UserJoinChatRoom>";
+                //var data = Encoding.UTF8.GetBytes(joinMsg);
 
-                byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
+                //await currentUser.Client.GetStream().WriteAsync(data, 0, data.Length);
 
-                Debug.WriteLine($"!! Sending UserJoinChatRoom: {chattingStartMessage}");
+                User userData = UserSession.Instance.CurrentUser;
+                string joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}";
+                byte[] payLoadData = Encoding.UTF8.GetBytes(joinMsg);
 
-                await currentUser.Client.GetStream().WriteAsync(chattingStartByte, 0, chattingStartByte.Length);
+                // 본 내용이 되는 데이터의 크기
+                int payLoadLength = 1 + payLoadData.Length;
+                byte[] header = BitConverter.GetBytes(payLoadLength);
+
+                // 메시지 타입
+                byte msgType = (byte)MessageType.UserJoinChatRoom;
+
+                // 본 내용일 되는 데이터의 크기
+                await currentUser.Client.GetStream().WriteAsync(header, 0, header.Length);
+
+                // 메시지 타입
+                await currentUser.Client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
+
+                // 메시지 내용
+                await currentUser.Client.GetStream().WriteAsync(payLoadData, 0, payLoadData.Length);
+
+                // 네트워크 버퍼에 쌓인 데이터 완료 신호 보내기
+                await currentUser.Client.GetStream().FlushAsync();
 
             }
             catch (Exception ex)
