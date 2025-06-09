@@ -12,6 +12,7 @@ namespace SlimMy.Model
         ChatContent = 2,
         UserLeaveRoom = 3,
         HostChanged = 4,
-        GiveMeUserList = 5
+        GiveMeUserList = 5,
+        GroupChattingStart = 6
     }
 }

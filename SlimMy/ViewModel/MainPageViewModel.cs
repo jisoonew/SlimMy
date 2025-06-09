@@ -404,6 +404,22 @@ namespace SlimMy.ViewModel
 
             await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
 
+            //string chattingStartMessage = $"{currentUser.UserId}:";
+            //byte[] chattingStartMsg = Encoding.UTF8.GetBytes(chattingStartMessage);
+
+            //int header = 1 + chattingStartMessage.Length;
+            //byte[] headerData = BitConverter.GetBytes(header);
+
+            //byte msgType = (byte)MessageType.GiveMeUserList;
+
+            //await currentUser.Client.GetStream().WriteAsync(headerData, 0, headerData.Length);
+
+            //await currentUser.Client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
+
+            //await currentUser.Client.GetStream().WriteAsync(chattingStartMsg, 0, chattingStartMsg.Length);
+
+            //await currentUser.Client.GetStream().FlushAsync();
+
             await _navigationService.NavigateToCommunityFrameAsync(typeof(View.Community));
         }
 
