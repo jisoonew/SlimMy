@@ -26,10 +26,10 @@ namespace SlimMy.ViewModel
         public static Guid myUid;
         private User currentUser;
 
-        private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션.
+        private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션
         public ObservableCollection<ChatMessageStatus> ChatMessageStatus { get; set; } // 메시지를 읽지 않았을 때 아이콘으로 표시하는 기능
-        private int _currentPage; // 현재 페이지 번호.
-        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
+        private int _currentPage; // 현재 페이지 번호
+        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
         private int _pageSize = 5; // 페이지당 항목 수
 
         public ObservableCollection<ChatRooms> CurrentPageData
@@ -107,7 +107,7 @@ namespace SlimMy.ViewModel
             {
                 _currentUserList = value;
                 // static 속성에서는 OnPropertyChanged를 호출할 수 없습니다.
-                // 속성이 static이 아닌 경우 UI 바인딩이 필요하다면, static 메서드를 사용하는 것이 적절하지 않을 수 있습니다.
+                // 속성이 static이 아닌 경우 UI 바인딩이 필요하다면, static 메서드를 사용하는 것이 적절하지 않을 수 있음
             }
         }
 
@@ -230,7 +230,6 @@ namespace SlimMy.ViewModel
 
         public ChatRooms LoginSuccessCom(string userEmail)
         {
-            // 여기서 사용자 정보를 설정하고 필요한 데이터를 가져올 수 있습니다.
             Chat = new ChatRooms
             {
                 CreatorEmail = userEmail

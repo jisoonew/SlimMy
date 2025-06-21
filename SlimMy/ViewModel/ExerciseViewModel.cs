@@ -25,13 +25,13 @@ namespace SlimMy.ViewModel
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private readonly INavigationService _navigationService;
 
-        private int _currentPage; // 현재 페이지 번호.
-        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
+        private int _currentPage; // 현재 페이지 번호
+        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
         private int _pageSize = 20; // 페이지당 항목 수
 
         public int minutes; // 운동 시간
 
-        // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산하여 저장.
+        // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산하여 저장
         public int TotalPages
         {
             get => _totalPages;
