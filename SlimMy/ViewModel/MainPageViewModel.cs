@@ -316,7 +316,8 @@ namespace SlimMy.ViewModel
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
             var ipTextBox = Application.Current.MainWindow.FindName("IpTextBox") as TextBox;
             string password = passwordBox.Password;
-            string ip = ipTextBox.Text;
+            var ip = IPAddress.Parse(ipTextBox.Text);
+            var localEndPoint = new IPEndPoint(ip, 0);
             string parsedName = "%^&";
 
             User.Password = password;
@@ -332,13 +333,13 @@ namespace SlimMy.ViewModel
                 parsedName += selectUserID.ToString();
 
                 User.NickName = loggedInNickName;
-                User.IpNum = ip;
+                User.IpNum = ipTextBox.Text;
                 User.UserId = selectUserID;
 
                 NickName = loggedInNickName;
 
-                client = new TcpClient();
-                await client.ConnectAsync(ip, 9999);
+                client = new TcpClient(localEndPoint);
+                await client.ConnectAsync("127.0.0.1", 9999);
 
                 byte[] byteData = Encoding.UTF8.GetBytes(parsedName);
                 await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
