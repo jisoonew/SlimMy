@@ -374,12 +374,6 @@ namespace SlimMy.ViewModel
                     }
                 }
 
-                //string chattingStartMessage = string.Format("{0}<GroupChattingStart>", groupChattingUserStrData);
-
-                //byte[] chattingStartByte = Encoding.UTF8.GetBytes(chattingStartMessage);
-
-                //await currentUser.Client.GetStream().WriteAsync(chattingStartByte, 0, chattingStartByte.Length);
-
                 ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
                 string chattingStartMessage = $"{currentUser.UserId}:{currentChatRoom.ChatRoomId}";

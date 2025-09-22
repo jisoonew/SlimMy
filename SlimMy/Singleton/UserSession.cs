@@ -1,4 +1,5 @@
-﻿using SlimMy.Model;
+using SlimMy.Model;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace SlimMy
     {
         private static UserSession _instance;
         public User CurrentUser { get; set; }
+        public INetworkTransport Transport { get; set; }
 
         private UserSession() { }
 

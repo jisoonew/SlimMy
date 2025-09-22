@@ -34,9 +34,9 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         public static Guid myUid;
 
-        private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션.
-        private int _currentPage; // 현재 페이지 번호.
-        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수.
+        private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션
+        private int _currentPage; // 현재 페이지 번호
+        private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
         private int _pageSize = 5; // 페이지당 항목 수
 
         public ObservableCollection<ChatRooms> CurrentPageData
@@ -64,7 +64,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산하여 저장.
+        // 전체 데이터에서 총 몇 개의 페이지가 있는지 계산 후 저장
         public int TotalPages
         {
             get => _totalPages;
@@ -85,7 +85,7 @@ namespace SlimMy.ViewModel
                 if (_count != value)
                 {
                     _count = value;
-                    CountChanged?.Invoke(); // 이벤트 발생
+                    CountChanged?.Invoke();
                 }
             }
         }
@@ -368,55 +368,18 @@ namespace SlimMy.ViewModel
 
                 CommunityViewModel.GroupChattingReceivers = userList;
 
-                // 사용자의 Uid 가져오기
-                string groupChattingUserStrData = myUid.ToString();
-
-                // DB에서 채팅방 참가한 사용자 Uid들을 groupChattingUserStrData 담아서 서버로 전송
-                foreach (var item in CommunityViewModel.GroupChattingReceivers)
+                var transport = UserSession.Instance.CurrentUser?.Transport;
+                if (transport == null)
                 {
-                    // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
-                    // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
-                    // 두명 이상일 때 "#"가 포함되기 때문에 #가 포함된 채팅방만 창이 실행되는거였음
-                    if (!groupChattingUserStrData.Contains(item.UsersID))
-                    {
-                        groupChattingUserStrData += "#";
-                        groupChattingUserStrData += item.UsersID;
-                    }
-                    else
-                    {
-                        groupChattingUserStrData += "#";
-                    }
+                    MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
+                    return;
                 }
-
-                //User userData = UserSession.Instance.CurrentUser;
-                //var joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}<UserJoinChatRoom>";
-                //var data = Encoding.UTF8.GetBytes(joinMsg);
-
-                //await currentUser.Client.GetStream().WriteAsync(data, 0, data.Length);
 
                 User userData = UserSession.Instance.CurrentUser;
                 string joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}";
-                byte[] payLoadData = Encoding.UTF8.GetBytes(joinMsg);
+                byte[] payload = Encoding.UTF8.GetBytes(joinMsg);
 
-                // 본 내용이 되는 데이터의 크기
-                int payLoadLength = 1 + payLoadData.Length;
-                byte[] header = BitConverter.GetBytes(payLoadLength);
-
-                // 메시지 타입
-                byte msgType = (byte)MessageType.UserJoinChatRoom;
-
-                // 본 내용일 되는 데이터의 크기
-                await currentUser.Client.GetStream().WriteAsync(header, 0, header.Length);
-
-                // 메시지 타입
-                await currentUser.Client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
-
-                // 메시지 내용
-                await currentUser.Client.GetStream().WriteAsync(payLoadData, 0, payLoadData.Length);
-
-                // 네트워크 버퍼에 쌓인 데이터 완료 신호 보내기
-                await currentUser.Client.GetStream().FlushAsync();
-
+                await transport.SendFrameAsync((byte)MessageType.UserJoinChatRoom, payload);
             }
             catch (Exception ex)
             {
@@ -545,11 +508,10 @@ namespace SlimMy.ViewModel
         {
             var createChatRoomViewModel = new CreateChatRoomViewModel();
 
-            // 이벤트 핸들러를 명시적으로 정의
             void OnChatRoomCreated(object sender, EventArgs e)
             {
                 _ = Task.Run(async () => await ChattingRefreshChatRooms());
-                createChatRoomViewModel.ChatRoomCreated -= OnChatRoomCreated; // 이벤트 핸들러 제거 (메모리 누수 방지)
+                createChatRoomViewModel.ChatRoomCreated -= OnChatRoomCreated;
             }
 
             createChatRoomViewModel.ChatRoomCreated += OnChatRoomCreated;

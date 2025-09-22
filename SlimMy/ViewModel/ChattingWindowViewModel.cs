@@ -22,7 +22,7 @@ namespace SlimMy.ViewModel
     public class ChattingWindowViewModel : INotifyPropertyChanged
     {
         private string chattingPartner = null;
-        private TcpClient client = null;
+        private readonly INetworkTransport transport;
         public List<string> chattingPartners = null;
         public static string myName = null;
         private Repo _repo;
@@ -172,12 +172,12 @@ namespace SlimMy.ViewModel
         }
 
         // 1명 채팅방 입장
-        public ChattingWindowViewModel(TcpClient client, string chattingPartner)
+        public ChattingWindowViewModel(INetworkTransport client, Guid roomId, string chattingPartner)
         {
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             User currentUser = UserSession.Instance.CurrentUser;
 
-            this.client = client;
+            this.transport = client;
             this.chattingPartner = chattingPartner;
 
             _repo = new Repo(_connstring); // Repo 초기화
@@ -192,7 +192,7 @@ namespace SlimMy.ViewModel
                 //}
 
                 // 내가 참가한 순간부터의 메시지를 가져온다
-                var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
+                var messagePrint = _repo.MessagePrint(roomId, currentUser.UserId);
 
                 // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
                 if (messagePrint != null)
@@ -217,9 +217,6 @@ namespace SlimMy.ViewModel
                         }
                     }
                 }
-
-                this.chattingPartner = chattingPartner;
-                this.client = client;
 
                 MessageList.Add(new ChatMessage
                 {
@@ -287,32 +284,32 @@ namespace SlimMy.ViewModel
 
         private async void InitializeHostCheck()
         {
-            // 1. 현재 로그인한 사용자 ID를 Guid로 가져옴
+            // 현재 로그인한 사용자 ID를 Guid로 가져옴
             User currentUser = UserSession.Instance.CurrentUser;
             Guid currentUserId = Guid.Parse(currentUser.UserId.ToString()); // 또는 currentUser.UserId가 이미 Guid면 Parse 불필요
 
-            // 2. DB에서 호스트(방장) GUID를 받아옴
+            // DB에서 호스트(방장) GUID를 받아옴
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             Guid hostUserId = await _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
 
-            // 3. 비교 후 IsHost 설정 (Guid 타입끼리 비교)
+            // 비교 후 IsHost 설정 (Guid 타입끼리 비교)
             IsHost = (currentUserId == hostUserId);
 
-            // (디버깅용 로그)
+            // 디버깅용 로그
             Debug.WriteLine($"currentUserId: {currentUserId}");
             Debug.WriteLine($"hostUserId   : {hostUserId}");
             Debug.WriteLine($"IsHost       : {IsHost}");
         }
 
         // 다수 채팅방 입장
-        public ChattingWindowViewModel(TcpClient client, List<string> targetChattingPartners)
+        public ChattingWindowViewModel(INetworkTransport client, List<string> targetChattingPartners)
         {
             try
             {
                 ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
                 User currentUser = UserSession.Instance.CurrentUser;
 
-                this.client = client;
+                this.transport = client;
                 this.chattingPartners = targetChattingPartners;
 
                 _repo = new Repo(_connstring); // Repo 초기화
@@ -456,24 +453,18 @@ namespace SlimMy.ViewModel
                     //byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
                     //await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
 
+                    var transport = UserSession.Instance.CurrentUser?.Transport;
+                    if (transport == null)
+                    {
+                        MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
+                        return;
+                    }
+
                     // 페이로드
                     parsedMessage = $"{currentChatRooms.ChatRoomId}:{message}:{myUid}";
                     byte[] parsedMessageByte = Encoding.UTF8.GetBytes(parsedMessage);
 
-                    // 페이로드 크기
-                    int payLoadLength = 1 + parsedMessageByte.Length;
-                    byte[] header = BitConverter.GetBytes(payLoadLength);
-
-                    // 메시지 타입
-                    byte msgType = (byte)MessageType.ChatContent;
-
-                    await client.GetStream().WriteAsync(header, 0, header.Length);
-
-                    await client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
-
-                    await client.GetStream().WriteAsync(parsedMessageByte, 0, parsedMessageByte.Length);
-
-                    await client.GetStream().FlushAsync();
+                    await transport.SendFrameAsync((byte)MessageType.ChatContent, parsedMessageByte);
                 }
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -515,7 +506,7 @@ namespace SlimMy.ViewModel
             {
                 parsedMessage = string.Format("{0}<{1}>", chattingPartner, message);
                 byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                client.GetStream().Write(byteData, 0, byteData.Length);
+                // transport.GetStream().Write(byteData, 0, byteData.Length);
             }
             // 그룹채팅
             else
@@ -533,7 +524,7 @@ namespace SlimMy.ViewModel
 
                 parsedMessage = string.Format("{0}<{1}>", partners, message);
                 byte[] byteData = Encoding.Default.GetBytes(parsedMessage);
-                client.GetStream().Write(byteData, 0, byteData.Length);
+                // client.GetStream().Write(byteData, 0, byteData.Length);
             }
 
             MessageList.Add(new ChatMessage
@@ -746,32 +737,18 @@ namespace SlimMy.ViewModel
                 string parsedMsg = "";
                 string parsedChatRoomId = currentChattingData.ChatRoomId.ToString();
 
-                // 채팅방 아이디와 위임 받을 사용자 아이디
-                //parsedMsg = string.Format("HostChanged:{0}:{1}", parsedChatRoomId, UserSelectedItem.UsersID);
-                //byte[] byteData = Encoding.Default.GetBytes(parsedMsg);
-                //await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
+                var transport = UserSession.Instance.CurrentUser?.Transport;
+                if (transport == null)
+                {
+                    MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
+                    return;
+                }
 
                 // 채팅방 위임 메시지
                 parsedMsg = $"{parsedChatRoomId}:{UserSelectedItem.UsersID}";
                 byte[] parsedMsgData = Encoding.UTF8.GetBytes(parsedMsg);
 
-                // 채팅방 위임 메시지 바이트 크기
-                int payLoadSize = 1 + parsedMsg.Length;
-                byte[] payLoadSizeData = BitConverter.GetBytes(payLoadSize);
-
-                // 채팅방 위임 메시지 타입
-                byte msgType = (byte)MessageType.HostChanged;
-
-                // 채팅방 위임 메시지 바이트 크기
-                await client.GetStream().WriteAsync(payLoadSizeData, 0, payLoadSizeData.Length);
-
-                // 채팅방 위임 메시지 타입
-                await client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
-
-                // 채팅방 위임 메시지
-                await client.GetStream().WriteAsync(parsedMsgData, 0, parsedMsgData.Length);
-
-                await client.GetStream().FlushAsync();
+                await transport.SendFrameAsync((byte)MessageType.HostChanged, parsedMsgData);
 
                 // 위임 받을 사용자 닉네임
                 string hostUserNick = await _repo.SendNickName(UserSelectedItem.UsersID);
@@ -815,6 +792,8 @@ namespace SlimMy.ViewModel
 
             byte leaveMsgType = (byte)MessageType.UserLeaveRoom;
 
+            var transport = UserSession.Instance.CurrentUser?.Transport;
+
             try
             {
                 if (!selectUserID.Equals(currentUser.UserId))
@@ -823,15 +802,7 @@ namespace SlimMy.ViewModel
                     await _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
 
                     // 클라이언트에게 메시지 전송
-                    // await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    await client.GetStream().WriteAsync(leavePayLoadData, 0, leavePayLoadData.Length);
-
-                    await client.GetStream().WriteAsync(new byte[] { leaveMsgType }, 0, 1);
-
-                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    await client.GetStream().FlushAsync();
+                    await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
                 }
                 else
                 {
@@ -839,15 +810,7 @@ namespace SlimMy.ViewModel
                     await _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
 
                     // 클라이언트에게 메시지 전송
-                    // await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    await client.GetStream().WriteAsync(leavePayLoadData, 0, leavePayLoadData.Length);
-
-                    await client.GetStream().WriteAsync(new byte[] { leaveMsgType }, 0, 1);
-
-                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    await client.GetStream().FlushAsync();
+                    await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
                 }
 
                 // UI 이동

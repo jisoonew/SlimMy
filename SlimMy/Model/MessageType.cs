@@ -13,6 +13,8 @@ namespace SlimMy.Model
         UserLeaveRoom = 3,
         HostChanged = 4,
         GiveMeUserList = 5,
-        GroupChattingStart = 6
+        GroupChattingStart = 6,
+        UserLogin = 9,
+        Heartbeat = 11
     }
 }

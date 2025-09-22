@@ -12,9 +12,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -37,6 +39,8 @@ namespace SlimMy.ViewModel
         static TcpClient client = null;
         Thread ReceiveThread = null;
         ChattingWindowViewModel chattingWindow = null;
+
+        public SslStream _ssl;
 
         private INavigationService _navigationService;
 
@@ -318,74 +322,82 @@ namespace SlimMy.ViewModel
             string password = passwordBox.Password;
             var ip = IPAddress.Parse(ipTextBox.Text);
             var localEndPoint = new IPEndPoint(ip, 0);
-            string parsedName = "%^&";
 
             User.Password = password;
-            bool isSuccess = await _repo.LoginSuccess(UserId, password);
+            // bool isSuccess = await _repo.LoginSuccess(UserId, password);
 
-            View.Login login = new View.Login();
+            // View.Login login = new View.Login();
 
-            if (isSuccess)
+            //if (isSuccess)
+            //{
+            // 로그인 이후 사용자의 닉네임 가져오기
+            string loggedInNickName = await _repo.NickName(UserId);
+            Guid selectUserID = await _repo.UserID(UserId);
+
+            User.NickName = loggedInNickName;
+            User.IpNum = ipTextBox.Text;
+            User.UserId = selectUserID;
+
+            NickName = loggedInNickName;
+
+            string email = UserId;                    // 입력된 아이디(이메일) 바인딩 값
+            string passwordWD = passwordBox?.Password ?? "";
+            string host = "localhost";               // 개발용: cert의 CN/SAN과 일치해야 함
+            int port = 9999;
+
+            var transport = new TlsTcpTransport();
+            await transport.ConnectAsync(host, port);
+
+            var loginReq = new { cmd = "LOGIN", email, password = passwordWD };
+            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
+            await transport.SendFrameAsync((byte)MessageType.UserLogin, payload);
+
+            var (respType, respPayload) = await transport.ReadFrameAsync();
+            var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var loginRes = JsonSerializer.Deserialize<LoginReply>(respPayload, opts);
+
+            string json = Encoding.UTF8.GetString(respPayload);
+            Debug.WriteLine($"[LOGIN REPLY] type={respType}, json={json}");
+
+            if (loginRes?.ok == true)
             {
-                // 로그인 이후 사용자의 닉네임 가져오기
-                string loggedInNickName = await _repo.NickName(UserId);
-                Guid selectUserID = await _repo.UserID(UserId);
-                parsedName += selectUserID.ToString();
-
-                User.NickName = loggedInNickName;
-                User.IpNum = ipTextBox.Text;
-                User.UserId = selectUserID;
-
-                NickName = loggedInNickName;
-
-                client = new TcpClient(localEndPoint);
-                await client.ConnectAsync("127.0.0.1", 9999);
-
-                byte[] byteData = Encoding.UTF8.GetBytes(parsedName);
-                await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
-
-                // 싱글톤 저장
+                // 성공 처리: 세션 저장, 수신 루프 시작 등
                 UserSession.Instance.CurrentUser = new User
                 {
-                    Email = UserId,
-                    NickName = User.NickName,
-                    IpNum = User.IpNum,
-                    UserId = User.UserId,
-                    Client = client
+                    Email = email,
+                    UserId = loginRes.userId,
+                    NickName = loginRes.nick,
+                    Transport = transport
                 };
 
-                // 로그인 시간 업데이트
-                await _repo.LastLogin();
-
-                myName = User.NickName;
-
-                // ReceiveThread는 서버로부터 데이터를 수신하고 처리하는 역할
-                // 이 스레드는 별도의 실행 경로를 가지며, 주 스레드(주로 UI 스레드)의 블로킹을 방지하여 원활한 사용자 경험을 제공
-                _ = Task.Run(RecieveMessage);
+                // 이후 모든 송수신은 ssl을 사용
+                _ = Task.Run(() => RecieveMessage(transport));
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    var mainView = new MainHome(this); // this = MainPageViewModel 인스턴스
+                    var mainView = new MainHome(this);
+                    Application.Current.MainWindow = mainView;
                     mainView.Show();
+
+                    // 떠 있는 로그인 창 닫기
+                    var loginWindow = Application.Current.Windows
+                        .OfType<View.Login>()
+                        .FirstOrDefault();
+                    loginWindow?.Close();
                 });
-
-                await MainHome.MainHomeLoaded.Task;
-
-                // 로그인 창 닫기
-                foreach (Window window in Application.Current.Windows)
-                {
-                    if (window is View.Login)
-                    {
-                        window.Close();
-                        break;
-                    }
-                }
             }
             else
             {
-                MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
-                client = null;
+                MessageBox.Show(loginRes?.message ?? "로그인 실패");
+                transport.Dispose();
+                return;
             }
+            //}
+            //else
+            //{
+            //    MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
+            //    client = null;
+            //}
         }
 
         private bool CanLogin(object parameter)
@@ -399,11 +411,13 @@ namespace SlimMy.ViewModel
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 선택된 그룹 채팅 참여자들의 정보를 문자열
-            string getUserProtocol = $"{currentUser.UserId}" + "<GiveMeUserList>";
+            //string getUserProtocol = $"{currentUser.UserId}" + "<GiveMeUserList>";
 
-            byte[] byteData = Encoding.UTF8.GetBytes(getUserProtocol);
+            //byte[] byteData = Encoding.UTF8.GetBytes(getUserProtocol);
 
-            await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
+            //await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
+
+            //await client.GetStream().FlushAsync();
 
             //string chattingStartMessage = $"{currentUser.UserId}:";
             //byte[] chattingStartMsg = Encoding.UTF8.GetBytes(chattingStartMessage);
@@ -465,48 +479,43 @@ namespace SlimMy.ViewModel
 
 
         // 사용자 채팅
-        public async Task RecieveMessage()
+        public async Task RecieveMessage(INetworkTransport transport, CancellationToken ct = default)
         {
-            List<string> receiveMessageList = new List<string>();
-            while (true)
+            try
             {
-                try
+                while (!ct.IsCancellationRequested)
                 {
-                    byte[] receiveByte = new byte[1024];
-                    int bytesRead = await client.GetStream().ReadAsync(receiveByte, 0, receiveByte.Length);
+                    var (rawType, payload) = await transport.ReadFrameAsync(ct);
+                    var type = (MessageType)rawType;
+                    var text = Encoding.UTF8.GetString(payload).Trim();
 
-                    if (bytesRead == 0) continue;
+                    // Debug.WriteLine($"[RECV] type={type}({rawType}), len={payload.Length}, text='{text}'");
 
-                    string receiveMessage = Encoding.UTF8.GetString(receiveByte).Trim();
+                    var list = new List<string>();
 
-                    string[] receiveMessageArray = receiveMessage.Split('>');
-
-                    // receiveMessageArray => "관리자<TEST"
-                    foreach (var item in receiveMessageArray)
+                    foreach (var seg in text.Split('>'))
                     {
-                        if (!item.Contains('<'))
-                            continue;
-                        if (item.Contains("관리자<TEST"))
-                            continue;
-
-                        receiveMessageList.Add(item);
+                        if (!seg.Contains('<')) continue;
+                        if (type == MessageType.Heartbeat && seg.Contains("관리자<TEST")) continue; // 하트비트 페이로드는 스킵
+                        list.Add(seg);
                     }
 
-                    await ParsingReceiveMessage(receiveMessageList);
+                    if (list.Count > 0)
+                        await ParsingReceiveMessage(list, type);
                 }
-                catch (Exception e)
-                {
-                    // MessageBox.Show("서버와의 연결이 끊어졌습니다.", "Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    // MessageBox.Show(e.Message);
-                    // MessageBox.Show(e.StackTrace);
-                    Environment.Exit(1);
-                }
-                await Task.Delay(500);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine($"[RECV] exception: {e}");
+                // MessageBox.Show("서버와의 연결이 끊어졌습니다.", "Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // MessageBox.Show(e.Message);
+                // MessageBox.Show(e.StackTrace);
+                // Environment.Exit(1);
             }
         }
 
         // 클라이언트가 받은 메시지를 분석 및 처리
-        private async Task ParsingReceiveMessage(List<string> messageList)
+        private async Task ParsingReceiveMessage(List<string> messageList, MessageType type)
         {
             foreach (var item in messageList)
             {
@@ -528,7 +537,7 @@ namespace SlimMy.ViewModel
                     //MessageBox.Show("chattingPartner : " + chattingPartner);
 
                     // message -> <> 안에 있는 내용 출력
-                    // MessageBox.Show("message : " + message);
+                    // Debug.WriteLine("message : " + message);
 
                     // 관리자가 보낸 하트비트 메시지인 경우
                     if (chattingPartner == "관리자")
@@ -559,7 +568,7 @@ namespace SlimMy.ViewModel
                     // 그룹채팅
                     // Contains 해당 문자열에 "#"가 포함되어 있는지 확인 true or false
                     // 문자열을 # 문자를 기준으로 나누는 메서드
-                    if (message.Contains("GroupChattingUserStart"))
+                    if (type == MessageType.UserJoinChatRoom)
                     {
                         await HandleGroupChattingUserStart(chattingPartner, message);
 
@@ -579,7 +588,7 @@ namespace SlimMy.ViewModel
                     }
 
                     // 사용자 메시지 송수신
-                    if (chattingPartner.Contains("+"))
+                    if (type == MessageType.ChatContent)
                     {
                         await HandleUserBundleChanged(chattingPartner, message);
 
@@ -613,47 +622,26 @@ namespace SlimMy.ViewModel
             List<string> chattingPartners = splitedChattingPartner.Where(el => !string.IsNullOrEmpty(el)).ToList();
 
             // 사용자 아이디
-            string sender = chattingPartners[1];
+            var roomId = chattingPartners[0];
+            var joinedUserId = chattingPartners[1];
 
             // 현재 사용자가 채팅방을 실행하고 있는지 확인
             // 채팅방을 실행하고 있다면 "사용자 아이디:채팅방 아이디" 리턴
-            string chattingRoomNum = GetChattingRoomNumTest(chattingPartners[0]);
-
-            Debug.WriteLine($"[CLIENT] GetChattingRoomNumTest returned: {chattingRoomNum}");
+            var chatKey = GetChattingRoomNumTest(roomId);
+            Debug.WriteLine($"[CLIENT] GetChattingRoomNumTest returned: {chatKey}");
 
             // 사용자가 해당 채팅방을 실행하고 있지 않다면
-            if (chattingRoomNum == "-1")
+            if (chatKey == "-1")
             {
-                ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
-
-                if (currentChatRoom == null)
-                {
-                    Debug.WriteLine("[ERROR] 채팅방 데이터가 없습니다.");
-                    return;
-                }
-
-                // 메인 화면 로딩 완료 대기
                 await MainHome.MainHomeLoaded.Task;
-
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
-                    Thread groupChattingThread = new Thread(async () =>
-                    {
-                        await ThreadStartingPoint(currentChatRoom.ChatRoomId.ToString(), chattingPartners[0]);
-                    });
-                    groupChattingThread.SetApartmentState(ApartmentState.STA);
-                    groupChattingThread.IsBackground = true;
-                    groupChattingThread.Start();
-                }, DispatcherPriority.ContextIdle);
+                    await ThreadStartingPoint(roomId, chattingPartner); // 세션 말고 roomId 사용
+                }, DispatcherPriority.Normal);
             }
-            else
+            else if (chattingThreadDic.TryGetValue(chatKey, out var data) && data.chattingThread.IsAlive)
             {
-                if (chattingThreadDic.ContainsKey(chattingRoomNum) &&
-                    chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
-                {
-
-                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveAddRoomMessage(sender, message);
-                }
+                await data.chattingWindow.ReceiveAddRoomMessage(joinedUserId, message);
             }
         }
 
@@ -768,41 +756,38 @@ namespace SlimMy.ViewModel
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                var vm = new ChattingWindowViewModel(client, chattingPartnersBundle);
-                var win = new ChattingWindow { DataContext = vm };
-
-                // 닫힐 때도 동일한 chatKey 로 제거
-                win.Closed += async (s, e) =>
+                try
                 {
-                    chattingThreadDic.Remove(chatKey);
-                    chatWindowReadyMap.Remove(chatKey);
-                    // var leaveMsg = $"{chatroomID}:{userId}<leaveRoom>";
+                    var roomId = Guid.Parse(chatroomID);
+                    var vm = new ChattingWindowViewModel(UserSession.Instance.CurrentUser?.Transport, roomId, chattingPartnersBundle);
+                    var win = new ChattingWindow { DataContext = vm };
 
-                    string leaveRoomData = $"{chatroomID}:{userId}";
-                    byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
+                    // 닫힐 때도 동일한 chatKey 로 제거
+                    win.Closed += async (s, e) =>
+                    {
+                        chattingThreadDic.Remove(chatKey);
+                        chatWindowReadyMap.Remove(chatKey);
 
-                    int leavePayLoad = 1 + leaveRoomData.Length;
-                    byte[] leavePayLoadData = BitConverter.GetBytes(leavePayLoad);
+                    var transport = UserSession.Instance.CurrentUser?.Transport;
 
-                    byte leaveMsgType = (byte)MessageType.UserLeaveRoom;
+                        string leaveRoomData = $"{chatroomID}:{userId}";
+                        byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
 
-                    await client.GetStream().WriteAsync(leavePayLoadData, 0, leavePayLoadData.Length);
-
-                    await client.GetStream().WriteAsync(new byte[] { leaveMsgType }, 0, 1);
-
-                    await client.GetStream().WriteAsync(leaveRoomDataByte, 0, leaveRoomDataByte.Length);
-
-                    await client.GetStream().FlushAsync();
-
-                    //var data = Encoding.UTF8.GetBytes(leaveMsg);
-                    //await client.GetStream().WriteAsync(data, 0, data.Length);
+                        await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
                 };
 
-                // 열 때, 동일한 chatKey 로 저장
-                chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey);
-                win.Show();
+                    // 열 때, 동일한 chatKey 로 저장
+                    chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey);
 
-                win.Loaded += (s2, e2) => readyTcs.TrySetResult(true);
+                    win.Loaded += (s2, e2) => readyTcs.TrySetResult(true);
+                    win.Show();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ChatWindow.Create] {ex}");
+                    readyTcs.TrySetException(ex);
+                    chatWindowReadyMap.Remove(chatKey);
+                }
             }, DispatcherPriority.ContextIdle);
 
             await readyTcs.Task;
