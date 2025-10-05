@@ -12,6 +12,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -69,7 +70,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        public Command InsertCommand { get; set; }
+        public AsyncRelayCommand InsertCommand { get; set; }
         public Command TestCommand { get; set; }
         public Command LoginCommand { get; set; }
         public Command NickNameCommand { get; set; }
@@ -90,7 +91,7 @@ namespace SlimMy.ViewModel
 
         public Login()
         {
-            InsertCommand = new Command(InsertUser);
+            InsertCommand = new AsyncRelayCommand(InsertUser);
             //TestCommand = new Command(TestUser);
 
             _repo = new Repo(_connstring);
@@ -148,7 +149,7 @@ namespace SlimMy.ViewModel
         }
 
         // 회원가입
-        public void InsertUser(object parameter)
+        public async Task InsertUser(object parameter)
         {
             // WPF 애플리케이션에서 현재 활성화된 메인 윈도우에서 이름이 "passwordBox"인 컨트롤을 찾기 위해 사용되는 메서드
             var passwordBox = Application.Current.MainWindow.FindName("passwordBox") as PasswordBox;
@@ -162,12 +163,20 @@ namespace SlimMy.ViewModel
 
             _user.Gender = User.Gender == "남성" ? "남성" : "여성";
 
+            var transport = UserSession.Instance.CurrentUser?.Transport;
+
             // 유효성 검사
             if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName)
                 && Validator.Validator.ValidatePassword(User.Password, User.PasswordCheck) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
                 && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal) && _repo.BuplicateNickName(User.NickName) && SignUp.count == 1)
             {
-                _repo.InsertUser(User.Name, User.Gender, User.NickName, User.Email, User.Password, User.BirthDate, User.Height, User.Weight, User.DietGoal);
+                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal };
+                byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
+                await transport.SendFrameAsync((byte)MessageType.Sign_Up, payload);
+
+                var (respType, respPayload) = await transport.ReadFrameAsync();
+                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var signUpRes = JsonSerializer.Deserialize<SignUpReply>(respPayload, opts);
             }
             else
             {

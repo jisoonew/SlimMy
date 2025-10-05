@@ -224,12 +224,37 @@ namespace SlimMy.ViewModel
 
             _signUp = new SignUp();
 
+            var transport = UserSession.Instance.CurrentUser?.Transport;
+
+            Debug.WriteLine(
+  $"[VALID] name={Validator.Validator.ValidateName(User.Name)}, " +
+  $"nick={Validator.Validator.ValidateNickName(User.NickName)}, " +
+  $"pass={Validator.Validator.ValidatePassword(User.Password, User.PasswordCheck)}, " +
+  $"birth={Validator.Validator.ValidateBirthDate(User.BirthDate)}, " +
+  $"height={Validator.Validator.ValidateHeight(User.Height)}, " +
+  $"weight={Validator.Validator.ValidateWeight(User.Weight)}, " +
+  $"diet={Validator.Validator.ValidateDietGoal(User.DietGoal)}, " +
+  $"dupNick={_repo.BuplicateNickName(User.NickName)}, " +
+  $"emailCodeOk={SignUp.count}"
+);
+
             // 유효성 검사
             if (Validator.Validator.ValidateName(User.Name) && Validator.Validator.ValidateNickName(User.NickName)
                 && Validator.Validator.ValidatePassword(User.Password, User.PasswordCheck) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
                 && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal) && _repo.BuplicateNickName(User.NickName) && SignUp.count == 1)
             {
-                await _repo.InsertUser(User.Name, User.Gender, User.NickName, User.Email, User.Password, User.BirthDate, User.Height, User.Weight, User.DietGoal);
+                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal };
+                byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
+                await transport.SendFrameAsync((byte)MessageType.Sign_Up, payload);
+
+                var (respType, respPayload) = await transport.ReadFrameAsync();
+                var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var signUpRes = JsonSerializer.Deserialize<SignUpReply>(respPayload, opts);
+
+                if (signUpRes?.ok == true)
+                {
+                    MessageBox.Show("회원가입이 완료되었습니다.");
+                }
             }
             else
             {
@@ -323,30 +348,14 @@ namespace SlimMy.ViewModel
             var ip = IPAddress.Parse(ipTextBox.Text);
             var localEndPoint = new IPEndPoint(ip, 0);
 
-            User.Password = password;
-            // bool isSuccess = await _repo.LoginSuccess(UserId, password);
-
-            // View.Login login = new View.Login();
-
-            //if (isSuccess)
-            //{
-            // 로그인 이후 사용자의 닉네임 가져오기
-            string loggedInNickName = await _repo.NickName(UserId);
-            Guid selectUserID = await _repo.UserID(UserId);
-
-            User.NickName = loggedInNickName;
-            User.IpNum = ipTextBox.Text;
-            User.UserId = selectUserID;
-
-            NickName = loggedInNickName;
-
-            string email = UserId;                    // 입력된 아이디(이메일) 바인딩 값
-            string passwordWD = passwordBox?.Password ?? "";
-            string host = "localhost";               // 개발용: cert의 CN/SAN과 일치해야 함
+            string host = "localhost"; // 개발용: cert의 CN/SAN과 일치해야 함
             int port = 9999;
 
             var transport = new TlsTcpTransport();
             await transport.ConnectAsync(host, port);
+
+            string email = UserId; // 입력된 아이디(이메일) 바인딩 값
+            string passwordWD = passwordBox?.Password ?? "";
 
             var loginReq = new { cmd = "LOGIN", email, password = passwordWD };
             byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
@@ -355,6 +364,9 @@ namespace SlimMy.ViewModel
             var (respType, respPayload) = await transport.ReadFrameAsync();
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var loginRes = JsonSerializer.Deserialize<LoginReply>(respPayload, opts);
+
+            NickName = loginRes.nick;
+            User.Password = password;
 
             string json = Encoding.UTF8.GetString(respPayload);
             Debug.WriteLine($"[LOGIN REPLY] type={respType}, json={json}");
@@ -392,12 +404,6 @@ namespace SlimMy.ViewModel
                 transport.Dispose();
                 return;
             }
-            //}
-            //else
-            //{
-            //    MessageBox.Show("로그인에 실패했습니다. 이메일과 비밀번호를 확인해 주세요.");
-            //    client = null;
-            //}
         }
 
         private bool CanLogin(object parameter)
@@ -409,31 +415,6 @@ namespace SlimMy.ViewModel
         public async Task CommunityBtn(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
-
-            // 선택된 그룹 채팅 참여자들의 정보를 문자열
-            //string getUserProtocol = $"{currentUser.UserId}" + "<GiveMeUserList>";
-
-            //byte[] byteData = Encoding.UTF8.GetBytes(getUserProtocol);
-
-            //await client.GetStream().WriteAsync(byteData, 0, byteData.Length);
-
-            //await client.GetStream().FlushAsync();
-
-            //string chattingStartMessage = $"{currentUser.UserId}:";
-            //byte[] chattingStartMsg = Encoding.UTF8.GetBytes(chattingStartMessage);
-
-            //int header = 1 + chattingStartMessage.Length;
-            //byte[] headerData = BitConverter.GetBytes(header);
-
-            //byte msgType = (byte)MessageType.GiveMeUserList;
-
-            //await currentUser.Client.GetStream().WriteAsync(headerData, 0, headerData.Length);
-
-            //await currentUser.Client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
-
-            //await currentUser.Client.GetStream().WriteAsync(chattingStartMsg, 0, chattingStartMsg.Length);
-
-            //await currentUser.Client.GetStream().FlushAsync();
 
             await _navigationService.NavigateToCommunityFrameAsync(typeof(View.Community));
         }
@@ -533,12 +514,6 @@ namespace SlimMy.ViewModel
                     chattingPartner = splitedMsg[0]; // "관리자"
                     message = splitedMsg[1]; // "TEST"
 
-                    // chattingPartner -> 사용자 아이디 출력
-                    //MessageBox.Show("chattingPartner : " + chattingPartner);
-
-                    // message -> <> 안에 있는 내용 출력
-                    // Debug.WriteLine("message : " + message);
-
                     // 관리자가 보낸 하트비트 메시지인 경우
                     if (chattingPartner == "관리자")
                     {
@@ -598,7 +573,7 @@ namespace SlimMy.ViewModel
                     }
 
                     // 방장 위임
-                    if (message.Contains("HostChanged"))
+                    if (type == MessageType.HostChanged)
                     {
                         await HandleHostChanged(chattingPartner, message);
 
@@ -667,18 +642,23 @@ namespace SlimMy.ViewModel
 
         private async Task HandleHostChanged(string chattingPartner, string message)
         {
-            string[] hostChangedPartner = chattingPartner.Split(":");
-            List<string> hostChangedList = hostChangedPartner.Where(el => !string.IsNullOrEmpty(el)).ToList();
+            var parts = chattingPartner.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return;
 
-            string hostChangedChattingRoomNum = GetHostChangedChattingRoomNum(hostChangedList);
+            var roomId = parts[0]; // 방 ID
+            var newHostUserId = parts[1]; // 새 방장 사용자 ID
 
-            if (hostChangedChattingRoomNum != "-1")
+            var currentUserId = UserSession.Instance.CurrentUser.UserId.ToString();
+            var chatKey = $"{currentUserId}:{roomId}";
+
+            if (chattingThreadDic.TryGetValue(chatKey, out var data) && data.chattingThread.IsAlive)
             {
-                if (chattingThreadDic.ContainsKey(hostChangedChattingRoomNum) &&
-                    chattingThreadDic[hostChangedChattingRoomNum].chattingThread.IsAlive)
-                {
-                    await chattingThreadDic[hostChangedChattingRoomNum].chattingWindow.ReceiveHostChangedMessage(hostChangedList, message);
-                }
+                await data.chattingWindow.ReceiveHostChangedMessage(parts.ToList(), message);
+                Debug.WriteLine($"[HOST_CHANGED] delivered -> chatKey={chatKey}");
+            }
+            else
+            {
+                Debug.WriteLine($"[HOST_CHANGED] window not found -> chatKey={chatKey}");
             }
         }
 
@@ -768,13 +748,13 @@ namespace SlimMy.ViewModel
                         chattingThreadDic.Remove(chatKey);
                         chatWindowReadyMap.Remove(chatKey);
 
-                    var transport = UserSession.Instance.CurrentUser?.Transport;
+                        var transport = UserSession.Instance.CurrentUser?.Transport;
 
                         string leaveRoomData = $"{chatroomID}:{userId}";
                         byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
 
                         await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
-                };
+                    };
 
                     // 열 때, 동일한 chatKey 로 저장
                     chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey);

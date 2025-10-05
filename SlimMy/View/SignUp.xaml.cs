@@ -1,7 +1,10 @@
 using SlimMy.Model;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -26,6 +29,34 @@ namespace SlimMy.View
         public SignUp()
         {
             InitializeComponent();
+
+            Loaded += async (_, __) =>
+            {
+                try
+                {
+                    INetworkTransport transport = UserSession.Instance.CurrentUser?.Transport;
+                    bool createdTemp = false;
+
+                    if (transport == null)
+                    {
+                        var t = new TlsTcpTransport();
+
+                        // 서버 인증서가 CN/SAN=localhost 라면 반드시 "localhost"로 접속
+                        await t.ConnectAsync("localhost", 9999);
+                        if (UserSession.Instance.CurrentUser == null)
+                            UserSession.Instance.CurrentUser = new User();
+                        UserSession.Instance.CurrentUser.Transport = t;
+
+                        transport = t;
+                    }
+                    Debug.WriteLine("[SignUp] Connected.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[SignUp] Connect failed: {ex}");
+                    MessageBox.Show("서버 연결 실패");
+                }
+            };
         }
 
         public static Random randomNum = new Random(); // 전역변수
@@ -38,55 +69,50 @@ namespace SlimMy.View
         // 이메일 인증 발송
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            string SystemMailId = "pjsu200@naver.com";
-            string SystemMailPwd = "qkrwltn848501!";
-            string recipientEmail = email.Text;
+            string from = "pjsu200@naver.com";
+            string appPwd = "4M95R3EM6RHM";
+            var to = (email.Text ?? "").Trim();
+
             _repo = new Repo(_connstring);
 
-            // 이메일 유효성 검사
-            if (Validator.Validator.ValidateEmail(recipientEmail) && _repo.DuplicateEmail(recipientEmail))
+            if (!(Validator.Validator.ValidateEmail(to) && _repo.DuplicateEmail(to)))
             {
-                MailMessage mail = new MailMessage();
+                MessageBox.Show("이메일 형식이 올바르지 않거나 이미 사용 중입니다.");
+                return;
+            }
 
-                // 받는 사람 이메일
-                mail.To.Add(email.Text);
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-                // 보내는 사람 이메일
-                mail.From = new MailAddress(SystemMailId);
+            using var msg = new MailMessage();
+            msg.From = new MailAddress(from);
+            msg.To.Add(to);
+            msg.Subject = "SlimMy 회원가입 본인인증";
+            msg.Body = $"SlimMy 이메일 인증 번호 : {SignUp.checkNum}";
+            msg.SubjectEncoding = Encoding.UTF8;
+            msg.BodyEncoding = Encoding.UTF8;
 
-                // 이메일 제목
-                mail.Subject = "SlimMy 회원가입 본인인증";
+            using var smtp = new SmtpClient("smtp.naver.com", 587)
+            {
+                EnableSsl = true,                   // 587 = STARTTLS
+                UseDefaultCredentials = false,
+                Credentials = new NetworkCredential(from, appPwd),
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                Timeout = 20000
+            };
 
-                // 이메일 내용
-                mail.Body = "SlimMy 이메일 인증 번호 : " + checkNum.ToString();
-
-                mail.IsBodyHtml = true;
-                mail.Priority = MailPriority.High;
-                mail.DeliveryNotificationOptions = DeliveryNotificationOptions.OnFailure;
-
-                mail.SubjectEncoding = Encoding.UTF8;
-                mail.BodyEncoding = Encoding.UTF8;
-
-                SmtpClient smtp = new SmtpClient();
-                smtp.Host = "smtp.naver.com";
-                smtp.Port = 587; // 또는 465
-                smtp.Timeout = 10000;
-                smtp.UseDefaultCredentials = false; // 네이버는 기본 자격 증명을 사용하지 않음
-                smtp.EnableSsl = true; // 또는 false에 따라 사용하는 포트에 따라 설정
-                smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                smtp.Credentials = new System.Net.NetworkCredential(SystemMailId, SystemMailPwd);
-
-                try
-                {
-                    smtp.Send(mail);
-                    smtp.Dispose();
-
-                    MessageBox.Show("인증번호 전송완료", "전송 완료");
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.ToString());
-                }
+            try
+            {
+                smtp.Send(msg);
+                MessageBox.Show("인증번호 전송완료", "전송 완료");
+            }
+            catch (SmtpException ex)
+            {
+                // 서버가 왜 거절했는지 정확히 보여줌
+                MessageBox.Show($"SMTP 오류: {ex.StatusCode}\n{ex.Message}\n{ex.InnerException?.Message}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
             }
         }
 
