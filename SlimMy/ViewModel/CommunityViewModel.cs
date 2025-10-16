@@ -403,7 +403,9 @@ namespace SlimMy.ViewModel
         // 채팅 목록
         public async Task RefreshChatRooms()
         {
-            var chatRooms = await _repo.SelectChatRoom();
+            var session = UserSession.Instance;
+
+            var chatRooms = await _repo.SelectChatRoom(session.CurrentUser.UserId);
 
             ChatRooms.Clear(); // 기존 데이터 제거
 
@@ -421,9 +423,11 @@ namespace SlimMy.ViewModel
 
         public async Task ChattingRefreshChatRooms()
         {
+            var session = UserSession.Instance;
+
             await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                var chatRooms = await _repo.SelectChatRoom(); // DB에서 최신 데이터 가져오기
+                var chatRooms = await _repo.SelectChatRoom(session.CurrentUser.UserId); // DB에서 최신 데이터 가져오기
 
                 if (AllData == null)
                     AllData = new ObservableCollection<ChatRooms>();

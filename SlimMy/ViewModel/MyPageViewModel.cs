@@ -1,5 +1,6 @@
 using SlimMy.Model;
 using SlimMy.Repository;
+using SlimMy.Response;
 using SlimMy.Service;
 using SlimMy.View;
 using System;
@@ -8,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -203,14 +205,29 @@ namespace SlimMy.ViewModel
         {
             User userDateBundle = UserSession.Instance.CurrentUser;
 
-            User userData = await _repo.GetUserData(userDateBundle.UserId);
+            var session = UserSession.Instance;
 
-            UserSession.Instance.CurrentUser.Weight = userData.Weight;
-            UserSession.Instance.CurrentUser.Height = userData.Height;
-            UserSession.Instance.CurrentUser.BirthDate = userData.BirthDate;
-            UserSession.Instance.CurrentUser.Gender = userData.Gender;
-            UserSession.Instance.CurrentUser.DietGoal = userData.DietGoal;
-            UserSession.Instance.CurrentUser.NickName = userData.NickName;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.WaitMyDataAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "MyData", userID = userDateBundle.UserId };
+            await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<MyDataRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            UserSession.Instance.CurrentUser.Weight = res.userData.Weight;
+            UserSession.Instance.CurrentUser.Height = res.userData.Height;
+            UserSession.Instance.CurrentUser.BirthDate = res.userData.BirthDate;
+            UserSession.Instance.CurrentUser.Gender = res.userData.Gender;
+            UserSession.Instance.CurrentUser.DietGoal = res.userData.DietGoal;
+            UserSession.Instance.CurrentUser.NickName = res.userData.NickName;
 
             UserData = UserSession.Instance.CurrentUser;
             OnPropertyChanged(nameof(UserData));
@@ -249,7 +266,21 @@ namespace SlimMy.ViewModel
                 else
                 {
                     DateTime now = DateTime.Now;
-                    int weightCount = await _weightRepo.GetTodayWeightCompleted(now, UserData.UserId);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.TodayWeightCompletedAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId };
+                    await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<TodayWeightCompletedRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // BMI 계산
                     double heightValue = double.Parse(Height) / 100.0;
@@ -258,17 +289,73 @@ namespace SlimMy.ViewModel
                     double bmiValue = weightValue / (heightValue * heightValue);
 
                     // 몸무게 정보
-                    if (weightCount > 0)
+                    if (res.count > 0)
                     {
                         // 사용자 정보
-                        await _repo.UpdateMyPageUserData(UserData.UserId, double.Parse(Height), Password, DietGoal);
-                        await _weightRepo.UpdatetMyPageWeight(UserData.UserId, now, double.Parse(Weight), double.Parse(Height), bmiValue);
+                        var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                        var myPageUserDatawaitTask = session.Responses.UpdateMyPageUserDataAsync(TimeSpan.FromSeconds(5));
+
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
+                        await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
+
+                        var userDataRespPayload = await myPageUserDatawaitTask;
+
+                        var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
+                            userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (userDataRes?.ok != true)
+                            throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
+
+
+                        var updatetMyPageWeighttransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                        var updatetMyPageWeightwaitTask = session.Responses.UpdatetMyPageWeightAsync(TimeSpan.FromSeconds(5));
+
+                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
+                        await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
+
+                        var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
+
+                        var updatetMyPageWeightRes = JsonSerializer.Deserialize<UpdatetMyPageWeightRes>(
+                            updatetMyPageWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (updatetMyPageWeightRes?.ok != true)
+                            throw new InvalidOperationException($"server not ok: {res?.message}");
                     }
                     else
                     {
                         // 사용자 정보
-                        await _repo.UpdateMyPageUserData(UserData.UserId, double.Parse(Height), Password, DietGoal);
-                        await _weightRepo.InsertMyPageWeight(UserData.UserId, now, double.Parse(Weight), double.Parse(Height), bmiValue);
+                        var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                        var myPageUserDatawaitTask = session.Responses.UpdateMyPageUserDataAsync(TimeSpan.FromSeconds(5));
+
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
+                        await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
+
+                        var userDataRespPayload = await myPageUserDatawaitTask;
+
+                        var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
+                            userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (userDataRes?.ok != true)
+                            throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
+
+                        // 몸무게 정보 저장
+                        var insertMyPageWeightTransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                        var insertMyPageWeightWaitTask = session.Responses.InsertMyPageWeightAsync(TimeSpan.FromSeconds(5));
+
+                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
+                        await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
+
+                        var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
+
+                        var insertMyPageWeightRes = JsonSerializer.Deserialize<InsertMyPageWeightRes>(
+                            insertMyPageWeightPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (insertMyPageWeightRes?.ok != true)
+                            throw new InvalidOperationException($"server not ok: {insertMyPageWeightRes?.message}");
                     }
                 }
             }
@@ -314,19 +401,23 @@ namespace SlimMy.ViewModel
         public async Task PasswordCheckPrint()
         {
             User userDateBundle = UserSession.Instance.CurrentUser;
-            User userData = await _repo.GetUserData(userDateBundle.UserId);
+
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetUserDataAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetUserData", userID = userDateBundle.UserId, password = CurrentPassword };
+            await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetUserDataRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             // 현재 비밀번호 확인
-            if (userData.Password.Equals(CurrentPassword))
-            {
-                PasswordCheck = true;
-                PasswordNoCheck = false;
-            }
-            else
-            {
-                PasswordCheck = false;
-                PasswordNoCheck = true;
-            }
+            PasswordCheck = res.match;
+            PasswordNoCheck = !res.match;
         }
 
         // 새 비밀번호 일치 여부

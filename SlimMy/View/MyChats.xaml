@@ -49,13 +49,12 @@
                     Background="White"
                     Width="350"
                     Height="40"
-                    Margin="0,0,10,0"
-                    Padding="10">
+                    Margin="0,0,10,0">
                     <TextBox x:Name="SearchTextBox"
                          VerticalAlignment="Center"
                          BorderThickness="0"
                          Background="Transparent"
-                         FontSize="16"
+                         FontSize="12"
                          Text="{Binding SearchWord, UpdateSourceTrigger=PropertyChanged}" />
                 </Border>
 
@@ -93,7 +92,6 @@
                     <GridViewColumn Header="카테고리" Width="100" DisplayMemberBinding="{Binding Category}"/>
                 </GridView>
             </ListView.View>
-            
             <ListView.ItemTemplate>
         <DataTemplate>
             <Grid Margin="5">

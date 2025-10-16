@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Response;
 using SlimMy.Service;
 using SlimMy.Singleton;
 using System;
@@ -7,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -30,7 +32,7 @@ namespace SlimMy.ViewModel
         public ObservableCollection<ChatMessageStatus> ChatMessageStatus { get; set; } // 메시지를 읽지 않았을 때 아이콘으로 표시하는 기능
         private int _currentPage; // 현재 페이지 번호
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
-        private int _pageSize = 5; // 페이지당 항목 수
+        private int _pageSize = 3; // 페이지당 항목 수
 
         public ObservableCollection<ChatRooms> CurrentPageData
         {
@@ -270,7 +272,6 @@ namespace SlimMy.ViewModel
 
             SearchCommand = new AsyncRelayCommand(Search);
 
-            // 예제 데이터 생성
             AllData = ChatRooms;
             currentUser = UserSession.Instance.CurrentUser;
 
@@ -337,60 +338,39 @@ namespace SlimMy.ViewModel
         // 채팅방에 참여한 사용자 아이디들을 서버로 전송
         public async Task SendRoomUserIds(ChatRooms selectedChatRoom, User currentUser)
         {
-            
             try
             {
-                // 특정 채팅방에 참가한 사용자들 아이디 모음
-                var userIds = await _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport
+                    ?? throw new InvalidOperationException("not connected");
 
-                if (userIds == null || userIds.Count == 0)
+                // 응답 대기 설치
+                var waitTask = session.Responses.WaitChatRoomUserListAsync(TimeSpan.FromSeconds(5));
+
+                // 요청 전송
+                var req = new { cmd = "ChatRoomUserList", ChatRoomID = selectedChatRoom.ChatRoomId.ToString() };
+                await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                // 수신 루프가 응답을 잡아주면 도착
+                var respPayload = await waitTask;
+
+                // 특정 채팅방에 참가한 사용자들 아이디 모음
+                var res = JsonSerializer.Deserialize<ChatRoomUserListRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
+
+                if (res.users == null || res.users.Count == 0)
                 {
                     MessageBox.Show("No user IDs found for the selected chat room.", "Debug Info");
                     return;
                 }
 
                 // 문자열을 ChatUserList 객체로 변환
-                List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id,"")).ToList();
+                List<ChatUserList> userList = res.users.Select(id => new ChatUserList(id,"")).ToList();
 
                 CommunityViewModel.GroupChattingReceivers = userList;
-
-                // 사용자의 Uid 가져오기
-                string groupChattingUserStrData = myUid.ToString();
-
-                // DB에서 채팅방 참가한 사용자 Uid들을 groupChattingUserStrData 담아서 서버로 전송
-                foreach (var item in CommunityViewModel.GroupChattingReceivers)
-                {
-                    // groupChattingUserStrData에 포함되지 않는 사용자 Uid만 저장
-                    // 조건문이 없다면 userList에 중복된 내용이 서버로 전송됨
-                    // 두명 이상일 때 "#"가 포함되기 때문에 #가 포함된 채팅방만 창이 실행되는거였음
-                    if (!groupChattingUserStrData.Contains(item.UsersID))
-                    {
-                        groupChattingUserStrData += "#";
-                        groupChattingUserStrData += item.UsersID;
-                    }
-                    else
-                    {
-                        groupChattingUserStrData += "#";
-                    }
-                }
-
-                ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
-
-                string chattingStartMessage = $"{currentUser.UserId}:{currentChatRoom.ChatRoomId}";
-                byte[] chattingStartMsg = Encoding.UTF8.GetBytes(chattingStartMessage);
-
-                int header = 1 + chattingStartMessage.Length;
-                byte[] headerData = BitConverter.GetBytes(header);
-
-                byte msgType = (byte)MessageType.UserJoinChatRoom;
-
-                await currentUser.Client.GetStream().WriteAsync(headerData, 0, headerData.Length);
-
-                await currentUser.Client.GetStream().WriteAsync(new byte[] { msgType }, 0, 1);
-
-                await currentUser.Client.GetStream().WriteAsync(chattingStartMsg, 0, chattingStartMsg.Length);
-
-                await currentUser.Client.GetStream().FlushAsync();
             }
             catch (Exception ex)
             {
@@ -414,20 +394,31 @@ namespace SlimMy.ViewModel
         // 채팅 목록
         public async Task RefreshChatRooms()
         {
-            User currentUser = UserSession.Instance.CurrentUser;
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
 
-            var chatRooms = await _repo.MyChatRooms(currentUser.UserId);
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitChatRoomPageListAsync(TimeSpan.FromSeconds(5));
 
-            ChatRooms.Clear(); // 기존 데이터 제거
+            // 요청 전송
+            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
 
-            foreach (var chatRoom in chatRooms)
-            {
-                ChatRooms.Add(chatRoom); // 새 데이터 추가
-            }
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<ChatRoomPageListRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                // ListView에 바인딩된 데이터 업데이트
+                ChatRooms.Clear();
+                foreach (var r in res.rooms)
+                    ChatRooms.Add(r);
                 OnPropertyChanged(nameof(ChatRooms));
             });
         }
@@ -435,11 +426,32 @@ namespace SlimMy.ViewModel
         // 채팅방 검색
         public async Task Search(object parameter)
         {
-            var chatRommsSearch = await _repo.MyChatRoomsSearch(SearchWord);
+            if (CurrentPageData == null)
+                CurrentPageData = new ObservableCollection<ChatRooms>();
+            else
+                CurrentPageData.Clear();
 
-            CurrentPageData.Clear(); // 기존 데이터 제거
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
 
-            foreach (var chatRoom in chatRommsSearch)
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitMyChatRoomSearchWordAsync(TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<MyChatRoomSearchWordRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            foreach (var chatRoom in res.rooms)
             {
                 CurrentPageData.Add(chatRoom); // 새 데이터 추가
             }
@@ -448,34 +460,6 @@ namespace SlimMy.ViewModel
             {
                 // ListView에 바인딩된 데이터 업데이트
                 OnPropertyChanged(nameof(CurrentPageData));
-            });
-        }
-
-        // 페이징에 따른 채팅 목록
-        public async Task ChattingRefreshChatRooms()
-        {
-            await Application.Current.Dispatcher.InvokeAsync(async() =>
-            {
-                var chatRooms = await _repo.SelectChatRoom(); // DB에서 최신 데이터 가져오기
-
-                if (AllData == null)
-                    AllData = new ObservableCollection<ChatRooms>();
-
-                AllData.Clear();
-
-                foreach (var chatRoom in chatRooms)
-                {
-                    AllData.Add(chatRoom);
-                }
-
-                // 총 페이지 수 재계산
-                TotalPages = (int)Math.Ceiling((double)AllData.Count / _pageSize);
-
-                if (CurrentPage > TotalPages)
-                    CurrentPage = TotalPages;
-
-                // 현재 페이지 데이터 업데이트
-                UpdateCurrentPageData();
             });
         }
 

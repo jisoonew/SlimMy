@@ -572,7 +572,7 @@ namespace SlimMy
         }
 
         // 채팅방 출력
-        public async Task<IEnumerable<ChatRooms>> SelectChatRoom()
+        public async Task<IEnumerable<ChatRooms>> SelectChatRoom(Guid chatRoomId)
         {
             var chatRooms = new List<ChatRooms>();
 
@@ -582,9 +582,14 @@ namespace SlimMy
                 {
                     await connection.OpenAsync();
 
-                    string sql = "select ChatRoomID, ChatRoomName, Description, Category from ChatRooms";
+                    byte[] chatRoomIdBytes = chatRoomId.ToByteArray();
+
+                    string sql = "select cr.ChatRoomID, cr.ChatRoomName, cr.Description, cr.Category from ChatRooms cr " +
+                        "left join userchatrooms uc on cr.chatroomid = uc.chatroomid where userid = :userid";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
+                        command.Parameters.Add(new OracleParameter("userid", OracleDbType.Raw, chatRoomIdBytes, ParameterDirection.Input));
+
                         using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {
                             while (reader.Read())
@@ -692,7 +697,7 @@ namespace SlimMy
         }
 
         // 내가 참여한 채팅방 출력
-        public async Task<IEnumerable<ChatRooms>> MyChatRoomsSearch(String searchWord)
+        public async Task<IEnumerable<ChatRooms>> MyChatRoomsSearch(String searchWord, Guid userID)
         {
             var chatRooms = new List<ChatRooms>();
 
@@ -702,10 +707,13 @@ namespace SlimMy
                 {
                     await connection.OpenAsync();
 
-                    string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE c.ChatRoomName = :searchWord or c.Description = :searchWord or c.Category = :searchWord";
+                    byte[] userIdBytes = userID.ToByteArray();
+
+                    string sql = "SELECT c.ChatRoomID, c.ChatRoomName, c.Description, c.Category FROM chatrooms c WHERE (c.ChatRoomName = :searchWord OR c.Description = :searchWord OR c.Category = :searchWord) AND uc.userid = :userID";
                     using (OracleCommand command = new OracleCommand(sql, connection))
                     {
                         command.Parameters.Add(new OracleParameter("searchWord", searchWord));
+                        command.Parameters.Add(new OracleParameter("userID", OracleDbType.Raw, userIdBytes, ParameterDirection.Input));
 
                         using (OracleDataReader reader = await command.ExecuteReaderAsync())
                         {

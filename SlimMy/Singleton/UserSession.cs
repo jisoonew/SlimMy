@@ -13,6 +13,7 @@ namespace SlimMy
         private static UserSession _instance;
         public User CurrentUser { get; set; }
         public INetworkTransport Transport { get; set; }
+        public ResponseHub Responses { get; } = new ResponseHub();
 
         private UserSession() { }
 
