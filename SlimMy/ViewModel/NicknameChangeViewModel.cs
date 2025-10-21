@@ -1,10 +1,12 @@
 using SlimMy.Model;
 using SlimMy.Repository;
+using SlimMy.Response;
 using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -94,9 +96,23 @@ namespace SlimMy.ViewModel
         // 닉네임 여부
         public async Task NickNameCheckPrint(object parameter)
         {
-            var allUserNickName = await _repo.AllNickName();
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            bool isDuplicate = allUserNickName.Any(name => name.Equals(NewNickname));
+            var waitTask = session.Responses.NickNameCheckPrintAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "NickNameCheckPrint"};
+            await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<NickNameCheckPrintRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            bool isDuplicate = res.nickNames.Any(name => name.Equals(NewNickname));
 
             // 닉네임 중복
             if (isDuplicate)
@@ -137,6 +153,22 @@ namespace SlimMy.ViewModel
                 if (NickNameCheck)
                 {
                     await _repo.NickNameSave(userData.UserId, NewNickname);
+
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.NickNameSaveAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname };
+                    await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<NickNameSaveRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // 닉네임 화면 닫기
                     await _navigationService.NavigateToNickNameClose();

@@ -23,6 +23,9 @@ namespace SlimMy.Service
         private TaskCompletionSource<byte[]> _UpdatetMyPageWeightTcs;
         private TaskCompletionSource<byte[]> _InsertMyPageWeightTcs;
         private TaskCompletionSource<byte[]> _getUserDataTcs;
+        private TaskCompletionSource<byte[]> _deleteAccountViewTcs;
+        private TaskCompletionSource<byte[]> _nickNameCheckPrintTcs;
+        private TaskCompletionSource<byte[]> _nickNameSaveTcs;
 
         // 채팅방 목록 응답을 기다릴 준비를 하고 Task 반환
         public Task<byte[]> WaitChatRoomListAsync(TimeSpan timeout)
@@ -183,6 +186,51 @@ namespace SlimMy.Service
             return tcs.Task;
         }
 
+        public Task<byte[]> DeleteAccountViewAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deleteAccountViewTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deleteAccountViewTcs == tcs) _deleteAccountViewTcs = null; }
+                tcs.TrySetException(new TimeoutException("UpdateMyPageUserDataAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> NickNameCheckPrintAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _nickNameCheckPrintTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_nickNameCheckPrintTcs == tcs) _nickNameCheckPrintTcs = null; }
+                tcs.TrySetException(new TimeoutException("UpdateMyPageUserDataAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> NickNameSaveAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _nickNameSaveTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_nickNameSaveTcs == tcs) _nickNameSaveTcs = null; }
+                tcs.TrySetException(new TimeoutException("UpdateMyPageUserDataAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
         // 수신 루프가 호출, 들어온 메시지 (type, payload)가 기다리던 응답이면 TCS를 완료
         public bool TryResolve(MessageType type, byte[] payload)
         {
@@ -243,6 +291,21 @@ namespace SlimMy.Service
                         if (_getUserDataTcs == null) return false;
                         _getUserDataTcs.TrySetResult(payload);
                         _getUserDataTcs = null;
+                        return true;
+                    case MessageType.DeleteAccountViewRes:
+                        if (_deleteAccountViewTcs == null) return false;
+                        _deleteAccountViewTcs.TrySetResult(payload);
+                        _deleteAccountViewTcs = null;
+                        return true;
+                    case MessageType.NickNameCheckPrintRes:
+                        if (_nickNameCheckPrintTcs == null) return false;
+                        _nickNameCheckPrintTcs.TrySetResult(payload);
+                        _nickNameCheckPrintTcs = null;
+                        return true;
+                    case MessageType.NickNameSaveRes:
+                        if (_nickNameSaveTcs == null) return false;
+                        _nickNameSaveTcs.TrySetResult(payload);
+                        _nickNameSaveTcs = null;
                         return true;
                     default:
                         return false;

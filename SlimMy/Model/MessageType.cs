@@ -35,6 +35,12 @@ namespace SlimMy.Model
         InsertMyPageWeight = 29,
         InsertMyPageWeightRes = 30,
         VerifyPassword = 31,
-        VerifyPasswordRes = 32
+        VerifyPasswordRes = 32,
+        DeleteAccountView = 33,
+        DeleteAccountViewRes = 34,
+        NickNameCheckPrint = 35,
+        NickNameCheckPrintRes = 36,
+        NickNameSave = 37,
+        NickNameSaveRes = 38
     }
 }

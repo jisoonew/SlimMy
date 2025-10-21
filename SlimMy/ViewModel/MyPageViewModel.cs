@@ -381,7 +381,21 @@ namespace SlimMy.ViewModel
             else
             {
                 //테이블 deleted_at 컬럼에 해당 날짜와 시간 업데이트
-                await _repo.DeleteAccountView(UserData.UserId);
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.DeleteAccountViewAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId };
+                await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<DeleteAccountViewRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
 
                 //서버 연결 해제
                 if (UserSession.Instance.CurrentUser?.Client != null)
