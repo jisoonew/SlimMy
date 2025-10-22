@@ -304,6 +304,36 @@ namespace SlimMy.Service
             }
         }
 
+        public async Task NavigateToPlannerFrameAsync(Type pageType)
+        {
+            if (_frame == null)
+            {
+                MessageBox.Show("Navigation Frame이 설정되지 않았습니다.");
+                return;
+            }
+
+            object pageInstance = null;
+
+            if (pageType == typeof(View.Planner))
+            {
+                var myChatsViewModel = await ViewModel.PlannerViewModel.CreateAsync();
+                pageInstance = new View.Planner { DataContext = myChatsViewModel };
+            }
+            else if (pageType.IsSubclassOf(typeof(Page)))
+            {
+                pageInstance = Activator.CreateInstance(pageType);
+            }
+
+            if (pageInstance is Page page)
+            {
+                _frame.Navigate(page);
+            }
+            else
+            {
+                MessageBox.Show("올바른 Page 타입이 아닙니다.");
+            }
+        }
+
         // 로그인 -> 메인 화면
         public void NavigateToMainWindow(MainPageViewModel mainPageViewModel)
         {

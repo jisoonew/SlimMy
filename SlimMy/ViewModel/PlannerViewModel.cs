@@ -1,10 +1,12 @@
 using SlimMy.Model;
+using SlimMy.Response;
 using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -13,7 +15,6 @@ namespace SlimMy.ViewModel
 {
     public class PlannerViewModel : BaseViewModel
     {
-        private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
 
         private readonly INavigationService _navigationService;
@@ -152,11 +153,13 @@ namespace SlimMy.ViewModel
 
         public IEnumerable<DateTime> HighlightDates { get; set; }
 
+        public PlannerViewModel(IDataService dataService)
+        {
+            Initialize();
+        }
 
         public PlannerViewModel()
         {
-            _repo = new Repo(_connstring);
-
             _navigationService = new NavigationService();
 
             ExerciseCommand = new Command(AddExerciseNavigation);
@@ -169,10 +172,6 @@ namespace SlimMy.ViewModel
 
             DeleteCommand = new RelayCommand(DeletePlannerPrint);
 
-            SaveCommand = new RelayCommand(InsertPlannerPrint);
-
-            DeletePlannerGroupCommand = new RelayCommand(AllDeletePlanner);
-
             NewPlannerCommand = new RelayCommand(CleanPlanner);
 
             SelectedDate = DateTime.Now;
@@ -184,6 +183,20 @@ namespace SlimMy.ViewModel
         };
 
             Items.Clear();
+        }
+
+        private async Task Initialize()
+        {
+            SaveCommand = new AsyncRelayCommand(InsertPlannerPrint);
+
+            DeletePlannerGroupCommand = new AsyncRelayCommand(AllDeletePlanner);
+        }
+
+        public static async Task<PlannerViewModel> CreateAsync()
+        {
+            var instance = new PlannerViewModel();
+            await instance.Initialize();
+            return instance;
         }
 
         // 운동 추가 뷰
@@ -251,7 +264,7 @@ namespace SlimMy.ViewModel
         }
 
         // 플래너 저장
-        public void InsertPlannerPrint(object parameter)
+        public async Task InsertPlannerPrint(object parameter)
         {
             string msg = string.Format("저장하시겠습니까?");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -267,59 +280,160 @@ namespace SlimMy.ViewModel
                 if (SelectedPlannerGroup != null)
                 {
                     // 해당 플래너가 존재하는가?
-                    var originalListFromDb = _repo.GetPlannerItemsByGroupId(SelectedPlannerGroup.PlannerGroupId);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.InsertPlannerPrintAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "InsertPlannerPrint", plannerGroup = SelectedPlannerGroup.PlannerGroupId };
+                    await transport.SendFrameAsync((byte)MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<InsertPlannerPrintRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // 현재 플래너 목록의 플래너 아이디를 가져온다
                     var currentItemIds = new HashSet<Guid>(Items.Select(i => i.PlannerID));
 
                     // 현재 플래너 목록의 플래너 아이디에 DB에 존재하는 데이터와 일치하지 않는 아이디
                     // 즉, DB에는 있고, 현재 플래너 목록에는 없는 플래너 아이디를 추출
-                    var deletedItems = originalListFromDb.Where(dbItem => !currentItemIds.Contains(dbItem.PlannerID));
+                    var deletedItems = res.plannerID.Where(dbItem => !currentItemIds.Contains(dbItem.PlannerID));
 
                     if (deletedItems != null)
                     {
                         foreach (var a in deletedItems)
                         {
                             // 현재 플래너 목록에 없는 플래너 아이디는 모두 삭제
-                            _repo.DeletePlannerList(a.PlannerID);
+                            var deleteSession = UserSession.Instance;
+                            var deleteTransport = deleteSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                            var deleteWaitTask = session.Responses.DeletePlannerListAsync(TimeSpan.FromSeconds(5));
+
+                            var deleteReq = new { cmd = "DeletePlannerList", plannerID = a.PlannerID };
+                            await deleteTransport.SendFrameAsync((byte)MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
+
+                            var deleteRespPayload = await deleteWaitTask;
+
+                            var deleteRes = JsonSerializer.Deserialize<DeletePlannerListRes>(
+                                deleteRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                            if (deleteRes?.ok != true)
+                                throw new InvalidOperationException($"server not ok: {deleteRes?.message}");
                         }
                     }
                 }
-               
-                if (_repo.ExerciseCheck(currentUser.UserId, SelectedDate))
+
+                var exerciseSession = UserSession.Instance;
+                var exerciseTransport = exerciseSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var exerciseWaitTask = exerciseSession.Responses.ExerciseCheckAsync(TimeSpan.FromSeconds(5));
+
+                var exerciseReq = new { cmd = "ExerciseCheck", userId = currentUser.UserId, selectedDate = SelectedDate };
+                await exerciseTransport.SendFrameAsync((byte)MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
+
+                var exerciseRespPayload = await exerciseWaitTask;
+
+                var exerciseRes = JsonSerializer.Deserialize<ExerciseCheckRes>(
+                    exerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (exerciseRes?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {exerciseRes?.message}");
+
+                if (exerciseRes.exerciseCheck)
                 {
                     // 플래너 리스트 수정
-                    _repo.UpdatePlanner(SelectedPlannerGroup.PlannerGroupId, PlannerTitle, Items.ToList());
+                    var UpdatePlannerSession = UserSession.Instance;
+                    var UpdatePlannerTransport = UpdatePlannerSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.UpdatePlannerAsync(TimeSpan.FromSeconds(5));
+
+                    var UpdatePlannerReq = new { cmd = "UpdatePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList() };
+                    await UpdatePlannerTransport.SendFrameAsync((byte)MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
+
+                    var UpdatePlannerRespPayload = await UpdatePlannerWaitTask;
+
+                    var UpdatePlannerRes = JsonSerializer.Deserialize<UpdatePlannerRes>(
+                        UpdatePlannerRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (UpdatePlannerRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {UpdatePlannerRes?.message}");
                 }
                 else
                 {
                     // 플래너 저장
-                    _repo.InsertPlanner(currentUser.UserId, PlannerTitle, SelectedDate, Items.ToList());
+                    var InsertPlannerSession = UserSession.Instance;
+                    var InsertPlannerTransport = InsertPlannerSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var InsertPlannerWaitTask = InsertPlannerSession.Responses.InsertPlannerAsync(TimeSpan.FromSeconds(5));
+
+                    var InsertPlannerReq = new { cmd = "InsertPlanner", userId = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList() };
+                    await InsertPlannerTransport.SendFrameAsync((byte)MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
+
+                    var InsertPlannerRespPayload = await InsertPlannerWaitTask;
+
+                    var InsertPlannerRes = JsonSerializer.Deserialize<InsertPlannerRes>(
+                        InsertPlannerRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (InsertPlannerRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {InsertPlannerRes?.message}");
                 }
 
             }
         }
 
         // 플래너 출력
-        public void PlannerPrint()
+        public async Task PlannerPrint()
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
             SelectedDate = SelectedDate.Date;
 
-            var resultList = _repo.ExerciseList(currentUser.UserId, SelectedDate);
+            var PlannerPrintSession = UserSession.Instance;
+            var PlannerPrintTransport = PlannerPrintSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var PlannerPrintWaitTask = PlannerPrintSession.Responses.PlannerPrintAsync(TimeSpan.FromSeconds(5));
+
+            var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate };
+            await PlannerPrintTransport.SendFrameAsync((byte)MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
+
+            var PlannerPrintRespPayload = await PlannerPrintWaitTask;
+
+            var PlannerPrintRes = JsonSerializer.Deserialize<PlannerPrintRes>(
+                PlannerPrintRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (PlannerPrintRes?.ok != true)
+                throw new InvalidOperationException($"server not ok: {PlannerPrintRes?.message}");
 
             // 특정 날짜의 콤보 박스에 플래너 내역 가져오기
-            PlannerGroups = new ObservableCollection<PlannerWithGroup>(resultList);
+            PlannerGroups = new ObservableCollection<PlannerWithGroup>(PlannerPrintRes.plannerPrint);
         }
 
         // 특정 날짜에 해당하는 플래너 내역 출력
-        public void SelectedDatePlanner()
+        public async Task SelectedDatePlanner()
         {
             if (UserSession.Instance.CurrentUser != null)
             {
-                var resultList = _repo.ExerciseList(UserSession.Instance.CurrentUser.UserId, SelectedDate.Date);
-                PlannerGroups = new ObservableCollection<PlannerWithGroup>(resultList);
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.ExerciseListAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "ExerciseList", userId = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date };
+                await transport.SendFrameAsync((byte)MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<ExerciseListRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
+
+                PlannerGroups = new ObservableCollection<PlannerWithGroup>(res.plannerGroups);
 
                 // 플래너 목록(콤보 박스)의 첫 번째 요소 혹은 null 반환
                 SelectedPlannerGroup = PlannerGroups.FirstOrDefault();
@@ -374,7 +488,7 @@ namespace SlimMy.ViewModel
         }
 
         // 해당 플래너 전체 삭제
-        public void AllDeletePlanner(object parameter)
+        public async Task AllDeletePlanner(object parameter)
         {
             string msg = string.Format("영구 삭제하시겠습니까?");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -385,7 +499,21 @@ namespace SlimMy.ViewModel
             else
             {
                 // 플래너 전체 삭제
-                _repo.DeletePlanner(SelectedPlannerGroup.PlannerGroupId);
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.DeletePlannerAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "DeletePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId };
+                await transport.SendFrameAsync((byte)MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<DeletePlannerRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
             }
         }
 

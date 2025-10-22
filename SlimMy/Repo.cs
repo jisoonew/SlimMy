@@ -1405,13 +1405,13 @@ namespace SlimMy
         }
 
         // 특정 플래너 목록 삭제
-        public void DeletePlannerList(Guid plannerID)
+        public async Task DeletePlannerList(Guid plannerID)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {
                 try
                 {
-                    connection.Open();
+                    await connection.OpenAsync();
 
                     string plannerSql = "delete from planner where plannerid = :plannerid";
 
@@ -1419,7 +1419,7 @@ namespace SlimMy
                     {
                         plannerCommand.Parameters.Add(new OracleParameter("plannerid", OracleDbType.Raw, plannerID.ToByteArray(), ParameterDirection.Input));
 
-                        plannerCommand.ExecuteNonQuery();
+                        await plannerCommand.ExecuteNonQueryAsync();
                     }
                 }
                 catch (Exception ex)
@@ -1430,13 +1430,13 @@ namespace SlimMy
         }
 
         // 플래너의 목록 아이디 출력
-        public List<PlanItem> GetPlannerItemsByGroupId(Guid plannerGroupID)
+        public async Task<List<PlanItem>> GetPlannerItemsByGroupId(Guid plannerGroupID)
         {
             var plannerItems = new List<PlanItem>();
 
             using (var connection = new OracleConnection(_connString))
             {
-                connection.Open();
+                await connection.OpenAsync();
 
                 string sql = @"SELECT plannerid, exercise_info_id, minutes, calories, iscompleted 
                        FROM planner 
@@ -1446,9 +1446,9 @@ namespace SlimMy
                 {
                     command.Parameters.Add(new OracleParameter("plannerGroupID", OracleDbType.Raw)).Value = plannerGroupID.ToByteArray();
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (reader.Read())
+                        while (await reader.ReadAsync())
                         {
                             var item = new PlanItem
                             {
@@ -1460,7 +1460,6 @@ namespace SlimMy
                     }
                 }
             }
-
             return plannerItems;
         }
 

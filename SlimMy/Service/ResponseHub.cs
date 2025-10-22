@@ -26,6 +26,14 @@ namespace SlimMy.Service
         private TaskCompletionSource<byte[]> _deleteAccountViewTcs;
         private TaskCompletionSource<byte[]> _nickNameCheckPrintTcs;
         private TaskCompletionSource<byte[]> _nickNameSaveTcs;
+        private TaskCompletionSource<byte[]> _insertPlannerPrintTcs;
+        private TaskCompletionSource<byte[]> _deletePlannerListTcs;
+        private TaskCompletionSource<byte[]> _exerciseCheckTcs;
+        private TaskCompletionSource<byte[]> _updatePlannerTcs;
+        private TaskCompletionSource<byte[]> _insertPlannerTcs;
+        private TaskCompletionSource<byte[]> _plannerPrintTcs;
+        private TaskCompletionSource<byte[]> _deletePlannerTcs;
+        private TaskCompletionSource<byte[]> _exerciseListTcs;
 
         // 채팅방 목록 응답을 기다릴 준비를 하고 Task 반환
         public Task<byte[]> WaitChatRoomListAsync(TimeSpan timeout)
@@ -231,6 +239,126 @@ namespace SlimMy.Service
             return tcs.Task;
         }
 
+        public Task<byte[]> InsertPlannerPrintAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertPlannerPrintTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertPlannerPrintTcs == tcs) _insertPlannerPrintTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> DeletePlannerListAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deletePlannerListTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deletePlannerListTcs == tcs) _deletePlannerListTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> ExerciseCheckAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _exerciseCheckTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_exerciseCheckTcs == tcs) _exerciseCheckTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> UpdatePlannerAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _updatePlannerTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_updatePlannerTcs == tcs) _updatePlannerTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> InsertPlannerAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertPlannerTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertPlannerTcs == tcs) _insertPlannerTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> PlannerPrintAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _plannerPrintTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_plannerPrintTcs == tcs) _plannerPrintTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> DeletePlannerAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deletePlannerTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deletePlannerTcs == tcs) _deletePlannerTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> ExerciseListAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _exerciseListTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_exerciseListTcs == tcs) _exerciseListTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
         // 수신 루프가 호출, 들어온 메시지 (type, payload)가 기다리던 응답이면 TCS를 완료
         public bool TryResolve(MessageType type, byte[] payload)
         {
@@ -306,6 +434,46 @@ namespace SlimMy.Service
                         if (_nickNameSaveTcs == null) return false;
                         _nickNameSaveTcs.TrySetResult(payload);
                         _nickNameSaveTcs = null;
+                        return true;
+                    case MessageType.InsertPlannerPrintRes:
+                        if (_insertPlannerPrintTcs == null) return false;
+                        _insertPlannerPrintTcs.TrySetResult(payload);
+                        _insertPlannerPrintTcs = null;
+                        return true;
+                    case MessageType.DeletePlannerListRes:
+                        if (_deletePlannerListTcs == null) return false;
+                        _deletePlannerListTcs.TrySetResult(payload);
+                        _deletePlannerListTcs = null;
+                        return true;
+                    case MessageType.ExerciseCheckRes:
+                        if (_exerciseCheckTcs == null) return false;
+                        _exerciseCheckTcs.TrySetResult(payload);
+                        _exerciseCheckTcs = null;
+                        return true;
+                    case MessageType.UpdatePlannerRes:
+                        if (_updatePlannerTcs == null) return false;
+                        _updatePlannerTcs.TrySetResult(payload);
+                        _updatePlannerTcs = null;
+                        return true;
+                    case MessageType.InsertPlannerRes:
+                        if (_insertPlannerTcs == null) return false;
+                        _insertPlannerTcs.TrySetResult(payload);
+                        _insertPlannerTcs = null;
+                        return true;
+                    case MessageType.PlannerPrintRes:
+                        if (_plannerPrintTcs == null) return false;
+                        _plannerPrintTcs.TrySetResult(payload);
+                        _plannerPrintTcs = null;
+                        return true;
+                    case MessageType.DeletePlannerRes:
+                        if (_deletePlannerTcs == null) return false;
+                        _deletePlannerTcs.TrySetResult(payload);
+                        _deletePlannerTcs = null;
+                        return true;
+                    case MessageType.ExerciseListRes:
+                        if (_exerciseListTcs == null) return false;
+                        _exerciseListTcs.TrySetResult(payload);
+                        _exerciseListTcs = null;
                         return true;
                     default:
                         return false;

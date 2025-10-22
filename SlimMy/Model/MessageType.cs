@@ -41,6 +41,22 @@ namespace SlimMy.Model
         NickNameCheckPrint = 35,
         NickNameCheckPrintRes = 36,
         NickNameSave = 37,
-        NickNameSaveRes = 38
+        NickNameSaveRes = 38,
+        InsertPlannerPrint = 39,
+        InsertPlannerPrintRes = 40,
+        DeletePlannerList = 41,
+        DeletePlannerListRes = 42,
+        ExerciseCheck = 43,
+        ExerciseCheckRes = 44,
+        UpdatePlanner = 45,
+        UpdatePlannerRes = 46,
+        InsertPlanner = 47,
+        InsertPlannerRes = 48,
+        PlannerPrint = 49,
+        PlannerPrintRes = 50,
+        DeletePlanner = 51,
+        DeletePlannerRes = 52,
+        ExerciseList = 53,
+        ExerciseListRes = 54
     }
 }

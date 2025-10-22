@@ -223,7 +223,7 @@ namespace SlimMy.ViewModel
 
             User.BirthDate = new DateTime(1990, 1, 1);
 
-            PlannerCommand = new Command(NavigateToPlanner);
+            PlannerCommand = new AsyncRelayCommand(NavigateToPlanner);
 
             MyChatsCommand = new AsyncRelayCommand(MyChatsBtn);
 
@@ -240,13 +240,13 @@ namespace SlimMy.ViewModel
             LogoutCommand = new AsyncRelayCommand(LogoutBtn);
         }
 
-        public Command PlannerCommand { get; set; }
+        public AsyncRelayCommand PlannerCommand { get; set; }
 
 
         // 플래너 화면 전환
-        private void NavigateToPlanner(object parameter)
+        private async Task NavigateToPlanner(object parameter)
         {
-            _navigationService.NavigateToFrame(typeof(Planner));
+            await _navigationService.NavigateToPlannerFrameAsync(typeof(Planner));
         }
 
         // 몸무게 내역
