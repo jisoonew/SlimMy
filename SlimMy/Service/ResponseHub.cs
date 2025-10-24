@@ -34,6 +34,11 @@ namespace SlimMy.Service
         private TaskCompletionSource<byte[]> _plannerPrintTcs;
         private TaskCompletionSource<byte[]> _deletePlannerTcs;
         private TaskCompletionSource<byte[]> _exerciseListTcs;
+        private TaskCompletionSource<byte[]> _getWeightHistoryTcs;
+        private TaskCompletionSource<byte[]> _getTodayWeightCompletedTcs;
+        private TaskCompletionSource<byte[]> _insertWeightTcs;
+        private TaskCompletionSource<byte[]> _updatetWeightWeightTcs;
+        private TaskCompletionSource<byte[]> _getMemoContentTcs;
 
         // 채팅방 목록 응답을 기다릴 준비를 하고 Task 반환
         public Task<byte[]> WaitChatRoomListAsync(TimeSpan timeout)
@@ -359,6 +364,81 @@ namespace SlimMy.Service
             return tcs.Task;
         }
 
+        public Task<byte[]> GetWeightHistoryAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getWeightHistoryTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getWeightHistoryTcs == tcs) _getWeightHistoryTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTodayWeightCompletedAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTodayWeightCompletedTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTodayWeightCompletedTcs == tcs) _getTodayWeightCompletedTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> InsertWeightAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertWeightTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertWeightTcs == tcs) _insertWeightTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> UpdateWeightWeightAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _updatetWeightWeightTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_updatetWeightWeightTcs == tcs) _updatetWeightWeightTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetMemoContentAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getMemoContentTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getMemoContentTcs == tcs) _getMemoContentTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
         // 수신 루프가 호출, 들어온 메시지 (type, payload)가 기다리던 응답이면 TCS를 완료
         public bool TryResolve(MessageType type, byte[] payload)
         {
@@ -474,6 +554,31 @@ namespace SlimMy.Service
                         if (_exerciseListTcs == null) return false;
                         _exerciseListTcs.TrySetResult(payload);
                         _exerciseListTcs = null;
+                        return true;
+                    case MessageType.GetWeightHistoryRes:
+                        if (_getWeightHistoryTcs == null) return false;
+                        _getWeightHistoryTcs.TrySetResult(payload);
+                        _getWeightHistoryTcs = null;
+                        return true;
+                    case MessageType.GetTodayWeightCompletedRes:
+                        if (_getTodayWeightCompletedTcs == null) return false;
+                        _getTodayWeightCompletedTcs.TrySetResult(payload);
+                        _getTodayWeightCompletedTcs = null;
+                        return true;
+                    case MessageType.InsertWeightRes:
+                        if (_insertWeightTcs == null) return false;
+                        _insertWeightTcs.TrySetResult(payload);
+                        _insertWeightTcs = null;
+                        return true;
+                    case MessageType.UpdateWeightRes:
+                        if (_updatetWeightWeightTcs == null) return false;
+                        _updatetWeightWeightTcs.TrySetResult(payload);
+                        _updatetWeightWeightTcs = null;
+                        return true;
+                    case MessageType.GetMemoContentRes:
+                        if (_getMemoContentTcs == null) return false;
+                        _getMemoContentTcs.TrySetResult(payload);
+                        _getMemoContentTcs = null;
                         return true;
                     default:
                         return false;

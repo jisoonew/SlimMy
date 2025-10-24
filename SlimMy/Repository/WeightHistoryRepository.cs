@@ -142,7 +142,7 @@ namespace SlimMy.Repository
         }
 
         // 몸무게 정보 수정
-        public async Task UpdatetWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi, double targetWeight, string memo)
+        public async Task UpdateWeight(Guid userID, DateTime plannerDate, double weight, double height, double bmi, double targetWeight, string memo)
         {
             using (OracleConnection connection = new OracleConnection(_connString))
             {

@@ -57,6 +57,16 @@ namespace SlimMy.Model
         DeletePlanner = 51,
         DeletePlannerRes = 52,
         ExerciseList = 53,
-        ExerciseListRes = 54
+        ExerciseListRes = 54,
+        GetWeightHistory = 55,
+        GetWeightHistoryRes = 56,
+        GetTodayWeightCompleted = 57,
+        GetTodayWeightCompletedRes = 58,
+        InsertWeight = 59,
+        InsertWeightRes = 60,
+        UpdateWeight = 61,
+        UpdateWeightRes = 62,
+        GetMemoContent = 63,
+        GetMemoContentRes = 64
     }
 }

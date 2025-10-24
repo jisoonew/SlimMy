@@ -3,6 +3,7 @@ using LiveCharts;
 using LiveCharts.Wpf;
 using SlimMy.Model;
 using SlimMy.Repository;
+using SlimMy.Response;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -10,6 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -229,9 +231,23 @@ namespace SlimMy.ViewModel
         {
             User userData = UserSession.Instance.CurrentUser;
 
-            var weightDataList = await _repo.GetWeightHistory(userData.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            foreach (var weightData in weightDataList)
+            var waitTask = session.Responses.GetWeightHistoryAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetWeightHistory", userID = userData.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetWeightHistory, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetWeightHistoryRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            foreach (var weightData in res.weightRecordItem)
             {
                 WeightRecords.Add(weightData);
             }
@@ -271,7 +287,22 @@ namespace SlimMy.ViewModel
 
             double bmiValue = weightValue / (heightValue * heightValue);
 
-            int weightCompetedCount = await _repo.GetTodayWeightCompleted(InputDate, userData.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetTodayWeightCompletedAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayWeightCompleted", dateTime = InputDate, userID = userData.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTodayWeightCompletedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
             string msg = string.Format("체중 관리 내역을 저장하시겠습니까?");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (messageBoxResult == MessageBoxResult.No)
@@ -280,13 +311,35 @@ namespace SlimMy.ViewModel
             }
             else
             {
-                if (weightCompetedCount < 1)
+                if (res.weightCount < 1)
                 {
-                    await _repo.InsertWeight(userData.UserId, InputDate, double.Parse(InputWeight), double.Parse(InputHeight), bmiValue, double.Parse(TargetWeight), NoteContent);
+                    var insertWeightWaitTask = session.Responses.InsertWeightAsync(TimeSpan.FromSeconds(5));
+
+                    var insertWeightReq = new { cmd = "InsertWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
+                    await transport.SendFrameAsync((byte)MessageType.InsertWeight, JsonSerializer.SerializeToUtf8Bytes(insertWeightReq));
+
+                    var insertWeightRespPayload = await insertWeightWaitTask;
+
+                    var insertWeightRes = JsonSerializer.Deserialize<InsertWeightRes>(
+                        insertWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (insertWeightRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {insertWeightRes?.message}");
                 }
                 else
                 {
-                    await _repo.UpdatetWeight(userData.UserId, InputDate, double.Parse(InputWeight), double.Parse(InputHeight), bmiValue, double.Parse(TargetWeight), NoteContent);
+                    var updatetWeightWaitTask = session.Responses.UpdateWeightWeightAsync(TimeSpan.FromSeconds(5));
+
+                    var updateWeightReq = new { cmd = "UpdateWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
+                    await transport.SendFrameAsync((byte)MessageType.UpdateWeight, JsonSerializer.SerializeToUtf8Bytes(updateWeightReq));
+
+                    var updateWeightRespPayload = await updatetWeightWaitTask;
+
+                    var updateWeightRes = JsonSerializer.Deserialize<UpdateWeightRes>(
+                        updateWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (updateWeightRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {updateWeightRes?.message}");
                 }
             }
         }
@@ -302,12 +355,26 @@ namespace SlimMy.ViewModel
                 return;
             }
 
-            var memoContent = await _repo.GetMemoContent(SelectedRecord.Date, userData.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            if (memoContent != null)
+            var waitTask = session.Responses.GetMemoContentAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetMemoContent", dateTime = SelectedRecord.Date, userID = userData.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetMemoContentRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            if (res.memoContent != null)
             {
-                NoteContent = memoContent.Content;
-                memoID = memoContent.MemoID;
+                NoteContent = res.memoContent.Content;
+                memoID = res.memoContent.MemoID;
             }
             else
             {
