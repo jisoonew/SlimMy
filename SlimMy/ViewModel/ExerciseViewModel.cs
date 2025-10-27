@@ -1,10 +1,12 @@
 using SlimMy.Model;
+using SlimMy.Response;
 using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -21,7 +23,6 @@ namespace SlimMy.ViewModel
 
     public class ExerciseViewModel : BaseViewModel
     {
-        private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private readonly INavigationService _navigationService;
 
@@ -165,14 +166,16 @@ namespace SlimMy.ViewModel
 
         public ExerciseViewModel()
         {
-            _repo = new Repo(_connstring);
+            // 결합도를 낮추기 위한 뷰 전환 서비스
+            _navigationService = new NavigationService();
+        }
+
+        private async Task Initialize()
+        {
             Exercises = new ObservableCollection<Exercise>();
 
             // 운동 목록 데이터 가져오기
-            ExerciseList();
-
-            // 결합도를 낮추기 위한 뷰 전환 서비스
-            _navigationService = new NavigationService();
+            await ExerciseList();
 
             AllData = Exercises;
 
@@ -203,17 +206,38 @@ namespace SlimMy.ViewModel
             AddExerciseCommand = new RelayCommand(AddExerciseData);
 
             // 칼로리 계산
-            CalculateCaloriesCommand = new RelayCommand(CalculateCalories);
+            CalculateCaloriesCommand = new AsyncRelayCommand(CalculateCalories);
+        }
+
+        public static async Task<ExerciseViewModel> CreateAsync()
+        {
+            var instance = new ExerciseViewModel();
+            await instance.Initialize();
+            return instance;
         }
 
         // 운동 목록 출력
-        public void ExerciseList()
+        public async Task ExerciseList()
         {
-            var exercisesData = _repo.AllExerciseList();
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.AllExerciseListAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "AllExerciseList" };
+            await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<AllExerciseListRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             Exercises.Clear();
 
-            foreach (var exerciseBundle in exercisesData)
+            foreach (var exerciseBundle in res.exerciseList)
             {
                 Exercises.Add(new Exercise
                 {
@@ -283,14 +307,29 @@ namespace SlimMy.ViewModel
         }
 
         // 칼로리 계산
-        private void CalculateCalories(object parameter)
+        private async Task CalculateCalories(object parameter)
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            double userWeight = _repo.SelectUserWeight(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SelectUserWeightAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SelectUserWeightRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
             double met = (double)SelectedChatRoomData.Met;
             minutes = Convert.ToInt32(PlannedMinutes);
-            int result = (int)(met * userWeight * 3.5 / 200) * minutes;
+            int result = (int)(met * res.userWeight * 3.5 / 200) * minutes;
 
             Calories = result.ToString();
         }

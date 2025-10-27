@@ -30,13 +30,12 @@ namespace SlimMy.Service
             }
         }
 
-        public void NavigateToAddExercise()
+        // 운동 추가
+        public async Task NavigateToAddExercise()
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                var exerciseWindow = new AddExercise();
-                exerciseWindow.Show();
-            });
+            var exerciseViewModel = await ViewModel.ExerciseViewModel.CreateAsync();
+            var pageInstance = new View.AddExercise { DataContext = exerciseViewModel };
+            pageInstance.Show();
         }
 
         // 닉네임 변경 화면 전환

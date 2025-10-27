@@ -13,7 +13,7 @@ namespace SlimMy.Service
 
         void NavigateToFrame(Type page);
 
-        void NavigateToAddExercise();
+        Task NavigateToAddExercise();
 
         Task NavigateToFrameAsync(Type pageType);
 

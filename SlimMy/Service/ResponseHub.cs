@@ -39,6 +39,20 @@ namespace SlimMy.Service
         private TaskCompletionSource<byte[]> _insertWeightTcs;
         private TaskCompletionSource<byte[]> _updatetWeightWeightTcs;
         private TaskCompletionSource<byte[]> _getMemoContentTcs;
+        private TaskCompletionSource<byte[]> _getSearchedMemoContentTcs;
+        private TaskCompletionSource<byte[]> _getSearchedDateTcs;
+        private TaskCompletionSource<byte[]> _getSearchedWeightTcs;
+        private TaskCompletionSource<byte[]> _deleteWeightTcs;
+        private TaskCompletionSource<byte[]> _allExerciseListTcs;
+        private TaskCompletionSource<byte[]> _selectUserWeightTcs;
+        private TaskCompletionSource<byte[]> _getExerciseHistoryTcs;
+        private TaskCompletionSource<byte[]> _getTodayCaloriesTcs;
+        private TaskCompletionSource<byte[]> _getTodayDurationTcs;
+        private TaskCompletionSource<byte[]> _getTodayCompletedTcs;
+        private TaskCompletionSource<byte[]> _getTotalExerciseTcs;
+        private TaskCompletionSource<byte[]> _getWeeklyCaloriesTcs;
+        private TaskCompletionSource<byte[]> _getTotalSessionsTcs;
+        private TaskCompletionSource<byte[]> _getTotalCaloriesTcs;
 
         // 채팅방 목록 응답을 기다릴 준비를 하고 Task 반환
         public Task<byte[]> WaitChatRoomListAsync(TimeSpan timeout)
@@ -439,6 +453,216 @@ namespace SlimMy.Service
             return tcs.Task;
         }
 
+        public Task<byte[]> GetSearchedMemoContentAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getSearchedMemoContentTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getSearchedMemoContentTcs == tcs) _getSearchedMemoContentTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetSearchedDateAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getSearchedDateTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getSearchedDateTcs == tcs) _getSearchedDateTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetSearchedWeightAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getSearchedWeightTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getSearchedWeightTcs == tcs) _getSearchedWeightTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> DeleteWeightAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deleteWeightTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deleteWeightTcs == tcs) _deleteWeightTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> AllExerciseListAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _allExerciseListTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_allExerciseListTcs == tcs) _allExerciseListTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> SelectUserWeightAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _selectUserWeightTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_selectUserWeightTcs == tcs) _selectUserWeightTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetExerciseHistoryAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getExerciseHistoryTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getExerciseHistoryTcs == tcs) _getExerciseHistoryTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTodayCaloriesAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTodayCaloriesTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTodayCaloriesTcs == tcs) _getTodayCaloriesTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTodayDurationAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTodayDurationTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTodayDurationTcs == tcs) _getTodayDurationTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTodayCompletedAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTodayCompletedTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTodayCompletedTcs == tcs) _getTodayCompletedTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTotalExerciseAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTotalExerciseTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTotalExerciseTcs == tcs) _getTotalExerciseTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetWeeklyCaloriesAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getWeeklyCaloriesTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getWeeklyCaloriesTcs == tcs) _getWeeklyCaloriesTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTotalSessionsAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTotalSessionsTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTotalSessionsTcs == tcs) _getTotalSessionsTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetTotalCaloriesAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTotalCaloriesTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTotalCaloriesTcs == tcs) _getTotalCaloriesTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
         // 수신 루프가 호출, 들어온 메시지 (type, payload)가 기다리던 응답이면 TCS를 완료
         public bool TryResolve(MessageType type, byte[] payload)
         {
@@ -579,6 +803,76 @@ namespace SlimMy.Service
                         if (_getMemoContentTcs == null) return false;
                         _getMemoContentTcs.TrySetResult(payload);
                         _getMemoContentTcs = null;
+                        return true;
+                    case MessageType.GetSearchedMemoContentRes:
+                        if (_getSearchedMemoContentTcs == null) return false;
+                        _getSearchedMemoContentTcs.TrySetResult(payload);
+                        _getSearchedMemoContentTcs = null;
+                        return true;
+                    case MessageType.GetSearchedDateRes:
+                        if (_getSearchedDateTcs == null) return false;
+                        _getSearchedDateTcs.TrySetResult(payload);
+                        _getSearchedDateTcs = null;
+                        return true;
+                    case MessageType.GetSearchedWeightRes:
+                        if (_getSearchedWeightTcs == null) return false;
+                        _getSearchedWeightTcs.TrySetResult(payload);
+                        _getSearchedWeightTcs = null;
+                        return true;
+                    case MessageType.DeleteWeightRes:
+                        if (_deleteWeightTcs == null) return false;
+                        _deleteWeightTcs.TrySetResult(payload);
+                        _deleteWeightTcs = null;
+                        return true;
+                    case MessageType.AllExerciseListRes:
+                        if (_allExerciseListTcs == null) return false;
+                        _allExerciseListTcs.TrySetResult(payload);
+                        _allExerciseListTcs = null;
+                        return true;
+                    case MessageType.SelectUserWeightRes:
+                        if (_selectUserWeightTcs == null) return false;
+                        _selectUserWeightTcs.TrySetResult(payload);
+                        _selectUserWeightTcs = null;
+                        return true;
+                    case MessageType.GetExerciseHistoryRes:
+                        if (_getExerciseHistoryTcs == null) return false;
+                        _getExerciseHistoryTcs.TrySetResult(payload);
+                        _getExerciseHistoryTcs = null;
+                        return true;
+                    case MessageType.GetTodayCaloriesRes:
+                        if (_getTodayCaloriesTcs == null) return false;
+                        _getTodayCaloriesTcs.TrySetResult(payload);
+                        _getTodayCaloriesTcs = null;
+                        return true;
+                    case MessageType.GetTodayDurationRes:
+                        if (_getTodayDurationTcs == null) return false;
+                        _getTodayDurationTcs.TrySetResult(payload);
+                        _getTodayDurationTcs = null;
+                        return true;
+                    case MessageType.GetTodayCompletedRes:
+                        if (_getTodayCompletedTcs == null) return false;
+                        _getTodayCompletedTcs.TrySetResult(payload);
+                        _getTodayCompletedTcs = null;
+                        return true;
+                    case MessageType.GetTotalExerciseRes:
+                        if (_getTotalExerciseTcs == null) return false;
+                        _getTotalExerciseTcs.TrySetResult(payload);
+                        _getTotalExerciseTcs = null;
+                        return true;
+                    case MessageType.GetWeeklyCalories:
+                        if (_getWeeklyCaloriesTcs == null) return false;
+                        _getWeeklyCaloriesTcs.TrySetResult(payload);
+                        _getWeeklyCaloriesTcs = null;
+                        return true;
+                    case MessageType.GetTotalSessionsRes:
+                        if (_getTotalSessionsTcs == null) return false;
+                        _getTotalSessionsTcs.TrySetResult(payload);
+                        _getTotalSessionsTcs = null;
+                        return true;
+                    case MessageType.GetTotalCaloriesRes:
+                        if (_getTotalCaloriesTcs == null) return false;
+                        _getTotalCaloriesTcs.TrySetResult(payload);
+                        _getTotalCaloriesTcs = null;
                         return true;
                     default:
                         return false;

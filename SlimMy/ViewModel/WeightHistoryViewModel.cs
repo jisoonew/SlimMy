@@ -20,9 +20,6 @@ namespace SlimMy.ViewModel
 {
     public class WeightHistoryViewModel : BaseViewModel
     {
-        private WeightHistoryRepository _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
         // 메모장 아이디
         private Guid memoID;
 
@@ -174,7 +171,6 @@ namespace SlimMy.ViewModel
 
         private async Task Initialize()
         {
-            _repo = new WeightHistoryRepository(_connstring); // Repo 초기화
             WeightRecords = new ObservableCollection<WeightRecordItem>();
 
             // 키 수정 불가능
@@ -413,7 +409,21 @@ namespace SlimMy.ViewModel
             {
                 if (SelectedRecord != null)
                 {
-                    await _repo.DeleteWeight(SelectedRecord.BodyID, memoID);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.DeleteWeightAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "DeleteWeight", bodyID = SelectedRecord.BodyID, memoID = memoID };
+                    await transport.SendFrameAsync((byte)MessageType.DeleteWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<DeleteWeightRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     NoteContent = string.Empty;
                 }
@@ -493,14 +503,14 @@ namespace SlimMy.ViewModel
                 }
 
                 WeightTrendSeries = new SeriesCollection
-    {
-        new LineSeries
-        {
-            Title = "몸무게 ",
-            Values = weightValues,
-            DataLabels = true
-        }
-    };
+                {
+                    new LineSeries
+                    {
+                        Title = "몸무게 ",
+                        Values = weightValues,
+                        DataLabels = true
+                    }
+                };
 
                 WeightTrendLabels = weightlabels;
                 OnPropertyChanged(nameof(WeightTrendSeries));
@@ -517,9 +527,24 @@ namespace SlimMy.ViewModel
             {
                 try
                 {
-                    var searchMomoResult = await _repo.GetSearchedMemoContent(userData.UserId, SearchKeyword);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.GetSearchedMemoContentAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "GetSearchedMemoContent", userID = userData.UserId, searchKeyword = SearchKeyword };
+                    await transport.SendFrameAsync((byte)MessageType.GetSearchedMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<GetSearchedMemoContentRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
+
                     WeightRecords.Clear();
-                    WeightRecords.Add(searchMomoResult.Record);
+                    WeightRecords.Add(res.weightMemoRecord.Record);
                 }
                 catch (Exception ex)
                 {
@@ -537,26 +562,54 @@ namespace SlimMy.ViewModel
                         return;
                     }
 
-                    var results = await _repo.GetSearchedDate(userData.UserId, parsedDate);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.GetSearchedDateAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "GetSearchedDate", userID = userData.UserId, parsedDate = parsedDate };
+                    await transport.SendFrameAsync((byte)MessageType.GetSearchedDate, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<GetSearchedDateRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     WeightRecords.Clear();
-                    WeightRecords.Add(results.Record);
+                    WeightRecords.Add(res.weightMemoRecord.Record);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     MessageBox.Show("해당 날짜는 존재하지 않습니다.");
                 }
 
             }
 
-            if(SelectedSearchValue == "몸무게")
+            if (SelectedSearchValue == "몸무게")
             {
                 try
                 {
-                    var results = await _repo.GetSearchedWeight(userData.UserId, double.Parse(SearchKeyword));
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.GetSearchedWeightAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "GetSearchedWeight", userID = userData.UserId, searchKeyword = double.Parse(SearchKeyword) };
+                    await transport.SendFrameAsync((byte)MessageType.GetSearchedWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<GetSearchedWeightRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     WeightRecords.Clear();
-                    WeightRecords.Add(results.Record);
+                    WeightRecords.Add(res.weightMemoRecord.Record);
                 }
                 catch (Exception ex)
                 {

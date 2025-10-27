@@ -1600,7 +1600,6 @@ namespace SlimMy
                     }
                 }
             }
-
             return result;
         }
 

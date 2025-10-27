@@ -1,11 +1,13 @@
 using LiveCharts;
 using LiveCharts.Wpf;
 using SlimMy.Model;
+using SlimMy.Response;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -162,20 +164,48 @@ namespace SlimMy.ViewModel
         // 오늘의 소모 칼로리의 총량
         public async Task TodayCaloriesPrint()
         {
-            int totalCalories = await _repo.GetTodayCalories(now, currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            TodayCalories = totalCalories + "Kcal";
+            var waitTask = session.Responses.GetTodayCaloriesAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTodayCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            TodayCalories = res.totalCalories + "Kcal";
         }
 
         // 오늘의 총 운동 시간
         public async Task TodayDurationPrint()
         {
-            int todayDuration = await _repo.GetTodayDuration(now, currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetTodayDurationAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTodayDurationRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             int hour = 0, min = 0;
 
-            hour = todayDuration / 60;
-            min = todayDuration % 60;
+            hour = res.todayDuration / 60;
+            min = res.todayDuration % 60;
 
             TodayDuration = hour + "시간 " + min + "분";
         }
@@ -183,19 +213,60 @@ namespace SlimMy.ViewModel
         // 오늘의 운동 완료 수
         public async Task TodayCompletedPrint()
         {
-            int todayCompleted = await _repo.GetTodayCompleted(now, currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            TodayCompleted = todayCompleted.ToString();
+            var waitTask = session.Responses.GetTodayCompletedAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            TodayCompleted = res.todayCompleted.ToString();
         }
 
         // 목표 달성률
         public async Task GoalRatePrint()
         {
-            int todayCompleted = await _repo.GetTodayCompleted(now, currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            int totalExercise = await _repo.GetTotalExercise(now, currentUser.UserId);
+            // 완료한 운동 리스트
+            var waitTask = session.Responses.GetTodayCompletedAsync(TimeSpan.FromSeconds(5));
 
-            double percent = totalExercise == 0 ? 0 : (double)todayCompleted / totalExercise * 100;
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            // 전체 운동 리스트
+            var totalExerciseWaitTask = session.Responses.GetTotalExerciseAsync(TimeSpan.FromSeconds(5));
+
+            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
+
+            var totalExerciseRespPayload = await totalExerciseWaitTask;
+
+            var totalExerciseRes = JsonSerializer.Deserialize<GetTotalExerciseRes>(
+                totalExerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (totalExerciseRes?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            double percent = totalExerciseRes.totalExercise == 0 ? 0 : (double)res.todayCompleted / totalExerciseRes.totalExercise * 100;
 
             string percentStr = Math.Round(percent, 1) + "%";
 
@@ -205,29 +276,42 @@ namespace SlimMy.ViewModel
         // 주간 그래프
         public async Task LoadWeeklyCalorieChart()
         {
-            var list = await _repo.GetWeeklyCalories(DateTime.Now, currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            // 예: 7일간 DailyCalorie 객체 리스트
+            var waitTask = session.Responses.GetWeeklyCaloriesAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetWeeklyCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
             var calorieValues = new ChartValues<int>();
             var labelList = new List<string>();
 
-            foreach (var item in list.OrderBy(x => x.Date))
+            foreach (var item in res.list.OrderBy(x => x.Date))
             {
                 calorieValues.Add(item.Calories);
                 labelList.Add(item.Date.ToString("MM/dd")); // x축 라벨
             }
 
             WeeklySeries = new SeriesCollection
-    {
-        new LineSeries
-        {
-            Title = "칼로리 소모",
-            Values = calorieValues,
-            Stroke = Brushes.OrangeRed,
-            Fill = Brushes.Transparent,
-            PointGeometrySize = 10
-        }
-    };
+            {
+                new LineSeries
+                {
+                    Title = "칼로리 소모",
+                    Values = calorieValues,
+                    Stroke = Brushes.OrangeRed,
+                    Fill = Brushes.Transparent,
+                    PointGeometrySize = 10
+                }
+            };
 
             Labels = labelList;
         }
@@ -235,17 +319,45 @@ namespace SlimMy.ViewModel
         // 누적 운동 횟수
         public async Task TotalSessionPrint()
         {
-            int totalSessionCount = await _repo.GetTotalSessions(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            TotalSessions = totalSessionCount.ToString();
+            var waitTask = session.Responses.GetTotalSessionsAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTotalSessionsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            TotalSessions = res.totalSessionCount.ToString();
         }
 
         // 누적 총 칼로리
         public async Task TotalCaloriesPrint()
         {
-            int totalCaloriesCount = await _repo.GetTotalCalories(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            TotalCalories = totalCaloriesCount.ToString();
+            var waitTask = session.Responses.GetTotalCaloriesAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTotalCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            TotalCalories = res.totalCaloriesCount.ToString();
         }
 
         // 누적 운동 시간

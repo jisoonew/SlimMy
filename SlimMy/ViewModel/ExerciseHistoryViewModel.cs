@@ -19,14 +19,13 @@ using System.Windows.Media.Imaging;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using ClosedXML.Excel;
+using System.Text.Json;
+using SlimMy.Response;
 
 namespace SlimMy.ViewModel
 {
     class ExerciseHistoryViewModel : BaseViewModel
     {
-        private ExerciseHistoryRepository _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
         private ObservableCollection<WorkoutHistoryItem> _filteredExerciseLogs;
         public ObservableCollection<WorkoutHistoryItem> FilteredExerciseLogs
         {
@@ -121,8 +120,6 @@ namespace SlimMy.ViewModel
 
         private async Task Initialize()
         {
-            _repo = new ExerciseHistoryRepository(_connstring); // Repo 초기화
-
             FilteredExerciseLogs = new ObservableCollection<WorkoutHistoryItem>();
 
             AllExerciseLogs = new ObservableCollection<WorkoutHistoryItem>();
@@ -169,10 +166,23 @@ namespace SlimMy.ViewModel
         public async Task ExerciseHistoryPrint()
         {
             User currentUser = UserSession.Instance.CurrentUser;
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var historyList = await _repo.GetExerciseHistory(currentUser.UserId);
+            var waitTask = session.Responses.GetExerciseHistoryAsync(TimeSpan.FromSeconds(5));
 
-            foreach (var history in historyList)
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            foreach (var history in res.historyItem)
             {
                 FilteredExerciseLogs.Add(history);
             }
@@ -201,16 +211,16 @@ namespace SlimMy.ViewModel
             }
 
             CalorieTrendSeries = new SeriesCollection
-    {
-        new LineSeries
-        {
-            Title = "칼로리 소모",
-            Values = calorieValues,
-            Stroke = Brushes.OrangeRed,
-            Fill = Brushes.Transparent,
-            PointGeometrySize = 10
-        }
-    };
+            {
+                new LineSeries
+                {
+                    Title = "칼로리 소모",
+                    Values = calorieValues,
+                    Stroke = Brushes.OrangeRed,
+                    Fill = Brushes.Transparent,
+                    PointGeometrySize = 10
+                }
+            };
 
             Labels = labelList.ToArray();
             OnPropertyChanged(nameof(Labels));
@@ -259,16 +269,16 @@ namespace SlimMy.ViewModel
             }
 
             DurationTrendSeries = new SeriesCollection
-    {
-        new LineSeries
-        {
-            Title = "운동 시간",
-            Values = calorieValues,
-            Stroke = Brushes.OrangeRed,
-            Fill = Brushes.Transparent,
-            PointGeometrySize = 10
-        }
-    };
+            {
+                new LineSeries
+                {
+                    Title = "운동 시간",
+                    Values = calorieValues,
+                    Stroke = Brushes.OrangeRed,
+                    Fill = Brushes.Transparent,
+                    PointGeometrySize = 10
+                }
+            };
 
             Labels = labelList.ToArray();
             OnPropertyChanged(nameof(Labels));
@@ -311,15 +321,28 @@ namespace SlimMy.ViewModel
 
             User currentUser = UserSession.Instance.CurrentUser;
 
-            var historyList = await _repo.GetExerciseHistory(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            foreach (var history in historyList)
+            var waitTask = session.Responses.GetExerciseHistoryAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
+            foreach (var history in res.historyItem)
             {
                 AllExerciseLogs.Add(history);
             }
 
-            var filtered = AllExerciseLogs
-    .Where(x => x.PlannerDate >= StartDate && x.PlannerDate <= EndDate);
+            var filtered = AllExerciseLogs.Where(x => x.PlannerDate >= StartDate && x.PlannerDate <= EndDate);
 
             if (!string.IsNullOrWhiteSpace(SearchKeyword))
             {

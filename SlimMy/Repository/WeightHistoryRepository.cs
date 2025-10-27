@@ -348,8 +348,6 @@ namespace SlimMy.Repository
         // 메모장 내용 검색
         public async Task<WeightMemoRecord> GetSearchedMemoContent(Guid userID, string searchMemo)
         {
-            var weightMemoItems = new List<WeightMemoItem>();
-
             using (var connection = new OracleConnection(_connString))
             {
                 await connection.OpenAsync();
