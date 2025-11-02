@@ -53,6 +53,22 @@ namespace SlimMy.Service
         private TaskCompletionSource<byte[]> _getWeeklyCaloriesTcs;
         private TaskCompletionSource<byte[]> _getTotalSessionsTcs;
         private TaskCompletionSource<byte[]> _getTotalCaloriesTcs;
+        private TaskCompletionSource<byte[]> _getTotalTimeTcs;
+        private TaskCompletionSource<byte[]> _getRecentWorkoutsTcs;
+        private TaskCompletionSource<byte[]> _insertChatRoomTcs;
+        private TaskCompletionSource<byte[]> _insertUserChatRoomsTcs;
+        private TaskCompletionSource<byte[]> _checkUserChatRoomsTcs;
+        private TaskCompletionSource<byte[]> _getChatRoomUserIdsTcs;
+        private TaskCompletionSource<byte[]> _selectChatRoomTcs;
+        private TaskCompletionSource<byte[]> _messagePrintTcs;
+        private TaskCompletionSource<byte[]> _getHostUserIdByRoomIdTcs;
+        private TaskCompletionSource<byte[]> _sendNickNameTcs;
+        private TaskCompletionSource<byte[]> _updateHostTcs;
+        private TaskCompletionSource<byte[]> _selectChatUserNickNameTcs;
+        private TaskCompletionSource<byte[]> _deleteBanUserChatRoomTcs;
+        private TaskCompletionSource<byte[]> _insertBanUserTcs;
+        private TaskCompletionSource<byte[]> _exitUserChatRoomTcs;
+        private TaskCompletionSource<byte[]> _deleteChatRoomWithRelationTcs;
 
         // 채팅방 목록 응답을 기다릴 준비를 하고 Task 반환
         public Task<byte[]> WaitChatRoomListAsync(TimeSpan timeout)
@@ -663,6 +679,246 @@ namespace SlimMy.Service
             return tcs.Task;
         }
 
+        public Task<byte[]> GetTotalTimeAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getTotalTimeTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getTotalTimeTcs == tcs) _getTotalTimeTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetRecentWorkoutsAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getRecentWorkoutsTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getRecentWorkoutsTcs == tcs) _getRecentWorkoutsTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> InsertChatRoomAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertChatRoomTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertChatRoomTcs == tcs) _insertChatRoomTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> InsertUserChatRoomsAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertUserChatRoomsTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertUserChatRoomsTcs == tcs) _insertUserChatRoomsTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> CheckUserChatRoomsAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _checkUserChatRoomsTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_checkUserChatRoomsTcs == tcs) _checkUserChatRoomsTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetChatRoomUserIdsAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getChatRoomUserIdsTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getChatRoomUserIdsTcs == tcs) _getChatRoomUserIdsTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> SelectChatRoomAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _selectChatRoomTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_selectChatRoomTcs == tcs) _selectChatRoomTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> MessagePrintAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _messagePrintTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_messagePrintTcs == tcs) _messagePrintTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> GetHostUserIdByRoomIdAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _getHostUserIdByRoomIdTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_getHostUserIdByRoomIdTcs == tcs) _getHostUserIdByRoomIdTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> SendNickNameAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _sendNickNameTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_sendNickNameTcs == tcs) _sendNickNameTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> UpdateHostAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _updateHostTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_updateHostTcs == tcs) _updateHostTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertPlannerPrintAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> SelectChatUserNickNameAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _selectChatUserNickNameTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_selectChatUserNickNameTcs == tcs) _selectChatUserNickNameTcs = null; }
+                tcs.TrySetException(new TimeoutException("SelectChatUserNickNameAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> DeleteBanUserChatRoomAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deleteBanUserChatRoomTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deleteBanUserChatRoomTcs == tcs) _deleteBanUserChatRoomTcs = null; }
+                tcs.TrySetException(new TimeoutException("DeleteBanUserChatRoomAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> InsertBanUserAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _insertBanUserTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_insertBanUserTcs == tcs) _insertBanUserTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertBanUserAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> ExitUserChatRoomAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _exitUserChatRoomTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_exitUserChatRoomTcs == tcs) _exitUserChatRoomTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertBanUserAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
+        public Task<byte[]> DeleteChatRoomWithRelationAsync(TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_gate) _deleteChatRoomWithRelationTcs = tcs;
+
+            var cts = new CancellationTokenSource(timeout);
+            cts.Token.Register(() =>
+            {
+                lock (_gate) { if (_deleteChatRoomWithRelationTcs == tcs) _deleteChatRoomWithRelationTcs = null; }
+                tcs.TrySetException(new TimeoutException("InsertBanUserAsync timeout"));
+                cts.Dispose();
+            });
+            return tcs.Task;
+        }
+
         // 수신 루프가 호출, 들어온 메시지 (type, payload)가 기다리던 응답이면 TCS를 완료
         public bool TryResolve(MessageType type, byte[] payload)
         {
@@ -873,6 +1129,86 @@ namespace SlimMy.Service
                         if (_getTotalCaloriesTcs == null) return false;
                         _getTotalCaloriesTcs.TrySetResult(payload);
                         _getTotalCaloriesTcs = null;
+                        return true;
+                    case MessageType.GetTotalTimeRes:
+                        if (_getTotalTimeTcs == null) return false;
+                        _getTotalTimeTcs.TrySetResult(payload);
+                        _getTotalTimeTcs = null;
+                        return true;
+                    case MessageType.GetRecentWorkoutsRes:
+                        if (_getRecentWorkoutsTcs == null) return false;
+                        _getRecentWorkoutsTcs.TrySetResult(payload);
+                        _getRecentWorkoutsTcs = null;
+                        return true;
+                    case MessageType.InsertChatRoomRes:
+                        if (_insertChatRoomTcs == null) return false;
+                        _insertChatRoomTcs.TrySetResult(payload);
+                        _insertChatRoomTcs = null;
+                        return true;
+                    case MessageType.InsertUserChatRoomsRes:
+                        if (_insertUserChatRoomsTcs == null) return false;
+                        _insertUserChatRoomsTcs.TrySetResult(payload);
+                        _insertUserChatRoomsTcs = null;
+                        return true;
+                    case MessageType.CheckUserChatRoomsRes:
+                        if (_checkUserChatRoomsTcs == null) return false;
+                        _checkUserChatRoomsTcs.TrySetResult(payload);
+                        _checkUserChatRoomsTcs = null;
+                        return true;
+                    case MessageType.GetChatRoomUserIdsRes:
+                        if (_getChatRoomUserIdsTcs == null) return false;
+                        _getChatRoomUserIdsTcs.TrySetResult(payload);
+                        _getChatRoomUserIdsTcs = null;
+                        return true;
+                    case MessageType.SelectChatRoomRes:
+                        if (_selectChatRoomTcs == null) return false;
+                        _selectChatRoomTcs.TrySetResult(payload);
+                        _selectChatRoomTcs = null;
+                        return true;
+                    case MessageType.MessagePrintRes:
+                        if (_messagePrintTcs == null) return false;
+                        _messagePrintTcs.TrySetResult(payload);
+                        _messagePrintTcs = null;
+                        return true;
+                    case MessageType.GetHostUserIdByRoomIdRes:
+                        if (_getHostUserIdByRoomIdTcs == null) return false;
+                        _getHostUserIdByRoomIdTcs.TrySetResult(payload);
+                        _getHostUserIdByRoomIdTcs = null;
+                        return true;
+                    case MessageType.SendNickNameRes:
+                        if (_sendNickNameTcs == null) return false;
+                        _sendNickNameTcs.TrySetResult(payload);
+                        _sendNickNameTcs = null;
+                        return true;
+                    case MessageType.UpdateHostRes:
+                        if (_updateHostTcs == null) return false;
+                        _updateHostTcs.TrySetResult(payload);
+                        _updateHostTcs = null;
+                        return true;
+                    case MessageType.SelectChatUserNickNameRes:
+                        if (_selectChatUserNickNameTcs == null) return false;
+                        _selectChatUserNickNameTcs.TrySetResult(payload);
+                        _selectChatUserNickNameTcs = null;
+                        return true;
+                    case MessageType.DeleteBanUserChatRoomRes:
+                        if (_deleteBanUserChatRoomTcs == null) return false;
+                        _deleteBanUserChatRoomTcs.TrySetResult(payload);
+                        _deleteBanUserChatRoomTcs = null;
+                        return true;
+                    case MessageType.InsertBanUserRes:
+                        if (_insertBanUserTcs == null) return false;
+                        _insertBanUserTcs.TrySetResult(payload);
+                        _insertBanUserTcs = null;
+                        return true;
+                    case MessageType.ExitUserChatRoomRes:
+                        if (_exitUserChatRoomTcs == null) return false;
+                        _exitUserChatRoomTcs.TrySetResult(payload);
+                        _exitUserChatRoomTcs = null;
+                        return true;
+                    case MessageType.DeleteChatRoomWithRelationsRes:
+                        if (_deleteChatRoomWithRelationTcs == null) return false;
+                        _deleteChatRoomWithRelationTcs.TrySetResult(payload);
+                        _deleteChatRoomWithRelationTcs = null;
                         return true;
                     default:
                         return false;

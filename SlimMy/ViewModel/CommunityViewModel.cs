@@ -15,9 +15,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Newtonsoft.Json;
 using SlimMy.Singleton;
 using SlimMy.Service;
+using System.Text.Json;
+using SlimMy.Response;
 
 namespace SlimMy.ViewModel
 {
@@ -25,8 +26,6 @@ namespace SlimMy.ViewModel
     {
         private User _user;
         private ChatRooms _chat;
-        private Repo _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private ChatUserList _chatUserList;
         private readonly IView _view;
         private View.ChattingWindow _chattingWindow;
@@ -58,7 +57,7 @@ namespace SlimMy.ViewModel
                 if (_currentPage != value)
                 {
                     _currentPage = value;
-                    UpdateCurrentPageData();
+                    _= UpdateCurrentPageData();
                     OnPropertyChanged(nameof(CurrentPage));
                 }
             }
@@ -269,7 +268,6 @@ namespace SlimMy.ViewModel
         // 초기화 메서드
         private async Task Initialize()
         {
-            _repo = new Repo(_connstring); // Repo 초기화
             await RefreshChatRooms(); // 채팅 방 불러오기
             InsertCommand = new AsyncRelayCommand(ChatRoomSelected);
             ChattingCommand = new AsyncRelayCommand(OpenCreateChatRoomWindow);
@@ -311,14 +309,41 @@ namespace SlimMy.ViewModel
                     myUid = currentUser.UserId;
                     _dataService.SetUserId(currentUser.UserId.ToString());
 
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.CheckUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "CheckUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId };
+                    await transport.SendFrameAsync((byte)MessageType.CheckUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<CheckUserChatRoomsRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
+
                     // 만약 사용자가 채팅방에 참가하지 않은 상태라면?
                     // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
-                    if (await _repo.CheckUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId))
+                    if (res.checkUserChatRooms)
                     {
                         DateTime now = DateTime.Now;
 
                         // 사용자와 채팅방 간의 관계 생성
-                        await _repo.InsertUserChatRooms(currentUser.UserId, selectedChatRoom.ChatRoomId, now, 0);
+                        var userChatRoomWaitTask = session.Responses.InsertUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+
+                        var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0 };
+                        await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
+
+                        var userChatRoomRespPayload = await userChatRoomWaitTask;
+
+                        var userChatRoomRes = JsonSerializer.Deserialize<InsertUserChatRoomsRes>(
+                            userChatRoomRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (userChatRoomRes?.ok != true)
+                            throw new InvalidOperationException($"server not ok: {userChatRoomRes?.message}");
 
                         ServerInfo serverInfo = new ServerInfo
                         {
@@ -355,20 +380,33 @@ namespace SlimMy.ViewModel
             try
             {
                 // 특정 채팅방에 참가한 사용자들 아이디 모음
-                var userIds = await _repo.GetChatRoomUserIds(selectedChatRoom.ChatRoomId.ToString());
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                if (userIds == null || userIds.Count == 0)
+                var waitTask = session.Responses.GetChatRoomUserIdsAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "GetChatRoomUserIds", chatRoomID = selectedChatRoom.ChatRoomId.ToString() };
+                await transport.SendFrameAsync((byte)MessageType.GetChatRoomUserIds, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<GetChatRoomUserIdsRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
+
+                if (res.userIDBundle == null || res.userIDBundle.Count == 0)
                 {
                     MessageBox.Show("No user IDs found for the selected chat room.", "Debug Info");
                     return;
                 }
 
                 // 문자열을 ChatUserList 객체로 변환
-                List<ChatUserList> userList = userIds.Select(id => new ChatUserList(id, "")).ToList();
+                List<ChatUserList> userList = res.userIDBundle.Select(id => new ChatUserList(id, "")).ToList();
 
                 CommunityViewModel.GroupChattingReceivers = userList;
 
-                var transport = UserSession.Instance.CurrentUser?.Transport;
                 if (transport == null)
                 {
                     MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
@@ -405,11 +443,24 @@ namespace SlimMy.ViewModel
         {
             var session = UserSession.Instance;
 
-            var chatRooms = await _repo.SelectChatRoom(session.CurrentUser.UserId);
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SelectChatRoomAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SelectChatRoomRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             ChatRooms.Clear(); // 기존 데이터 제거
 
-            foreach (var chatRoom in chatRooms)
+            foreach (var chatRoom in res.chatRooms)
             {
                 ChatRooms.Add(chatRoom); // 새 데이터 추가
             }
@@ -427,14 +478,27 @@ namespace SlimMy.ViewModel
 
             await Application.Current.Dispatcher.InvokeAsync(async () =>
             {
-                var chatRooms = await _repo.SelectChatRoom(session.CurrentUser.UserId); // DB에서 최신 데이터 가져오기
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.SelectChatRoomAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId };
+                await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<SelectChatRoomRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
 
                 if (AllData == null)
                     AllData = new ObservableCollection<ChatRooms>();
 
                 AllData.Clear();
 
-                foreach (var chatRoom in chatRooms)
+                foreach (var chatRoom in res.chatRooms)
                 {
                     AllData.Add(chatRoom);
                 }

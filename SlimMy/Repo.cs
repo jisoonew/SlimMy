@@ -567,7 +567,6 @@ namespace SlimMy
                     }
                 }
             }
-
             return userIds;
         }
 
@@ -942,7 +941,7 @@ namespace SlimMy
                 {
                     try
                     {
-                        // 1. 사용자와 채팅방 관계 삭제
+                        // 사용자와 채팅방 관계 삭제
                         string sql1 = "DELETE FROM userchatrooms WHERE chatroomID = :chatID";
                         using (OracleCommand command1 = new OracleCommand(sql1, connection))
                         {
@@ -951,7 +950,7 @@ namespace SlimMy
                             await command1.ExecuteNonQueryAsync();
                         }
 
-                        // 2. 채팅방 메시지 삭제
+                        // 채팅방 메시지 삭제
                         string sql2 = "DELETE FROM Message WHERE chatroomID = :chatID";
                         using (OracleCommand command2 = new OracleCommand(sql2, connection))
                         {
@@ -960,7 +959,7 @@ namespace SlimMy
                             await command2.ExecuteNonQueryAsync();
                         }
 
-                        // 3. 채팅방 삭제
+                        // 채팅방 삭제
                         string sql3 = "DELETE FROM chatrooms WHERE chatroomid = :chatID";
                         using (OracleCommand command3 = new OracleCommand(sql3, connection))
                         {

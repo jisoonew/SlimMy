@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Response;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,14 +19,11 @@ namespace SlimMy.ViewModel
 {
     public class CreateChatRoomViewModel : BaseViewModel
     {
-        private readonly CommunityViewModel _communityViewModel;
         private ChatRooms _chat;
-        private Repo _repo;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         public event EventHandler ChatRoomCreated;
 
         public static string myName = null;
-        TcpClient client = null;
 
         private ObservableCollection<ChatRooms> _chatRooms;
 
@@ -60,7 +59,6 @@ namespace SlimMy.ViewModel
         public CreateChatRoomViewModel()
         {
             _chat = new ChatRooms();
-            _repo = new Repo(_connstring);
             OpenCreateChatRoomCommand = new AsyncRelayCommand(CreateChat);
         }
 
@@ -70,12 +68,37 @@ namespace SlimMy.ViewModel
             // 생성 시간
             DateTime now = DateTime.Now;
 
-            Guid chatRoomId = await _repo.InsertChatRoom(_chat.ChatRoomName, _chat.Description, _chat.Category, now);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.InsertChatRoomAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "InsertChatRoom", chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now };
+            await transport.SendFrameAsync((byte)MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<InsertChatRoomRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             Guid userId = UserSession.Instance.CurrentUser.UserId;
 
             // 사용자와 채팅방 간의 관계 생성
-            await _repo.InsertUserChatRooms(userId, chatRoomId, now, 1);
+            var userChatRoomWaitTask = session.Responses.InsertUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+
+            var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1 };
+            await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
+
+            var userChatRoomRespPayload = await userChatRoomWaitTask;
+
+            var userChatRoomRes = JsonSerializer.Deserialize<InsertUserChatRoomsRes>(
+                userChatRoomRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (userChatRoomRes?.ok != true)
+                throw new InvalidOperationException($"server not ok: {userChatRoomRes?.message}");
 
             // 이벤트 발생
             ChatRoomCreated?.Invoke(this, EventArgs.Empty);

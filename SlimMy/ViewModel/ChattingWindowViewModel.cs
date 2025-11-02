@@ -1,4 +1,5 @@
 using SlimMy.Model;
+using SlimMy.Response;
 using SlimMy.Service;
 using SlimMy.Singleton;
 using System;
@@ -10,6 +11,7 @@ using System.Globalization;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,8 +27,6 @@ namespace SlimMy.ViewModel
         private readonly INetworkTransport transport;
         public List<string> chattingPartners = null;
         public static string myName = null;
-        private Repo _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private readonly INavigationService _navigationService;
 
         public ICommand Window_PreviewKeyDownCommand { get; private set; }
@@ -180,10 +180,8 @@ namespace SlimMy.ViewModel
             this.transport = client;
             this.chattingPartner = chattingPartner;
 
-            _repo = new Repo(_connstring); // Repo 초기화
-
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
-            Application.Current.Dispatcher.Invoke(() =>
+            Application.Current.Dispatcher.Invoke(async () =>
             {
                 // var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
                 //if (listView != null)
@@ -191,13 +189,27 @@ namespace SlimMy.ViewModel
                 //    listView.ItemsSource = MessageList;
                 //}
 
-                // 내가 참가한 순간부터의 메시지를 가져온다
-                var messagePrint = _repo.MessagePrint(roomId, currentUser.UserId);
+                // 내가 참가한 순간부터 메시지를 가져온다
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.MessagePrintAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "MessagePrint", chatRoomID = roomId, userID = currentUser.UserId };
+                await transport.SendFrameAsync((byte)MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<MessagePrintRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
 
                 // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-                if (messagePrint != null)
+                if (res.messageBundle != null)
                 {
-                    foreach (var messageList in messagePrint)
+                    foreach (var messageList in res.messageBundle)
                     {
                         if (currentUser.UserId == messageList.SendUserID)
                         {
@@ -290,14 +302,29 @@ namespace SlimMy.ViewModel
 
             // DB에서 호스트(방장) GUID를 받아옴
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
-            Guid hostUserId = await _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
+
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetHostUserIdByRoomIdAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetHostUserIdByRoomId", chatRoomID = currentChattingData.ChatRoomId.ToString() };
+            await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             // 비교 후 IsHost 설정 (Guid 타입끼리 비교)
-            IsHost = (currentUserId == hostUserId);
+            IsHost = (currentUserId == res.hostUserId);
 
             // 디버깅용 로그
             Debug.WriteLine($"currentUserId: {currentUserId}");
-            Debug.WriteLine($"hostUserId   : {hostUserId}");
+            Debug.WriteLine($"hostUserId   : {res.hostUserId}");
             Debug.WriteLine($"IsHost       : {IsHost}");
         }
 
@@ -312,10 +339,8 @@ namespace SlimMy.ViewModel
                 this.transport = client;
                 this.chattingPartners = targetChattingPartners;
 
-                _repo = new Repo(_connstring); // Repo 초기화
-
                 // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current.Dispatcher.Invoke(async () =>
                 {
                     var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
                     if (listView != null)
@@ -331,12 +356,26 @@ namespace SlimMy.ViewModel
                         enteredUser += "님, ";
                     }
 
-                    var messagePrint = _repo.MessagePrint(currentChattingData.ChatRoomId, currentUser.UserId);
+                    var session = UserSession.Instance;
+                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                    var waitTask = session.Responses.MessagePrintAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "MessagePrint", chatRoomID = currentChattingData.ChatRoomId, userID = currentUser.UserId };
+                    await transport.SendFrameAsync((byte)MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<MessagePrintRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-                    if (messagePrint != null)
+                    if (res.messageBundle != null)
                     {
-                        foreach (var messageList in messagePrint)
+                        foreach (var messageList in res.messageBundle)
                         {
                             if (currentUser.UserId == messageList.SendUserID)
                             {
@@ -365,8 +404,20 @@ namespace SlimMy.ViewModel
                     //this.Title = enteredUser + "과의 채팅방";
 
                     // 로그인한 사용자가 채팅방 방장이라면 방장 권한 부여(방장 권한 UI True)
-                    Task<Guid> hostUserID = _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
-                    IsHost = currentUser.UserId.ToString() == hostUserID.ToString();
+                    var hostUserIDWaitTask = session.Responses.GetHostUserIdByRoomIdAsync(TimeSpan.FromSeconds(5));
+
+                    var hostUserIDReq = new { cmd = "GetHostUserIdByRoomId", chatRoomID = currentChattingData.ChatRoomId.ToString() };
+                    await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(hostUserIDReq));
+
+                    var hostUserIDRespPayload = await hostUserIDWaitTask;
+
+                    var hostUserIDRes = JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
+                        hostUserIDRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (hostUserIDRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {hostUserIDRes?.message}");
+
+                    IsHost = currentUser.UserId.ToString() == hostUserIDRes.hostUserId.ToString();
                 });
 
                 SendCommand = new AsyncRelayCommand(Send_btn_Click);
@@ -431,7 +482,6 @@ namespace SlimMy.ViewModel
                 return;
             string message = MessageText;
             string parsedMessage = "";
-            _repo = new Repo(_connstring); // Repo 초기화
 
             try
             {
@@ -564,7 +614,22 @@ namespace SlimMy.ViewModel
                 return;
             }
 
-            string senderNickName = await _repo.SendNickName(sender);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SendNickNameAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SendNickName", sender = sender };
+            await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SendNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
@@ -574,7 +639,7 @@ namespace SlimMy.ViewModel
                 {
                     MessageList.Add(new ChatMessage
                     {
-                        Message = $"{senderNickName}: {message}",
+                        Message = $"{res.senderNickName}: {message}",
                         Alignment = TextAlignment.Left
                     });
                 });
@@ -608,7 +673,21 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            string senderNickName = await _repo.SendNickName(sender);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SendNickNameAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SendNickName", sender = sender };
+            await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SendNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (!sender.Equals(currentUser.UserId.ToString()))
@@ -617,7 +696,7 @@ namespace SlimMy.ViewModel
                 {
                     MessageList.Add(new ChatMessage
                     {
-                        Message = $"{senderNickName}님이 참여하였습니다.",
+                        Message = $"{res.senderNickName}님이 참여하였습니다.",
                         Alignment = TextAlignment.Left
                     });
 
@@ -651,7 +730,21 @@ namespace SlimMy.ViewModel
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
             // 방장 위임을 받는 사용자 닉네임
-            string hostUserNick = await _repo.SendNickName(hostChangedUserID);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SendNickNameAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SendNickName", sender = hostChangedUserID };
+            await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SendNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             // 현재 입장한 채팅방과 위임을 진행하는 채팅방이 일치하면 방장 위임 채팅방 알림
             if (currentChattingData.ChatRoomId.ToString() == hostChangedChattingRoomID)
@@ -661,7 +754,7 @@ namespace SlimMy.ViewModel
                 {
                     MessageList.Add(new ChatMessage
                     {
-                        Message = $"{hostUserNick}님이 새로운 방장이 되었습니다.",
+                        Message = $"{res.senderNickName}님이 새로운 방장이 되었습니다.",
                         Alignment = TextAlignment.Left
                     });
                 });
@@ -698,11 +791,26 @@ namespace SlimMy.ViewModel
             Guid currentChatRoomId = currentChattingData.ChatRoomId;
 
             // SelectChatUserNickName으로 데이터 가져오기
-            var usersInChatRoom = await _repo.SelectChatUserNickName(currentChatRoomId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.SelectChatUserNickNameAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectChatUserNickName", currentChatRoomId = currentChatRoomId };
+            await transport.SendFrameAsync((byte)MessageType.SelectChatUserNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<SelectChatUserNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
+
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 // DelegateCandidateList에 추가
-                foreach (var user in usersInChatRoom)
+                foreach (var user in res.usersInChatRoom)
                 {
                     DelegateCandidateList.Add(user);
                     BanCandidateList.Add(user);
@@ -721,7 +829,21 @@ namespace SlimMy.ViewModel
                 ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
                 // 방장이었던 사용자는 isowner = 0, 지목 당한 사용자는 isowner = 1
-                await _repo.UpdateHost(currentChattingData.ChatRoomId, UserSelectedItem.UsersID);
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var waitTask = session.Responses.UpdateHostAsync(TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "UpdateHost", chatRoomID = currentChattingData.ChatRoomId, userIDBundle = UserSelectedItem.UsersID };
+                await transport.SendFrameAsync((byte)MessageType.UpdateHost, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                var respPayload = await waitTask;
+
+                var res = JsonSerializer.Deserialize<UpdateHostRes>(
+                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.message}");
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -731,13 +853,25 @@ namespace SlimMy.ViewModel
                 // 현재 사용자가 방장인지 확인하여 IsHost 업데이트
                 User currentUser = UserSession.Instance.CurrentUser;
 
-                IsHost = currentUser.UserId == await _repo.GetHostUserIdByRoomId(currentChattingData.ChatRoomId.ToString());
+                var hostUserIDWaitTask = session.Responses.GetHostUserIdByRoomIdAsync(TimeSpan.FromSeconds(5));
+
+                var hostUserIDReq = new { cmd = "GetHostUserIdByRoomId", chatRoomID = currentChattingData.ChatRoomId.ToString() };
+                await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(hostUserIDReq));
+
+                var hostUserIDRespPayload = await hostUserIDWaitTask;
+
+                var hostUserIDRes = JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
+                    hostUserIDRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (hostUserIDRes?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {hostUserIDRes?.message}");
+
+                IsHost = currentUser.UserId == hostUserIDRes.hostUserId;
 
                 // 서버에 방장 변경 업데이트
                 string parsedMsg = "";
                 string parsedChatRoomId = currentChattingData.ChatRoomId.ToString();
 
-                var transport = UserSession.Instance.CurrentUser?.Transport;
                 if (transport == null)
                 {
                     MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
@@ -751,10 +885,32 @@ namespace SlimMy.ViewModel
                 await transport.SendFrameAsync((byte)MessageType.HostChanged, parsedMsgData);
 
                 // 위임 받을 사용자 닉네임
-                string hostUserNick = await _repo.SendNickName(UserSelectedItem.UsersID);
+                var hostUserNickWaitTask = session.Responses.SendNickNameAsync(TimeSpan.FromSeconds(5));
+
+                var hostUserNickReq = new { cmd = "SendNickName", sender = UserSelectedItem.UsersID };
+                await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(hostUserNickReq));
+
+                var hostUserNickRespPayload = await hostUserNickWaitTask;
+
+                var hostUserNickRes = JsonSerializer.Deserialize<SendNickNameRes>(
+                    hostUserNickRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (hostUserNickRes?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {hostUserNickRes?.message}");
 
                 // 방장 위임 공지 DB 저장
-                await _repo.InsertMessage(Guid.Parse(parsedChatRoomId), Guid.Parse(UserSelectedItem.UsersID), $"{hostUserNick}님이 새로운 방장이 되었습니다.");
+                var insertMessageWaitTask = session.Responses.SendNickNameAsync(TimeSpan.FromSeconds(5));
+
+                var insertMessageNickReq = new { cmd = "InsertMessage", parsedChatRoomId = Guid.Parse(parsedChatRoomId), userID = Guid.Parse(UserSelectedItem.UsersID), senderNickName = hostUserNickRes.senderNickName };
+                await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(insertMessageNickReq));
+
+                var insertMessageRespPayload = await insertMessageWaitTask;
+
+                var insertMessageNickRes = JsonSerializer.Deserialize<InsertMessageRes>(
+                    insertMessageRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (insertMessageNickRes?.ok != true)
+                    throw new InvalidOperationException($"server not ok: {insertMessageNickRes?.message}");
 
                 // 위임 팝업 닫기
                 IsMainPopupOpen = false;
@@ -775,7 +931,21 @@ namespace SlimMy.ViewModel
             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
             // 현재 채팅방의 방장 아이디 가져오기
-            Guid selectUserID = await _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var hostUserIDWaitTask = session.Responses.GetHostUserIdByRoomIdAsync(TimeSpan.FromSeconds(5));
+
+            var hostUserIDReq = new { cmd = "GetHostUserIdByRoomId", chatRoomID = currentChatRoom.ChatRoomId.ToString() };
+            await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(hostUserIDReq));
+
+            var hostUserIDRespPayload = await hostUserIDWaitTask;
+
+            var hostUserIDRes = JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
+                hostUserIDRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (hostUserIDRes?.ok != true)
+                throw new InvalidOperationException($"server not ok: {hostUserIDRes?.message}");
 
             string msg = string.Format($"{currentChatRoom.ChatRoomName} 채팅방을 나가시겠습니까?");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -790,16 +960,23 @@ namespace SlimMy.ViewModel
             int leavePayLoad = 1 + leaveRoomData.Length;
             byte[] leavePayLoadData = BitConverter.GetBytes(leavePayLoad);
 
-            byte leaveMsgType = (byte)MessageType.UserLeaveRoom;
-
-            var transport = UserSession.Instance.CurrentUser?.Transport;
-
             try
             {
-                if (!selectUserID.Equals(currentUser.UserId))
+                if (!hostUserIDRes.hostUserId.Equals(currentUser.UserId))
                 {
                     // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제
-                    await _repo.ExitUserChatRoom(currentUser.UserId, currentChatRoom.ChatRoomId);
+                    var exitUserChatRoomWaitTask = session.Responses.ExitUserChatRoomAsync(TimeSpan.FromSeconds(5));
+
+                    var exitUserChatRoomReq = new { cmd = "ExitUserChatRoom", userID = currentUser.UserId, ChatRoomID = currentChatRoom.ChatRoomId };
+                    await transport.SendFrameAsync((byte)MessageType.ExitUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(exitUserChatRoomReq));
+
+                    var exitUserChatRoomRespPayload = await exitUserChatRoomWaitTask;
+
+                    var exitUserChatRoomRes = JsonSerializer.Deserialize<ExitUserChatRoomRes>(
+                        exitUserChatRoomRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (exitUserChatRoomRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {exitUserChatRoomRes?.message}");
 
                     // 클라이언트에게 메시지 전송
                     await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
@@ -807,7 +984,18 @@ namespace SlimMy.ViewModel
                 else
                 {
                     // 채팅방 데이터 및 연관된 데이터 삭제
-                    await _repo.DeleteChatRoomWithRelations(currentChatRoom.ChatRoomId);
+                    var waitTask = session.Responses.DeleteChatRoomWithRelationAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "DeleteChatRoomWithRelations", chatRoomID = currentChatRoom.ChatRoomId };
+                    await transport.SendFrameAsync((byte)MessageType.DeleteChatRoomWithRelations, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<DeleteChatRoomWithRelationRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // 클라이언트에게 메시지 전송
                     await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
@@ -829,7 +1017,21 @@ namespace SlimMy.ViewModel
             ChatRooms currentChatRoom = ChattingSession.Instance.CurrentChattingData;
 
             // 현재 채팅방의 방장 아이디 가져오기
-            Guid selectUserID = await _repo.GetHostUserIdByRoomId(currentChatRoom.ChatRoomId.ToString());
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var hostUserIDWaitTask = session.Responses.GetHostUserIdByRoomIdAsync(TimeSpan.FromSeconds(5));
+
+            var hostUserIDReq = new { cmd = "GetHostUserIdByRoomId", chatRoomID = currentChatRoom.ChatRoomId.ToString() };
+            await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(hostUserIDReq));
+
+            var hostUserIDRespPayload = await hostUserIDWaitTask;
+
+            var hostUserIDRes = JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
+                hostUserIDRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (hostUserIDRes?.ok != true)
+                throw new InvalidOperationException($"server not ok: {hostUserIDRes?.message}");
 
             string msg = string.Format("\"{0}\"님을 방출하시겠습니까?", UserBanSelectedItem.UsersNickName);
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -840,13 +1042,35 @@ namespace SlimMy.ViewModel
             else
             {
                 // 만약 현재 사용자가 채팅방 방장이라면 Message, UserChatRoom, ChatRooms 테이블에서 관련 데이터를 모두 삭제
-                if (selectUserID == currentUser.UserId)
+                if (hostUserIDRes.hostUserId == currentUser.UserId)
                 {
                     // 사용자와 채팅방 간의 관계 정보 삭제
-                    await _repo.DeleteBanUserChatRoom(currentChatRoom.ChatRoomId, Guid.Parse(UserBanSelectedItem.UsersID));
+                    var waitTask = session.Responses.DeleteBanUserChatRoomAsync(TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "DeleteBanUserChatRoom", chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = Guid.Parse(UserBanSelectedItem.UsersID) };
+                    await transport.SendFrameAsync((byte)MessageType.DeleteBanUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+
+                    var respPayload = await waitTask;
+
+                    var res = JsonSerializer.Deserialize<DeleteBanUserChatRoomRes>(
+                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.message}");
 
                     // 방출 사용자 정보 저장
-                    await _repo.InsertBanUser(currentChatRoom.ChatRoomId, UserBanSelectedItem.UsersID);
+                    var insertBanUserWaitTask = session.Responses.InsertBanUserAsync(TimeSpan.FromSeconds(5));
+
+                    var insertBanUserReq = new { cmd = "InsertBanUser", chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = UserBanSelectedItem.UsersID };
+                    await transport.SendFrameAsync((byte)MessageType.InsertBanUser, JsonSerializer.SerializeToUtf8Bytes(insertBanUserReq));
+
+                    var insertBanUserRespPayload = await insertBanUserWaitTask;
+
+                    var insertBanUserRes = JsonSerializer.Deserialize<InsertBanUserRes>(
+                        insertBanUserRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (insertBanUserRes?.ok != true)
+                        throw new InvalidOperationException($"server not ok: {insertBanUserRes?.message}");
                 }
             }
         }

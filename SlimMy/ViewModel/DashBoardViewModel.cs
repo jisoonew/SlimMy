@@ -16,8 +16,6 @@ namespace SlimMy.ViewModel
 {
     public class DashBoardViewModel : BaseViewModel
     {
-        private Repo _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         DateTime now;
 
         User currentUser = UserSession.Instance.CurrentUser;
@@ -114,8 +112,6 @@ namespace SlimMy.ViewModel
 
         private async Task Initialize()
         {
-            _repo = new Repo(_connstring); // Repo 초기화
-
             RecentWorkouts = new ObservableCollection<string>();
 
             // 총 소모 칼로리
@@ -363,12 +359,26 @@ namespace SlimMy.ViewModel
         // 누적 운동 시간
         public async Task TotalTimePrint()
         {
-            int totalTimeCount = await _repo.GetTotalTime(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetTotalTimeAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetTotalTimeRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             int hour = 0, min = 0;
 
-            hour = totalTimeCount / 60;
-            min = totalTimeCount % 60;
+            hour = res.totalTimeCount / 60;
+            min = res.totalTimeCount % 60;
 
             TotalTime = hour + "시간 " + min + "분";
         }
@@ -377,6 +387,7 @@ namespace SlimMy.ViewModel
         public async Task RecentWorkoutsPrint()
         {
             var currentUser = UserSession.Instance.CurrentUser;
+
             if (currentUser == null)
             {
                 RecentWorkouts.Clear();
@@ -384,10 +395,25 @@ namespace SlimMy.ViewModel
                 return;
             }
 
-            List<string> recentWorkoutList = await _repo.GetRecentWorkouts(currentUser.UserId);
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var waitTask = session.Responses.GetRecentWorkoutsAsync(TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId };
+            await transport.SendFrameAsync((byte)MessageType.GetRecentWorkouts, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            var res = JsonSerializer.Deserialize<GetRecentWorkoutsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res?.ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.message}");
 
             RecentWorkouts.Clear();
-            foreach (var item in recentWorkoutList.Take(6))
+
+            foreach (var item in res.recentWorkoutList.Take(6))
             {
                 RecentWorkouts.Add(item);
             }
