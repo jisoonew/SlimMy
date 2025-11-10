@@ -39,6 +39,8 @@ namespace SlimMy.ViewModel
         Thread ReceiveThread = null;
         ChattingWindowViewModel chattingWindow = null;
 
+        private CancellationTokenSource _recvCts;
+
         public SslStream _ssl;
 
         private INavigationService _navigationService;
@@ -291,19 +293,26 @@ namespace SlimMy.ViewModel
             string email = UserId; // 입력된 아이디(이메일) 바인딩 값
             string passwordWD = passwordBox?.Password ?? "";
 
-            var loginReq = new { cmd = "LOGIN", email, password = passwordWD };
-            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
-            await transport.SendFrameAsync((byte)MessageType.UserLogin, payload);
+            var hub = UserSession.Instance.Responses;
+            // hub.StartReceiveLoopIfNeeded(transport);
 
-            var (respType, respPayload) = await transport.ReadFrameAsync();
+            _recvCts?.Cancel();
+            _recvCts = new CancellationTokenSource();
+            _ = Task.Run(() => RecieveMessage(transport, _recvCts.Token));
+
+            var reqId = Guid.NewGuid();
+
+            var wait = hub.WaitAsync(MessageType.UserLoginRes, reqId, TimeSpan.FromSeconds(5));
+
+            var loginReq = new { cmd = "LOGIN", email, password = passwordWD, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.UserLogin, JsonSerializer.SerializeToUtf8Bytes(loginReq));
+
+            var payload = await wait;
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var loginRes = JsonSerializer.Deserialize<LoginReply>(respPayload, opts);
+            var loginRes = JsonSerializer.Deserialize<LoginReply>(payload, opts);
 
             NickName = loginRes.nick;
             User.Password = password;
-
-            string json = Encoding.UTF8.GetString(respPayload);
-            Debug.WriteLine($"[LOGIN REPLY] type={respType}, json={json}");
 
             if (loginRes?.ok == true)
             {
@@ -317,7 +326,7 @@ namespace SlimMy.ViewModel
                 };
 
                 // 이후 모든 송수신은 ssl을 사용
-                _ = Task.Run(() => RecieveMessage(transport));
+                // _ = Task.Run(() => RecieveMessage(transport));
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
@@ -396,18 +405,22 @@ namespace SlimMy.ViewModel
         // 사용자 채팅
         public async Task RecieveMessage(INetworkTransport transport, CancellationToken ct = default)
         {
+            Debug.WriteLine("[RECV] loop start");
             try
             {
+                var hub = UserSession.Instance.Responses;
+
                 while (!ct.IsCancellationRequested)
                 {
                     var (rawType, payload) = await transport.ReadFrameAsync(ct);
                     var type = (MessageType)rawType;
                     var text = Encoding.UTF8.GetString(payload).Trim();
 
-                    if (UserSession.Instance.Responses.TryResolve(type, payload))
-                        continue;
+                    Debug.WriteLine($"[RECV] type={type}({rawType}), len={payload.Length}, text='{text}'");
 
-                    // Debug.WriteLine($"[RECV] type={type}({rawType}), len={payload.Length}, text='{text}'");
+                    var reqId = TryExtractRequestId(payload);
+                    if (hub.TryResolve(type, reqId, payload))
+                        continue; // 내 요청의 응답이면 여기서 끝
 
                     var list = new List<string>();
 
@@ -708,6 +721,27 @@ namespace SlimMy.ViewModel
             }, DispatcherPriority.ContextIdle);
 
             await readyTcs.Task;
+        }
+
+        private static Guid TryExtractRequestId(byte[] payload)
+        {
+            if (payload == null || payload.Length < 2) return Guid.Empty;
+            byte first = payload[0], last = payload[^1];
+            if (first != (byte)'{' || last != (byte)'}') return Guid.Empty;
+
+            if (payload.Length == 0) return Guid.Empty;
+            if (payload[0] != '{') return Guid.Empty;
+
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(payload);
+                if (doc.RootElement.TryGetProperty("requestID", out var p) &&
+                    p.ValueKind == System.Text.Json.JsonValueKind.String &&
+                    Guid.TryParse(p.GetString(), out var g))
+                    return g;
+            }
+            catch (System.Text.Json.JsonException) { }
+            return Guid.Empty;
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

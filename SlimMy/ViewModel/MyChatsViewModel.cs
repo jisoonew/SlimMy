@@ -344,8 +344,10 @@ namespace SlimMy.ViewModel
                 var transport = session.CurrentUser?.Transport
                     ?? throw new InvalidOperationException("not connected");
 
+                var reqId = Guid.NewGuid();
+
                 // 응답 대기 설치
-                var waitTask = session.Responses.WaitChatRoomUserListAsync(TimeSpan.FromSeconds(5));
+                var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
 
                 // 요청 전송
                 var req = new { cmd = "ChatRoomUserList", ChatRoomID = selectedChatRoom.ChatRoomId.ToString() };
@@ -398,8 +400,10 @@ namespace SlimMy.ViewModel
             var transport = session.CurrentUser?.Transport
                 ?? throw new InvalidOperationException("not connected");
 
+            var reqId = Guid.NewGuid();
+
             // 응답 대기 설치
-            var waitTask = session.Responses.WaitChatRoomPageListAsync(TimeSpan.FromSeconds(5));
+            var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomPageListRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
             var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId };
@@ -435,8 +439,10 @@ namespace SlimMy.ViewModel
             var transport = session.CurrentUser?.Transport
                 ?? throw new InvalidOperationException("not connected");
 
+            var reqId = Guid.NewGuid();
+
             // 응답 대기 설치
-            var waitTask = session.Responses.WaitMyChatRoomSearchWordAsync(TimeSpan.FromSeconds(5));
+            var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
             var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId };

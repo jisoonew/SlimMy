@@ -169,7 +169,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetExerciseHistoryAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -324,7 +326,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetExerciseHistoryAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));

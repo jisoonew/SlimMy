@@ -71,7 +71,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.InsertChatRoomAsync(TimeSpan.FromSeconds(5));
+            var insertChatRoomReqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.InsertChatRoomRes, insertChatRoomReqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "InsertChatRoom", chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now };
             await transport.SendFrameAsync((byte)MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -86,8 +88,10 @@ namespace SlimMy.ViewModel
 
             Guid userId = UserSession.Instance.CurrentUser.UserId;
 
+            var reqId = Guid.NewGuid();
+
             // 사용자와 채팅방 간의 관계 생성
-            var userChatRoomWaitTask = session.Responses.InsertUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+            var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
             var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1 };
             await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));

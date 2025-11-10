@@ -163,7 +163,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTodayCaloriesAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -185,7 +187,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTodayDurationAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayDurationRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -212,7 +216,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTodayCompletedAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -234,8 +240,10 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
+            var reqId = Guid.NewGuid();
+
             // 완료한 운동 리스트
-            var waitTask = session.Responses.GetTodayCompletedAsync(TimeSpan.FromSeconds(5));
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -248,8 +256,10 @@ namespace SlimMy.ViewModel
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
 
+            var getTotalExerciseReqId = Guid.NewGuid();
+
             // 전체 운동 리스트
-            var totalExerciseWaitTask = session.Responses.GetTotalExerciseAsync(TimeSpan.FromSeconds(5));
+            var totalExerciseWaitTask = session.Responses.WaitAsync(MessageType.GetTotalExerciseRes, getTotalExerciseReqId, TimeSpan.FromSeconds(5));
 
             var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
@@ -275,7 +285,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetWeeklyCaloriesAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetWeeklyCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -318,7 +330,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTotalSessionsAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalSessionsRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -340,7 +354,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTotalCaloriesAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -362,7 +378,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTotalTimeAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalTimeRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTotalTime", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -398,7 +416,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetRecentWorkoutsAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetRecentWorkoutsRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetRecentWorkouts, JsonSerializer.SerializeToUtf8Bytes(req));

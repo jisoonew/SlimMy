@@ -99,7 +99,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.NickNameCheckPrintAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "NickNameCheckPrint"};
             await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -157,7 +159,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.NickNameSaveAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname };
                     await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));

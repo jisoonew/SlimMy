@@ -209,7 +209,9 @@ namespace SlimMy.ViewModel
 
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.WaitMyDataAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "MyData", userID = userDateBundle.UserId };
             await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -269,7 +271,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.TodayWeightCompletedAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId };
                     await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -294,7 +298,9 @@ namespace SlimMy.ViewModel
                         // 사용자 정보
                         var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                        var myPageUserDatawaitTask = session.Responses.UpdateMyPageUserDataAsync(TimeSpan.FromSeconds(5));
+                        var updateMyPageUserDataReqId = Guid.NewGuid();
+
+                        var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
                         var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
@@ -310,7 +316,9 @@ namespace SlimMy.ViewModel
 
                         var updatetMyPageWeighttransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                        var updatetMyPageWeightwaitTask = session.Responses.UpdatetMyPageWeightAsync(TimeSpan.FromSeconds(5));
+                        var updatetMyPageWeightReqId = Guid.NewGuid();
+
+                        var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
                         var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
                         await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
@@ -328,7 +336,9 @@ namespace SlimMy.ViewModel
                         // 사용자 정보
                         var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                        var myPageUserDatawaitTask = session.Responses.UpdateMyPageUserDataAsync(TimeSpan.FromSeconds(5));
+                        var updateMyPageUserDataReqId = Guid.NewGuid();
+
+                        var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
                         var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
@@ -344,7 +354,9 @@ namespace SlimMy.ViewModel
                         // 몸무게 정보 저장
                         var insertMyPageWeightTransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                        var insertMyPageWeightWaitTask = session.Responses.InsertMyPageWeightAsync(TimeSpan.FromSeconds(5));
+                        var insertMyPageWeightReqId = Guid.NewGuid();
+
+                        var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
                         var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
                         await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
@@ -384,7 +396,9 @@ namespace SlimMy.ViewModel
                 var session = UserSession.Instance;
                 var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var waitTask = session.Responses.DeleteAccountViewAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
+
+                var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
 
                 var req = new { cmd = "DeleteAccountView", userID = UserData.UserId };
                 await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -419,7 +433,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetUserDataAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetUserData", userID = userDateBundle.UserId, password = CurrentPassword };
             await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));

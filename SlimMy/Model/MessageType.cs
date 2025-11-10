@@ -129,6 +129,7 @@ namespace SlimMy.Model
         ExitUserChatRoom = 123,
         ExitUserChatRoomRes = 124,
         DeleteChatRoomWithRelations = 125,
-        DeleteChatRoomWithRelationsRes = 126
+        DeleteChatRoomWithRelationsRes = 126,
+        UserLoginRes = 129
     }
 }

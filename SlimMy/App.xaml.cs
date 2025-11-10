@@ -1,15 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
-using SlimMy.Model;
 using SlimMy.Service;
-using SlimMy.View;
 using SlimMy.ViewModel;
 using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
+using System.Diagnostics;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace SlimMy

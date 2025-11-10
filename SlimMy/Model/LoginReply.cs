@@ -13,5 +13,6 @@ namespace SlimMy.Model
         public Guid userId { get; set; }
         public string nick { get; set; }
         public string accessToken { get; set; }
+        public Guid requestId { get; set; }
     }
 }

@@ -230,7 +230,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetWeightHistoryAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetWeightHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetWeightHistory", userID = userData.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetWeightHistory, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -286,7 +288,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetTodayWeightCompletedAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayWeightCompleted", dateTime = InputDate, userID = userData.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -309,9 +313,11 @@ namespace SlimMy.ViewModel
             {
                 if (res.weightCount < 1)
                 {
-                    var insertWeightWaitTask = session.Responses.InsertWeightAsync(TimeSpan.FromSeconds(5));
+                    var insertWeightResReqId = Guid.NewGuid();
 
-                    var insertWeightReq = new { cmd = "InsertWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
+                    var insertWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertWeightRes, insertWeightResReqId, TimeSpan.FromSeconds(5));
+
+                    var insertWeightReq = new { cmd = "InsertWeight", requestId = reqId, userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
                     await transport.SendFrameAsync((byte)MessageType.InsertWeight, JsonSerializer.SerializeToUtf8Bytes(insertWeightReq));
 
                     var insertWeightRespPayload = await insertWeightWaitTask;
@@ -324,7 +330,9 @@ namespace SlimMy.ViewModel
                 }
                 else
                 {
-                    var updatetWeightWaitTask = session.Responses.UpdateWeightWeightAsync(TimeSpan.FromSeconds(5));
+                    var updateWeightReqId = Guid.NewGuid();
+
+                    var updatetWeightWaitTask = session.Responses.WaitAsync(MessageType.UpdateWeightRes, updateWeightReqId, TimeSpan.FromSeconds(5));
 
                     var updateWeightReq = new { cmd = "UpdateWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
                     await transport.SendFrameAsync((byte)MessageType.UpdateWeight, JsonSerializer.SerializeToUtf8Bytes(updateWeightReq));
@@ -354,7 +362,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.GetMemoContentAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetMemoContent", dateTime = SelectedRecord.Date, userID = userData.UserId };
             await transport.SendFrameAsync((byte)MessageType.GetMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -412,7 +422,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.DeleteWeightAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.DeleteWeightRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "DeleteWeight", bodyID = SelectedRecord.BodyID, memoID = memoID };
                     await transport.SendFrameAsync((byte)MessageType.DeleteWeight, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -530,7 +542,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.GetSearchedMemoContentAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "GetSearchedMemoContent", userID = userData.UserId, searchKeyword = SearchKeyword };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -565,7 +579,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.GetSearchedDateAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedDateRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "GetSearchedDate", userID = userData.UserId, parsedDate = parsedDate };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedDate, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -595,7 +611,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.GetSearchedWeightAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedWeightRes, reqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "GetSearchedWeight", userID = userData.UserId, searchKeyword = double.Parse(SearchKeyword) };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedWeight, JsonSerializer.SerializeToUtf8Bytes(req));

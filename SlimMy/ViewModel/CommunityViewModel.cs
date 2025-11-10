@@ -312,9 +312,11 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.CheckUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+                    var reqId = Guid.NewGuid();
 
-                    var req = new { cmd = "CheckUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId };
+                    var waitTask = session.Responses.WaitAsync(MessageType.CheckUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
+
+                    var req = new { cmd = "CheckUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.CheckUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -331,10 +333,12 @@ namespace SlimMy.ViewModel
                     {
                         DateTime now = DateTime.Now;
 
-                        // 사용자와 채팅방 간의 관계 생성
-                        var userChatRoomWaitTask = session.Responses.InsertUserChatRoomsAsync(TimeSpan.FromSeconds(5));
+                        var insertUserChatRoomsReqId = Guid.NewGuid();
 
-                        var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0 };
+                        // 사용자와 채팅방 간의 관계 생성
+                        var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, insertUserChatRoomsReqId, TimeSpan.FromSeconds(5));
+
+                        var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0, requestID = insertUserChatRoomsReqId };
                         await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
                         var userChatRoomRespPayload = await userChatRoomWaitTask;
@@ -383,9 +387,11 @@ namespace SlimMy.ViewModel
                 var session = UserSession.Instance;
                 var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var waitTask = session.Responses.GetChatRoomUserIdsAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
 
-                var req = new { cmd = "GetChatRoomUserIds", chatRoomID = selectedChatRoom.ChatRoomId.ToString() };
+                var waitTask = session.Responses.WaitAsync(MessageType.GetChatRoomUserIdsRes, reqId, TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "GetChatRoomUserIds", chatRoomID = selectedChatRoom.ChatRoomId.ToString(), requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.GetChatRoomUserIds, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
@@ -445,9 +451,11 @@ namespace SlimMy.ViewModel
 
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.SelectChatRoomAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
 
-            var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId };
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectChatRoomRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -480,9 +488,11 @@ namespace SlimMy.ViewModel
             {
                 var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var waitTask = session.Responses.SelectChatRoomAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
 
-                var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId };
+                var waitTask = session.Responses.WaitAsync(MessageType.SelectChatRoomRes, reqId, TimeSpan.FromSeconds(5));
+
+                var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;

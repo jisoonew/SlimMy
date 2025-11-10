@@ -222,7 +222,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.AllExerciseListAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "AllExerciseList" };
             await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -314,7 +316,9 @@ namespace SlimMy.ViewModel
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var waitTask = session.Responses.SelectUserWeightAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId };
             await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));

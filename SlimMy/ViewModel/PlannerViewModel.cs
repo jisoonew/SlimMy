@@ -283,7 +283,9 @@ namespace SlimMy.ViewModel
                     var session = UserSession.Instance;
                     var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var waitTask = session.Responses.InsertPlannerPrintAsync(TimeSpan.FromSeconds(5));
+                    var insertPlannerPrintReqId = Guid.NewGuid();
+
+                    var waitTask = session.Responses.WaitAsync(MessageType.InsertPlannerPrintRes, insertPlannerPrintReqId, TimeSpan.FromSeconds(5));
 
                     var req = new { cmd = "InsertPlannerPrint", plannerGroup = SelectedPlannerGroup.PlannerGroupId };
                     await transport.SendFrameAsync((byte)MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -311,7 +313,9 @@ namespace SlimMy.ViewModel
                             var deleteSession = UserSession.Instance;
                             var deleteTransport = deleteSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                            var deleteWaitTask = session.Responses.DeletePlannerListAsync(TimeSpan.FromSeconds(5));
+                            var deletePlannerListReqId = Guid.NewGuid();
+
+                            var deleteWaitTask = session.Responses.WaitAsync(MessageType.DeletePlannerListRes, deletePlannerListReqId, TimeSpan.FromSeconds(5));
 
                             var deleteReq = new { cmd = "DeletePlannerList", plannerID = a.PlannerID };
                             await deleteTransport.SendFrameAsync((byte)MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
@@ -330,7 +334,9 @@ namespace SlimMy.ViewModel
                 var exerciseSession = UserSession.Instance;
                 var exerciseTransport = exerciseSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var exerciseWaitTask = exerciseSession.Responses.ExerciseCheckAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
+
+                var exerciseWaitTask = exerciseSession.Responses.WaitAsync(MessageType.ExerciseCheckRes, reqId, TimeSpan.FromSeconds(5));
 
                 var exerciseReq = new { cmd = "ExerciseCheck", userId = currentUser.UserId, selectedDate = SelectedDate };
                 await exerciseTransport.SendFrameAsync((byte)MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
@@ -349,7 +355,9 @@ namespace SlimMy.ViewModel
                     var UpdatePlannerSession = UserSession.Instance;
                     var UpdatePlannerTransport = UpdatePlannerSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.UpdatePlannerAsync(TimeSpan.FromSeconds(5));
+                    var updatePlannerReqId = Guid.NewGuid();
+
+                    var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.WaitAsync(MessageType.UpdatePlannerRes, updatePlannerReqId, TimeSpan.FromSeconds(5));
 
                     var UpdatePlannerReq = new { cmd = "UpdatePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList() };
                     await UpdatePlannerTransport.SendFrameAsync((byte)MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
@@ -368,7 +376,9 @@ namespace SlimMy.ViewModel
                     var InsertPlannerSession = UserSession.Instance;
                     var InsertPlannerTransport = InsertPlannerSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var InsertPlannerWaitTask = InsertPlannerSession.Responses.InsertPlannerAsync(TimeSpan.FromSeconds(5));
+                    var insertPlannerReqId = Guid.NewGuid();
+
+                    var InsertPlannerWaitTask = InsertPlannerSession.Responses.WaitAsync(MessageType.InsertPlannerRes, insertPlannerReqId, TimeSpan.FromSeconds(5));
 
                     var InsertPlannerReq = new { cmd = "InsertPlanner", userId = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList() };
                     await InsertPlannerTransport.SendFrameAsync((byte)MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
@@ -395,7 +405,9 @@ namespace SlimMy.ViewModel
             var PlannerPrintSession = UserSession.Instance;
             var PlannerPrintTransport = PlannerPrintSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var PlannerPrintWaitTask = PlannerPrintSession.Responses.PlannerPrintAsync(TimeSpan.FromSeconds(5));
+            var reqId = Guid.NewGuid();
+
+            var PlannerPrintWaitTask = PlannerPrintSession.Responses.WaitAsync(MessageType.PlannerPrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate };
             await PlannerPrintTransport.SendFrameAsync((byte)MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
@@ -420,7 +432,9 @@ namespace SlimMy.ViewModel
                 var session = UserSession.Instance;
                 var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var waitTask = session.Responses.ExerciseListAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
+
+                var waitTask = session.Responses.WaitAsync(MessageType.ExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
                 var req = new { cmd = "ExerciseList", userId = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date };
                 await transport.SendFrameAsync((byte)MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
@@ -502,7 +516,9 @@ namespace SlimMy.ViewModel
                 var session = UserSession.Instance;
                 var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                var waitTask = session.Responses.DeletePlannerAsync(TimeSpan.FromSeconds(5));
+                var reqId = Guid.NewGuid();
+
+                var waitTask = session.Responses.WaitAsync(MessageType.DeletePlannerRes, reqId, TimeSpan.FromSeconds(5));
 
                 var req = new { cmd = "DeletePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId };
                 await transport.SendFrameAsync((byte)MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));

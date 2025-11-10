@@ -1,3 +1,4 @@
+using SlimMy.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,6 @@ namespace SlimMy.Service
 
         Task SendFrameAsync(byte type, ReadOnlyMemory<byte> payload, CancellationToken ct = default);
 
-        Task<(byte type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default);
+        Task<(MessageType type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default);
     }
 }

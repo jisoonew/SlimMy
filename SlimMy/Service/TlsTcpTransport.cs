@@ -1,3 +1,4 @@
+using SlimMy.Model;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -42,13 +43,21 @@ namespace SlimMy.Service
             finally { _sendLock.Release(); }
         }
 
-        public async Task<(byte type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default)
+        public Task SendFrameAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken ct = default) => SendFrameAsync((byte)type, payload, ct);
+
+        public async Task<(MessageType type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default)
         {
             byte[] lenBuf = await ReadExactAsync(_ssl, 4, ct);
             int totalLen = BitConverter.ToInt32(lenBuf, 0);
-            byte type = (await ReadExactAsync(_ssl, 1, ct))[0];
+            if (totalLen < 1)
+                throw new IOException($"invalid frame length: {totalLen}");
+
+            byte[] typeBuf = await ReadExactAsync(_ssl, 1, ct);
+            var type = (MessageType)typeBuf[0];
+
             int pl = totalLen - 1;
             byte[] payload = pl > 0 ? await ReadExactAsync(_ssl, pl, ct) : Array.Empty<byte>();
+
             return (type, payload);
         }
 
