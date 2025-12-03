@@ -350,7 +350,7 @@ namespace SlimMy.ViewModel
                 var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
 
                 // 요청 전송
-                var req = new { cmd = "ChatRoomUserList", ChatRoomID = selectedChatRoom.ChatRoomId.ToString() };
+                var req = new { cmd = "ChatRoomUserList", ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 // 수신 루프가 응답을 잡아주면 도착
@@ -406,7 +406,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomPageListRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId };
+            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
@@ -445,7 +445,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId };
+            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착

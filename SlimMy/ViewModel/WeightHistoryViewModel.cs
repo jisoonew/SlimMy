@@ -234,13 +234,18 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetWeightHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetWeightHistory", userID = userData.UserId };
+            var req = new { cmd = "GetWeightHistory", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetWeightHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetWeightHistoryRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res.message == "unauthorized" || res.message == "expired token")
+            {
+
+            }
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -292,7 +297,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayWeightCompleted", dateTime = InputDate, userID = userData.UserId };
+            var req = new { cmd = "GetTodayWeightCompleted", dateTime = InputDate, userID = userData.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -317,7 +322,7 @@ namespace SlimMy.ViewModel
 
                     var insertWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertWeightRes, insertWeightResReqId, TimeSpan.FromSeconds(5));
 
-                    var insertWeightReq = new { cmd = "InsertWeight", requestId = reqId, userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
+                    var insertWeightReq = new { cmd = "InsertWeight", requestId = insertWeightResReqId, userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
                     await transport.SendFrameAsync((byte)MessageType.InsertWeight, JsonSerializer.SerializeToUtf8Bytes(insertWeightReq));
 
                     var insertWeightRespPayload = await insertWeightWaitTask;
@@ -334,7 +339,7 @@ namespace SlimMy.ViewModel
 
                     var updatetWeightWaitTask = session.Responses.WaitAsync(MessageType.UpdateWeightRes, updateWeightReqId, TimeSpan.FromSeconds(5));
 
-                    var updateWeightReq = new { cmd = "UpdateWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent };
+                    var updateWeightReq = new { cmd = "UpdateWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent, requestID = updateWeightReqId };
                     await transport.SendFrameAsync((byte)MessageType.UpdateWeight, JsonSerializer.SerializeToUtf8Bytes(updateWeightReq));
 
                     var updateWeightRespPayload = await updatetWeightWaitTask;
@@ -366,7 +371,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetMemoContent", dateTime = SelectedRecord.Date, userID = userData.UserId };
+            var req = new { cmd = "GetMemoContent", dateTime = SelectedRecord.Date, userID = userData.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -426,7 +431,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.DeleteWeightRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "DeleteWeight", bodyID = SelectedRecord.BodyID, memoID = memoID };
+                    var req = new { cmd = "DeleteWeight", bodyID = SelectedRecord.BodyID, memoID = memoID, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.DeleteWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -546,7 +551,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "GetSearchedMemoContent", userID = userData.UserId, searchKeyword = SearchKeyword };
+                    var req = new { cmd = "GetSearchedMemoContent", userID = userData.UserId, searchKeyword = SearchKeyword, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -583,7 +588,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedDateRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "GetSearchedDate", userID = userData.UserId, parsedDate = parsedDate };
+                    var req = new { cmd = "GetSearchedDate", userID = userData.UserId, parsedDate = parsedDate, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedDate, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -615,7 +620,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedWeightRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "GetSearchedWeight", userID = userData.UserId, searchKeyword = double.Parse(SearchKeyword) };
+                    var req = new { cmd = "GetSearchedWeight", userID = userData.UserId, searchKeyword = double.Parse(SearchKeyword), requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.GetSearchedWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;

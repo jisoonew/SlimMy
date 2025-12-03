@@ -173,7 +173,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -330,7 +330,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId };
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;

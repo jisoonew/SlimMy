@@ -33,6 +33,8 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         public static Guid myUid;
 
+        private INavigationService _navigationService;
+
         private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션
         private int _currentPage; // 현재 페이지 번호
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
@@ -72,8 +74,8 @@ namespace SlimMy.ViewModel
 
         public ObservableCollection<ChatRooms> AllData { get; set; } // 전체 데이터
 
-        public ICommand NextPageCommand { get; }
-        public ICommand PreviousPageCommand { get; }
+        public ICommand NextPageCommand { get; set; }
+        public ICommand PreviousPageCommand { get; set; }
 
         private static int _count;
         public static int Count
@@ -240,10 +242,16 @@ namespace SlimMy.ViewModel
             _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService)); // _dataService 필드 초기화
         }
 
-        // 기본 생성자 (IDataService의 기본 구현 사용)
         public CommunityViewModel()
         {
+        }
+
+        // 초기화 메서드
+        private async Task Initialize()
+        {
             _dataService = new DataService();
+
+            _navigationService = new NavigationService();
 
             ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
             AllData = ChatRooms;
@@ -263,11 +271,6 @@ namespace SlimMy.ViewModel
                 execute: _ => PreviousPage(),
                 canExecute: _ => CanGoToPreviousPage());
 
-        }
-
-        // 초기화 메서드
-        private async Task Initialize()
-        {
             await RefreshChatRooms(); // 채팅 방 불러오기
             InsertCommand = new AsyncRelayCommand(ChatRoomSelected);
             ChattingCommand = new AsyncRelayCommand(OpenCreateChatRoomWindow);
@@ -316,13 +319,36 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.CheckUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "CheckUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, requestID = reqId };
+                    var req = new { cmd = "CheckUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.CheckUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
 
                     var res = JsonSerializer.Deserialize<CheckUserChatRoomsRes>(
                         respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (res == null)
+                    {
+                        Debug.WriteLine("[CheckUserChatRooms] res is null");
+                        return;
+                    }
+
+                    if (res.message == "unauthorized" || res.message == "expired token")
+                    {
+                        UserSession.Instance.Clear();
+
+                        if (_navigationService == null)
+                        {
+                            Debug.WriteLine("[CheckUserChatRooms] _navigationService is NULL!!!!");
+                            MessageBox.Show("내부 네비게이션 서비스가 초기화되지 않았습니다.", "오류");
+                            return;
+                        }
+
+                        // 모든 창을 닫고 로그인 창만 생성
+                        _navigationService.NavigateToLoginOnly();
+
+                        return;
+                    }
 
                     if (res?.ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.message}");

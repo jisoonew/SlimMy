@@ -39,6 +39,9 @@ namespace SlimMy.Service
         // 닉네임 변경 화면 닫기
         Task NavigateToNickNameClose();
 
+        // 모든 창을 닫고 로그인 창만 생성
+        void NavigateToLoginOnly();
+
         // 로그인 화면
         Task NavigateToCloseAndLoginAsync(string viewCloseName);
     }

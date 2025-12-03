@@ -23,7 +23,6 @@ namespace SlimMy.ViewModel
 
     public class ExerciseViewModel : BaseViewModel
     {
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private readonly INavigationService _navigationService;
 
         private int _currentPage; // 현재 페이지 번호
@@ -226,7 +225,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "AllExerciseList" };
+            var req = new { cmd = "AllExerciseList", requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -320,7 +319,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId };
+            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;

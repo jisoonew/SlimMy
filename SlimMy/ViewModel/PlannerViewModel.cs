@@ -287,7 +287,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.InsertPlannerPrintRes, insertPlannerPrintReqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "InsertPlannerPrint", plannerGroup = SelectedPlannerGroup.PlannerGroupId };
+                    var req = new { cmd = "InsertPlannerPrint", plannerGroup = SelectedPlannerGroup.PlannerGroupId, requestID = insertPlannerPrintReqId };
                     await transport.SendFrameAsync((byte)MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -317,7 +317,7 @@ namespace SlimMy.ViewModel
 
                             var deleteWaitTask = session.Responses.WaitAsync(MessageType.DeletePlannerListRes, deletePlannerListReqId, TimeSpan.FromSeconds(5));
 
-                            var deleteReq = new { cmd = "DeletePlannerList", plannerID = a.PlannerID };
+                            var deleteReq = new { cmd = "DeletePlannerList", plannerID = a.PlannerID, requestID = deletePlannerListReqId };
                             await deleteTransport.SendFrameAsync((byte)MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
 
                             var deleteRespPayload = await deleteWaitTask;
@@ -338,7 +338,7 @@ namespace SlimMy.ViewModel
 
                 var exerciseWaitTask = exerciseSession.Responses.WaitAsync(MessageType.ExerciseCheckRes, reqId, TimeSpan.FromSeconds(5));
 
-                var exerciseReq = new { cmd = "ExerciseCheck", userId = currentUser.UserId, selectedDate = SelectedDate };
+                var exerciseReq = new { cmd = "ExerciseCheck", userId = currentUser.UserId, selectedDate = SelectedDate, requestID = reqId };
                 await exerciseTransport.SendFrameAsync((byte)MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
 
                 var exerciseRespPayload = await exerciseWaitTask;
@@ -359,7 +359,7 @@ namespace SlimMy.ViewModel
 
                     var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.WaitAsync(MessageType.UpdatePlannerRes, updatePlannerReqId, TimeSpan.FromSeconds(5));
 
-                    var UpdatePlannerReq = new { cmd = "UpdatePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList() };
+                    var UpdatePlannerReq = new { cmd = "UpdatePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList(), requestID = updatePlannerReqId };
                     await UpdatePlannerTransport.SendFrameAsync((byte)MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
 
                     var UpdatePlannerRespPayload = await UpdatePlannerWaitTask;
@@ -380,7 +380,7 @@ namespace SlimMy.ViewModel
 
                     var InsertPlannerWaitTask = InsertPlannerSession.Responses.WaitAsync(MessageType.InsertPlannerRes, insertPlannerReqId, TimeSpan.FromSeconds(5));
 
-                    var InsertPlannerReq = new { cmd = "InsertPlanner", userId = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList() };
+                    var InsertPlannerReq = new { cmd = "InsertPlanner", userId = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList(), requestID = insertPlannerReqId };
                     await InsertPlannerTransport.SendFrameAsync((byte)MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
 
                     var InsertPlannerRespPayload = await InsertPlannerWaitTask;
@@ -409,7 +409,7 @@ namespace SlimMy.ViewModel
 
             var PlannerPrintWaitTask = PlannerPrintSession.Responses.WaitAsync(MessageType.PlannerPrintRes, reqId, TimeSpan.FromSeconds(5));
 
-            var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate };
+            var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate, requestID = reqId };
             await PlannerPrintTransport.SendFrameAsync((byte)MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
 
             var PlannerPrintRespPayload = await PlannerPrintWaitTask;
@@ -436,7 +436,7 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.ExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "ExerciseList", userId = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date };
+                var req = new { cmd = "ExerciseList", userId = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
@@ -520,7 +520,7 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.DeletePlannerRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "DeletePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId };
+                var req = new { cmd = "DeletePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;

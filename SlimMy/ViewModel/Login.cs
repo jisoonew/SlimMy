@@ -170,13 +170,25 @@ namespace SlimMy.ViewModel
                 && Validator.Validator.ValidatePassword(User.Password, User.PasswordCheck) && Validator.Validator.ValidateBirthDate(User.BirthDate) && Validator.Validator.ValidateHeight(User.Height)
                 && Validator.Validator.ValidateWeight(User.Weight) && Validator.Validator.ValidateDietGoal(User.DietGoal) && _repo.BuplicateNickName(User.NickName) && SignUp.count == 1)
             {
-                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal };
+                var reqId = Guid.NewGuid();
+
+                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal, requestID = reqId };
                 byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
                 await transport.SendFrameAsync((byte)MessageType.Sign_Up, payload);
 
                 var (respType, respPayload) = await transport.ReadFrameAsync();
                 var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var signUpRes = JsonSerializer.Deserialize<SignUpReply>(respPayload, opts);
+
+                if (respType == MessageType.Sign_UpRes && signUpRes != null && signUpRes.ok)
+                {
+                    MessageBox.Show("회원가입에 성공하였습니다.");
+                }
+                else
+                {
+                    string msg = signUpRes?.message ?? "회원가입에 실패하였습니다.";
+                    MessageBox.Show($"회원가입에 실패하였습니다.\n\n사유: {msg}");
+                }
             }
             else
             {

@@ -75,7 +75,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.InsertChatRoomRes, insertChatRoomReqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "InsertChatRoom", chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now };
+            var req = new { cmd = "InsertChatRoom", chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now, requestID = insertChatRoomReqId };
             await transport.SendFrameAsync((byte)MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -93,7 +93,7 @@ namespace SlimMy.ViewModel
             // 사용자와 채팅방 간의 관계 생성
             var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1 };
+            var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
             var userChatRoomRespPayload = await userChatRoomWaitTask;

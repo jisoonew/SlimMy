@@ -14,6 +14,7 @@ namespace SlimMy
         public User CurrentUser { get; set; }
         public INetworkTransport Transport { get; set; }
         public ResponseHub Responses { get; } = new ResponseHub();
+        public Guid? AccessToken { get; set; }
 
         private UserSession() { }
 
@@ -27,6 +28,23 @@ namespace SlimMy
                 }
                 return _instance;
             }
+        }
+
+        public void Clear()
+        {
+            try
+            {
+                // 네트워크 연결 정리
+                (Transport as IDisposable)?.Dispose();
+            }
+            catch
+            {
+                // Dispose 중 예외는 무시
+            }
+
+            Transport = null;
+            CurrentUser = null;
+            AccessToken = null;
         }
     }
 }

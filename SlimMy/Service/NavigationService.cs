@@ -49,21 +49,21 @@ namespace SlimMy.Service
         // 로그인 화면
         public async Task NavigateToCloseAndLoginAsync(string viewCloseName)
         {
-            // 1. 로그인 뷰 먼저 생성
+            // 로그인 뷰 먼저 생성
             var loginView = new View.Login();
             var loginViewModel = new MainPageViewModel(_dataService, loginView);
             loginView.DataContext = loginViewModel;
 
-            // 2. MainWindow 교체 먼저 (Shutdown 방지)
+            // MainWindow 교체 먼저 (Shutdown 방지)
             Application.Current.MainWindow = loginView;
 
-            // 3. 로그인 창 표시
+            // 로그인 창 표시
             loginView.Show();
 
-            // 4. 약간의 딜레이를 주어 WPF 내부 루프가 안정화되도록 함
+            // 약간의 딜레이를 주어 WPF 내부 루프가 안정화되도록 함
             await Task.Delay(200);  // 중요! 렌더링 시점 보장
 
-            // 5. 기존 창 닫기 (MainHome 등)
+            // 기존 창 닫기 (MainHome 등)
             Window currentWindow = Application.Current.Windows
                 .OfType<Window>()
                 .FirstOrDefault(w => w.GetType().Name == viewCloseName);
@@ -355,7 +355,7 @@ namespace SlimMy.Service
         // 운동 선택창 닫기
         public void NavigateToExerciseWindow()
         {
-            // 로그인 창 닫기
+            // 운도 선택창 창 닫기
             foreach (Window window in Application.Current.Windows)
             {
                 if (window is AddExercise)
@@ -364,6 +364,41 @@ namespace SlimMy.Service
                     break;
                 }
             }
+        }
+
+        // 모든 창을 닫고 로그인 창만 생성
+        public void NavigateToLoginOnly()
+        {
+            var app = Application.Current;
+            if (app == null)
+                throw new InvalidOperationException("Application.Current 가 null 입니다.");
+
+            app.Dispatcher.Invoke(() =>
+            {
+                // 로그인 창 찾기 or 없으면 새로 생성
+                var loginWindow = app.Windows
+                    .OfType<View.Login>()
+                    .FirstOrDefault();
+
+                if (loginWindow == null)
+                {
+                    loginWindow = new View.Login();
+                    loginWindow.Show();
+                }
+
+                // 현재 열린 모든 창을 리스트로 복사
+                var windows = app.Windows.Cast<Window>().ToList();
+
+                // 로그인창을 제외한 나머지 전부 닫기
+                foreach (var window in windows)
+                {
+                    if (!ReferenceEquals(window, loginWindow))
+                        window.Close();
+                }
+
+                // 메인 윈도우를 로그인창으로 교체
+                app.MainWindow = loginWindow;
+            });
         }
 
         public void SetFrame(Frame frame)

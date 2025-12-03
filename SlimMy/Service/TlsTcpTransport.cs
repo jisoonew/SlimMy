@@ -75,7 +75,13 @@ namespace SlimMy.Service
 
         public void Dispose()
         {
-            try { _ssl?.Dispose(); } catch { }
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[TlsTcpTransport] Dispose called");
+                _ssl?.Dispose();
+            }
+            catch { }
+
             try { _tcp?.Dispose(); } catch { }
         }
     }

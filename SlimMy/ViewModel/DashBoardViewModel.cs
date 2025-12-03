@@ -167,7 +167,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId };
+            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -191,7 +191,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayDurationRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId };
+            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -220,7 +220,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -245,7 +245,7 @@ namespace SlimMy.ViewModel
             // 완료한 운동 리스트
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId };
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -261,7 +261,7 @@ namespace SlimMy.ViewModel
             // 전체 운동 리스트
             var totalExerciseWaitTask = session.Responses.WaitAsync(MessageType.GetTotalExerciseRes, getTotalExerciseReqId, TimeSpan.FromSeconds(5));
 
-            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId };
+            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId, requestID = getTotalExerciseReqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
 
             var totalExerciseRespPayload = await totalExerciseWaitTask;
@@ -289,7 +289,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetWeeklyCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId };
+            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -334,7 +334,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalSessionsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId };
+            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -358,7 +358,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId };
+            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -382,7 +382,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalTimeRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId };
+            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -420,7 +420,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetRecentWorkoutsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId };
+            var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetRecentWorkouts, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;

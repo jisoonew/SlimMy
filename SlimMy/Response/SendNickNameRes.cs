@@ -11,5 +11,6 @@ namespace SlimMy.Response
         public bool ok { get; set; }
         public string message { get; set; }
         public string senderNickName { get; set; }
+        public Guid requestID { get; set; }
     }
 }

@@ -643,7 +643,7 @@ namespace SlimMy.ViewModel
             User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
-            if (!sender.Equals(currentUser.UserId.ToString()))
+            if (Guid.TryParse(sender, out var senderGuid) && senderGuid != currentUser.UserId)
             {
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {

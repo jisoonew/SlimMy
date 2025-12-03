@@ -311,11 +311,13 @@ namespace SlimMy.ViewModel
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var loginRes = JsonSerializer.Deserialize<LoginReply>(payload, opts);
 
-            NickName = loginRes.nick;
-            User.Password = password;
-
             if (loginRes?.ok == true)
             {
+                Debug.WriteLine("서버 데이터 도착");
+
+                NickName = loginRes.nick;
+                User.Password = password;
+
                 // 성공 처리: 세션 저장, 수신 루프 시작 등
                 UserSession.Instance.CurrentUser = new User
                 {
@@ -324,6 +326,8 @@ namespace SlimMy.ViewModel
                     NickName = loginRes.nick,
                     Transport = transport
                 };
+
+                UserSession.Instance.AccessToken = loginRes.accessTokenID;
 
                 // 이후 모든 송수신은 ssl을 사용
                 // _ = Task.Run(() => RecieveMessage(transport));
@@ -344,6 +348,7 @@ namespace SlimMy.ViewModel
             else
             {
                 MessageBox.Show(loginRes?.message ?? "로그인 실패");
+                _recvCts?.Cancel();
                 transport.Dispose();
                 return;
             }
@@ -375,6 +380,8 @@ namespace SlimMy.ViewModel
         // 로그아웃
         public async Task LogoutBtn(object parameter)
         {
+            _recvCts.Cancel();
+
             // 서버 연결 해제
             if (UserSession.Instance.CurrentUser?.Client != null)
             {
@@ -424,16 +431,22 @@ namespace SlimMy.ViewModel
 
                     var list = new List<string>();
 
+
+                    if (type == MessageType.Heartbeat) continue; // 하트비트 페이로드는 스킵
+
                     foreach (var seg in text.Split('>'))
                     {
                         if (!seg.Contains('<')) continue;
-                        if (type == MessageType.Heartbeat && seg.Contains("관리자<TEST")) continue; // 하트비트 페이로드는 스킵
                         list.Add(seg);
                     }
 
                     if (list.Count > 0)
-                        await ParsingReceiveMessage(list, type);
+                        _ = Task.Run(() => ParsingReceiveMessage(list, type));
                 }
+            }
+            catch (IOException ex)
+            {
+                Debug.WriteLine($"[RECV] remote closed: {ex.Message}");
             }
             catch (Exception e)
             {
@@ -621,7 +634,6 @@ namespace SlimMy.ViewModel
             string messageContent = parts[1];
             string sender = parts[3];
 
-            // 지금부터 쭉 같은 키를 씁니다
             var userId = UserSession.Instance.CurrentUser.UserId.ToString();
             var chatKey = $"{userId}:{roomId}";
 

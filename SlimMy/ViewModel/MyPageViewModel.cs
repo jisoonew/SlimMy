@@ -213,7 +213,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "MyData", userID = userDateBundle.UserId };
+            var req = new { cmd = "MyData", userID = userDateBundle.UserId, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -275,7 +275,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId };
+                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
@@ -302,7 +302,7 @@ namespace SlimMy.ViewModel
 
                         var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, requestID = updateMyPageUserDataReqId };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
 
                         var userDataRespPayload = await myPageUserDatawaitTask;
@@ -320,7 +320,7 @@ namespace SlimMy.ViewModel
 
                         var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
-                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
+                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, requestID = updatetMyPageWeightReqId };
                         await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
 
                         var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
@@ -340,7 +340,7 @@ namespace SlimMy.ViewModel
 
                         var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal };
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, requestID = updateMyPageUserDataReqId };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
 
                         var userDataRespPayload = await myPageUserDatawaitTask;
@@ -358,7 +358,7 @@ namespace SlimMy.ViewModel
 
                         var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
-                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue };
+                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, requestID = insertMyPageWeightReqId };
                         await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
 
                         var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
@@ -400,7 +400,7 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId };
+                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
@@ -437,7 +437,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetUserData", userID = userDateBundle.UserId, password = CurrentPassword };
+            var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;

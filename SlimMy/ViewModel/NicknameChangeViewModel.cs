@@ -103,7 +103,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "NickNameCheckPrint"};
+            var req = new { cmd = "NickNameCheckPrint", requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -163,7 +163,7 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname };
+                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;

@@ -1136,7 +1136,7 @@ namespace SlimMy
                     connection.Open();
                     using (OracleTransaction transaction = connection.BeginTransaction())
                     {
-                        // 1. PlannerGroup 저장
+                        // PlannerGroup 저장
                         Guid plannerGroupId = Guid.NewGuid();
                         byte[] plannerGroupIdBytes = plannerGroupId.ToByteArray();
 
@@ -1155,7 +1155,7 @@ namespace SlimMy
                             groupCmd.ExecuteNonQuery();
                         }
 
-                        // 2. Planner 리스트 저장
+                        // Planner 리스트 저장
                         string insertDetailQuery = @"
                     INSERT INTO Planner 
                     (PlannerId, PlannerGroupId, Exercise_Info_Id, IndexNum, Minutes, Calories, IsCompleted)
@@ -1212,7 +1212,7 @@ namespace SlimMy
                             groupCmd.ExecuteNonQuery();
                         }
 
-                        // 2. Planner 리스트 저장
+                        // Planner 리스트 저장
                         string insertDetailQuery = @"
                     update Planner set minutes = :minutes, calories = :calories, iscompleted = :iscompleted where plannerid = :plannerid";
 

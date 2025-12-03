@@ -41,12 +41,12 @@ namespace SlimMy.View
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            MessageBoxResult messageBoxResult = MessageBox.Show("SlimMy를 종료하시겠습니까?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (messageBoxResult == MessageBoxResult.No)
-            {
-                e.Cancel = true;
-                return;
-            }
+            //MessageBoxResult messageBoxResult = MessageBox.Show("SlimMy를 종료하시겠습니까?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            //if (messageBoxResult == MessageBoxResult.No)
+            //{
+            //    e.Cancel = true;
+            //    return;
+            //}
 
             Application.Current.Shutdown();
         }
