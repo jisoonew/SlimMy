@@ -1,5 +1,6 @@
 using SlimMy.Model;
 using SlimMy.Response;
+using SlimMy.Service;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,8 @@ namespace SlimMy.ViewModel
         private ChatRooms _chat;
         private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         public event EventHandler ChatRoomCreated;
+
+        private readonly INavigationService _navigationService;
 
         public static string myName = null;
 
@@ -60,6 +63,8 @@ namespace SlimMy.ViewModel
         {
             _chat = new ChatRooms();
             OpenCreateChatRoomCommand = new AsyncRelayCommand(CreateChat);
+
+            _navigationService = new NavigationService();
         }
 
         // 채팅방 생성
@@ -75,13 +80,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.InsertChatRoomRes, insertChatRoomReqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "InsertChatRoom", chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now, requestID = insertChatRoomReqId };
+            var req = new { cmd = "InsertChatRoom", userID = session.CurrentUser.UserId, chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now, accessToken = UserSession.Instance.AccessToken, requestID = insertChatRoomReqId };
             await transport.SendFrameAsync((byte)MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<InsertChatRoomRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -93,13 +102,17 @@ namespace SlimMy.ViewModel
             // 사용자와 채팅방 간의 관계 생성
             var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1, requestID = reqId };
+            var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.chatRoomID, dateTime = now, isowner = 1, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
             var userChatRoomRespPayload = await userChatRoomWaitTask;
 
             var userChatRoomRes = JsonSerializer.Deserialize<InsertUserChatRoomsRes>(
                 userChatRoomRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(userChatRoomRes?.message))
+                return;
 
             if (userChatRoomRes?.ok != true)
                 throw new InvalidOperationException($"server not ok: {userChatRoomRes?.message}");
@@ -109,6 +122,21 @@ namespace SlimMy.ViewModel
 
             CloseWindow();
 
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
 
         private void CloseWindow()

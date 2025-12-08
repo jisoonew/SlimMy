@@ -225,13 +225,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "AllExerciseList", requestID = reqId };
+            var req = new { cmd = "AllExerciseList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<AllExerciseListRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -319,13 +323,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<SelectUserWeightRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -376,5 +384,21 @@ namespace SlimMy.ViewModel
 
         private bool CanGoToNextPage() => CurrentPage < TotalPages;
         private bool CanGoToPreviousPage() => CurrentPage > 1;
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
+        }
+
     }
 }

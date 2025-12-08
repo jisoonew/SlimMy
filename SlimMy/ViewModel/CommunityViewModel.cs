@@ -337,13 +337,6 @@ namespace SlimMy.ViewModel
                     {
                         UserSession.Instance.Clear();
 
-                        if (_navigationService == null)
-                        {
-                            Debug.WriteLine("[CheckUserChatRooms] _navigationService is NULL!!!!");
-                            MessageBox.Show("내부 네비게이션 서비스가 초기화되지 않았습니다.", "오류");
-                            return;
-                        }
-
                         // 모든 창을 닫고 로그인 창만 생성
                         _navigationService.NavigateToLoginOnly();
 
@@ -364,13 +357,23 @@ namespace SlimMy.ViewModel
                         // 사용자와 채팅방 간의 관계 생성
                         var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, insertUserChatRoomsReqId, TimeSpan.FromSeconds(5));
 
-                        var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0, requestID = insertUserChatRoomsReqId };
+                        var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = currentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0, accessToken = UserSession.Instance.AccessToken, requestID = insertUserChatRoomsReqId };
                         await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
                         var userChatRoomRespPayload = await userChatRoomWaitTask;
 
                         var userChatRoomRes = JsonSerializer.Deserialize<InsertUserChatRoomsRes>(
                             userChatRoomRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        if (userChatRoomRes.message == "unauthorized" || userChatRoomRes.message == "expired token")
+                        {
+                            UserSession.Instance.Clear();
+
+                            // 모든 창을 닫고 로그인 창만 생성
+                            _navigationService.NavigateToLoginOnly();
+
+                            return;
+                        }
 
                         if (userChatRoomRes?.ok != true)
                             throw new InvalidOperationException($"server not ok: {userChatRoomRes?.message}");
@@ -417,13 +420,23 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.GetChatRoomUserIdsRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "GetChatRoomUserIds", chatRoomID = selectedChatRoom.ChatRoomId.ToString(), requestID = reqId };
+                var req = new { cmd = "GetChatRoomUserIds", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.GetChatRoomUserIds, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
 
                 var res = JsonSerializer.Deserialize<GetChatRoomUserIdsRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res.message == "unauthorized" || res.message == "expired token")
+                {
+                    UserSession.Instance.Clear();
+
+                    // 모든 창을 닫고 로그인 창만 생성
+                    _navigationService.NavigateToLoginOnly();
+
+                    return;
+                }
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -481,13 +494,23 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.SelectChatRoomRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, requestID = reqId };
+            var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<SelectChatRoomRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (res.message == "unauthorized" || res.message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return;
+            }
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -518,13 +541,23 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.SelectChatRoomRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, requestID = reqId };
+                var req = new { cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
 
                 var res = JsonSerializer.Deserialize<SelectChatRoomRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (res.message == "unauthorized" || res.message == "expired token")
+                {
+                    UserSession.Instance.Clear();
+
+                    // 모든 창을 닫고 로그인 창만 생성
+                    _navigationService.NavigateToLoginOnly();
+
+                    return;
+                }
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");

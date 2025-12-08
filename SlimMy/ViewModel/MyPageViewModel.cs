@@ -213,13 +213,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "MyData", userID = userDateBundle.UserId, requestID = reqId };
+            var req = new { cmd = "MyData", userID = userDateBundle.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<MyDataRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -275,13 +279,17 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, requestID = reqId };
+                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
 
                     var res = JsonSerializer.Deserialize<TodayWeightCompletedRes>(
                         respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 세션이 만료되면 로그인 창만 실행
+                    if (HandleAuthError(res?.message))
+                        return;
 
                     if (res?.ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -302,13 +310,17 @@ namespace SlimMy.ViewModel
 
                         var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, requestID = updateMyPageUserDataReqId };
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
 
                         var userDataRespPayload = await myPageUserDatawaitTask;
 
                         var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
                             userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        // 세션이 만료되면 로그인 창만 실행
+                        if (HandleAuthError(userDataRes?.message))
+                            return;
 
                         if (userDataRes?.ok != true)
                             throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
@@ -320,13 +332,17 @@ namespace SlimMy.ViewModel
 
                         var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
-                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, requestID = updatetMyPageWeightReqId };
+                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = updatetMyPageWeightReqId };
                         await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
 
                         var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
 
                         var updatetMyPageWeightRes = JsonSerializer.Deserialize<UpdatetMyPageWeightRes>(
                             updatetMyPageWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        // 세션이 만료되면 로그인 창만 실행
+                        if (HandleAuthError(updatetMyPageWeightRes?.message))
+                            return;
 
                         if (updatetMyPageWeightRes?.ok != true)
                             throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -340,13 +356,17 @@ namespace SlimMy.ViewModel
 
                         var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, requestID = updateMyPageUserDataReqId };
+                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
                         await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
 
                         var userDataRespPayload = await myPageUserDatawaitTask;
 
                         var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
                             userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        // 세션이 만료되면 로그인 창만 실행
+                        if (HandleAuthError(userDataRes?.message))
+                            return;
 
                         if (userDataRes?.ok != true)
                             throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
@@ -358,13 +378,17 @@ namespace SlimMy.ViewModel
 
                         var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
-                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, requestID = insertMyPageWeightReqId };
+                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = insertMyPageWeightReqId };
                         await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
 
                         var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
 
                         var insertMyPageWeightRes = JsonSerializer.Deserialize<InsertMyPageWeightRes>(
                             insertMyPageWeightPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        // 세션이 만료되면 로그인 창만 실행
+                        if (HandleAuthError(insertMyPageWeightRes?.message))
+                            return;
 
                         if (insertMyPageWeightRes?.ok != true)
                             throw new InvalidOperationException($"server not ok: {insertMyPageWeightRes?.message}");
@@ -400,13 +424,17 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, requestID = reqId };
+                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
 
                 var res = JsonSerializer.Deserialize<DeleteAccountViewRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(res?.message))
+                    return;
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -437,13 +465,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, requestID = reqId };
+            var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetUserDataRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             // 현재 비밀번호 확인
             PasswordCheck = res.match;
@@ -470,6 +502,21 @@ namespace SlimMy.ViewModel
         public async Task NickNameChangedFunction(object parameter)
         {
             await _navigationService.NavigateToNickName();
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
     }
 }

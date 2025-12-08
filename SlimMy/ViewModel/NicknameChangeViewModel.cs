@@ -103,13 +103,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "NickNameCheckPrint", requestID = reqId };
+            var req = new { cmd = "NickNameCheckPrint", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<NickNameCheckPrintRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -163,13 +167,17 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, requestID = reqId };
+                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                     await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
 
                     var res = JsonSerializer.Deserialize<NickNameSaveRes>(
                         respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 세션이 만료되면 로그인 창만 실행
+                    if (HandleAuthError(res?.message))
+                        return;
 
                     if (res?.ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -178,6 +186,21 @@ namespace SlimMy.ViewModel
                     await _navigationService.NavigateToNickNameClose();
                 }
             }
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
     }
 }

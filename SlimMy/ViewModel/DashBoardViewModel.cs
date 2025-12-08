@@ -2,6 +2,7 @@ using LiveCharts;
 using LiveCharts.Wpf;
 using SlimMy.Model;
 using SlimMy.Response;
+using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -19,6 +20,8 @@ namespace SlimMy.ViewModel
         DateTime now;
 
         User currentUser = UserSession.Instance.CurrentUser;
+
+        private readonly INavigationService _navigationService;
 
         private string _todayDisplay;
         public string TodayDisplay
@@ -108,6 +111,8 @@ namespace SlimMy.ViewModel
         {
             now = DateTime.Now.Date;
             TodayDisplay = now.ToString("yyyy-MM-dd (dddd)");
+
+            _navigationService = new NavigationService();
         }
 
         private async Task Initialize()
@@ -167,13 +172,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTodayCaloriesRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -191,13 +200,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayDurationRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTodayDurationRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -220,13 +233,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -245,13 +262,17 @@ namespace SlimMy.ViewModel
             // 완료한 운동 리스트
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -261,13 +282,17 @@ namespace SlimMy.ViewModel
             // 전체 운동 리스트
             var totalExerciseWaitTask = session.Responses.WaitAsync(MessageType.GetTotalExerciseRes, getTotalExerciseReqId, TimeSpan.FromSeconds(5));
 
-            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId, requestID = getTotalExerciseReqId };
+            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = getTotalExerciseReqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
 
             var totalExerciseRespPayload = await totalExerciseWaitTask;
 
             var totalExerciseRes = JsonSerializer.Deserialize<GetTotalExerciseRes>(
                 totalExerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(totalExerciseRes?.message))
+                return;
 
             if (totalExerciseRes?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -289,13 +314,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetWeeklyCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetWeeklyCaloriesRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -334,13 +363,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalSessionsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTotalSessionsRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -358,13 +391,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalCaloriesRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTotalCaloriesRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -382,13 +419,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetTotalTimeRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetTotalTimeRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -420,13 +461,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetRecentWorkoutsRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetRecentWorkouts", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetRecentWorkouts, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetRecentWorkoutsRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -437,6 +482,21 @@ namespace SlimMy.ViewModel
             {
                 RecentWorkouts.Add(item);
             }
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
     }
 }

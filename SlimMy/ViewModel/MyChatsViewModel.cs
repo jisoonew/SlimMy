@@ -28,6 +28,8 @@ namespace SlimMy.ViewModel
         public static Guid myUid;
         private User currentUser;
 
+        private readonly INavigationService _navigationService;
+
         private ObservableCollection<ChatRooms> _currentPageData; // 현재 페이지에 표시할 데이터의 컬렉션
         public ObservableCollection<ChatMessageStatus> ChatMessageStatus { get; set; } // 메시지를 읽지 않았을 때 아이콘으로 표시하는 기능
         private int _currentPage; // 현재 페이지 번호
@@ -261,6 +263,8 @@ namespace SlimMy.ViewModel
             ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
 
             ChatMessageStatus = new ObservableCollection<ChatMessageStatus>();
+
+            _navigationService = new NavigationService();
         }
 
         // 초기화 메서드
@@ -350,7 +354,7 @@ namespace SlimMy.ViewModel
                 var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
 
                 // 요청 전송
-                var req = new { cmd = "ChatRoomUserList", ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), requestID = reqId };
+                var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 // 수신 루프가 응답을 잡아주면 도착
@@ -359,6 +363,10 @@ namespace SlimMy.ViewModel
                 // 특정 채팅방에 참가한 사용자들 아이디 모음
                 var res = JsonSerializer.Deserialize<ChatRoomUserListRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(res?.message))
+                    return;
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -406,7 +414,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomPageListRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, requestID = reqId };
+            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
@@ -414,6 +422,10 @@ namespace SlimMy.ViewModel
 
             var res = JsonSerializer.Deserialize<ChatRoomPageListRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -445,7 +457,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, requestID = reqId };
+            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
@@ -453,6 +465,10 @@ namespace SlimMy.ViewModel
 
             var res = JsonSerializer.Deserialize<MyChatRoomSearchWordRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -521,5 +537,20 @@ namespace SlimMy.ViewModel
 
         private bool CanGoToNextPage() => CurrentPage < TotalPages;
         private bool CanGoToPreviousPage() => CurrentPage > 1;
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
+        }
     }
 }

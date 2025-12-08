@@ -2,6 +2,7 @@ using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Messaging;
 using MVVM2.ViewModel;
 using SlimMy.Model;
+using SlimMy.Service;
 using SlimMy.View;
 using System;
 using System.Collections.Generic;
@@ -35,6 +36,8 @@ namespace SlimMy.ViewModel
         public static string myName = null;
         // 이벤트 정의: 로그인 성공 시 발생하는 이벤트
         public event EventHandler<ChatUserList> DataPassed; // 데이터 전달을 위한 이벤트 정의
+
+        private INavigationService _navigationService;
 
         List<User> UserList = new List<User>();
 
@@ -99,6 +102,8 @@ namespace SlimMy.ViewModel
             _user = new User();
 
             User.BirthDate = new DateTime(1990, 1, 1);
+
+            _navigationService = new NavigationService();
 
             //MainServerStart();
 
@@ -172,13 +177,17 @@ namespace SlimMy.ViewModel
             {
                 var reqId = Guid.NewGuid();
 
-                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal, requestID = reqId };
+                var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
                 await transport.SendFrameAsync((byte)MessageType.Sign_Up, payload);
 
                 var (respType, respPayload) = await transport.ReadFrameAsync();
                 var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var signUpRes = JsonSerializer.Deserialize<SignUpReply>(respPayload, opts);
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(signUpRes?.message))
+                    return;
 
                 if (respType == MessageType.Sign_UpRes && signUpRes != null && signUpRes.ok)
                 {
@@ -210,6 +219,21 @@ namespace SlimMy.ViewModel
             {
                 UserEmail = userEmail;
             }
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
 
         // INotifyPropertyChanged 구현

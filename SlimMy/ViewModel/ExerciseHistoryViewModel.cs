@@ -21,11 +21,14 @@ using Microsoft.Win32;
 using ClosedXML.Excel;
 using System.Text.Json;
 using SlimMy.Response;
+using SlimMy.Service;
 
 namespace SlimMy.ViewModel
 {
     class ExerciseHistoryViewModel : BaseViewModel
     {
+        private readonly INavigationService _navigationService;
+
         private ObservableCollection<WorkoutHistoryItem> _filteredExerciseLogs;
         public ObservableCollection<WorkoutHistoryItem> FilteredExerciseLogs
         {
@@ -116,6 +119,7 @@ namespace SlimMy.ViewModel
 
         public ExerciseHistoryViewModel()
         {
+            _navigationService = new NavigationService();
         }
 
         private async Task Initialize()
@@ -145,6 +149,7 @@ namespace SlimMy.ViewModel
             SearchCommand = new AsyncRelayCommand(SearchExerciseHistory);
 
             ExportCommand = new RelayCommand(ExecuteExport);
+
         }
 
         public static async Task<ExerciseHistoryViewModel> CreateAsync()
@@ -173,13 +178,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -330,13 +339,17 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, requestID = reqId };
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(res?.message))
+                return;
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -701,6 +714,21 @@ namespace SlimMy.ViewModel
 
             // 저장
             workbook.SaveAs(filePath);
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
     }
 }

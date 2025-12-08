@@ -287,13 +287,17 @@ namespace SlimMy.ViewModel
 
                     var waitTask = session.Responses.WaitAsync(MessageType.InsertPlannerPrintRes, insertPlannerPrintReqId, TimeSpan.FromSeconds(5));
 
-                    var req = new { cmd = "InsertPlannerPrint", plannerGroup = SelectedPlannerGroup.PlannerGroupId, requestID = insertPlannerPrintReqId };
+                    var req = new { cmd = "InsertPlannerPrint", userID = session.CurrentUser.UserId, plannerGroup = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = insertPlannerPrintReqId };
                     await transport.SendFrameAsync((byte)MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
                     var respPayload = await waitTask;
 
                     var res = JsonSerializer.Deserialize<InsertPlannerPrintRes>(
                         respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 세션이 만료되면 로그인 창만 실행
+                    if (HandleAuthError(res?.message))
+                        return;
 
                     if (res?.ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -317,13 +321,17 @@ namespace SlimMy.ViewModel
 
                             var deleteWaitTask = session.Responses.WaitAsync(MessageType.DeletePlannerListRes, deletePlannerListReqId, TimeSpan.FromSeconds(5));
 
-                            var deleteReq = new { cmd = "DeletePlannerList", plannerID = a.PlannerID, requestID = deletePlannerListReqId };
+                            var deleteReq = new { cmd = "DeletePlannerList", userID = session.CurrentUser.UserId, plannerID = a.PlannerID, accessToken = UserSession.Instance.AccessToken, requestID = deletePlannerListReqId };
                             await deleteTransport.SendFrameAsync((byte)MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
 
                             var deleteRespPayload = await deleteWaitTask;
 
                             var deleteRes = JsonSerializer.Deserialize<DeletePlannerListRes>(
                                 deleteRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                            // 세션이 만료되면 로그인 창만 실행
+                            if (HandleAuthError(deleteRes?.message))
+                                return;
 
                             if (deleteRes?.ok != true)
                                 throw new InvalidOperationException($"server not ok: {deleteRes?.message}");
@@ -338,13 +346,17 @@ namespace SlimMy.ViewModel
 
                 var exerciseWaitTask = exerciseSession.Responses.WaitAsync(MessageType.ExerciseCheckRes, reqId, TimeSpan.FromSeconds(5));
 
-                var exerciseReq = new { cmd = "ExerciseCheck", userId = currentUser.UserId, selectedDate = SelectedDate, requestID = reqId };
+                var exerciseReq = new { cmd = "ExerciseCheck", userID = currentUser.UserId, selectedDate = SelectedDate, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await exerciseTransport.SendFrameAsync((byte)MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
 
                 var exerciseRespPayload = await exerciseWaitTask;
 
                 var exerciseRes = JsonSerializer.Deserialize<ExerciseCheckRes>(
                     exerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(exerciseRes?.message))
+                    return;
 
                 if (exerciseRes?.ok != true)
                     throw new InvalidOperationException($"server not ok: {exerciseRes?.message}");
@@ -359,13 +371,17 @@ namespace SlimMy.ViewModel
 
                     var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.WaitAsync(MessageType.UpdatePlannerRes, updatePlannerReqId, TimeSpan.FromSeconds(5));
 
-                    var UpdatePlannerReq = new { cmd = "UpdatePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList(), requestID = updatePlannerReqId };
+                    var UpdatePlannerReq = new { cmd = "UpdatePlanner", userID = UpdatePlannerSession.CurrentUser.UserId, plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList(), accessToken = UserSession.Instance.AccessToken, requestID = updatePlannerReqId };
                     await UpdatePlannerTransport.SendFrameAsync((byte)MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
 
                     var UpdatePlannerRespPayload = await UpdatePlannerWaitTask;
 
                     var UpdatePlannerRes = JsonSerializer.Deserialize<UpdatePlannerRes>(
                         UpdatePlannerRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 세션이 만료되면 로그인 창만 실행
+                    if (HandleAuthError(UpdatePlannerRes?.message))
+                        return;
 
                     if (UpdatePlannerRes?.ok != true)
                         throw new InvalidOperationException($"server not ok: {UpdatePlannerRes?.message}");
@@ -380,13 +396,17 @@ namespace SlimMy.ViewModel
 
                     var InsertPlannerWaitTask = InsertPlannerSession.Responses.WaitAsync(MessageType.InsertPlannerRes, insertPlannerReqId, TimeSpan.FromSeconds(5));
 
-                    var InsertPlannerReq = new { cmd = "InsertPlanner", userId = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList(), requestID = insertPlannerReqId };
+                    var InsertPlannerReq = new { cmd = "InsertPlanner", userID = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList(), accessToken = UserSession.Instance.AccessToken, requestID = insertPlannerReqId };
                     await InsertPlannerTransport.SendFrameAsync((byte)MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
 
                     var InsertPlannerRespPayload = await InsertPlannerWaitTask;
 
                     var InsertPlannerRes = JsonSerializer.Deserialize<InsertPlannerRes>(
                         InsertPlannerRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    // 세션이 만료되면 로그인 창만 실행
+                    if (HandleAuthError(InsertPlannerRes?.message))
+                        return;
 
                     if (InsertPlannerRes?.ok != true)
                         throw new InvalidOperationException($"server not ok: {InsertPlannerRes?.message}");
@@ -409,13 +429,17 @@ namespace SlimMy.ViewModel
 
             var PlannerPrintWaitTask = PlannerPrintSession.Responses.WaitAsync(MessageType.PlannerPrintRes, reqId, TimeSpan.FromSeconds(5));
 
-            var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate, requestID = reqId };
+            var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await PlannerPrintTransport.SendFrameAsync((byte)MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
 
             var PlannerPrintRespPayload = await PlannerPrintWaitTask;
 
             var PlannerPrintRes = JsonSerializer.Deserialize<PlannerPrintRes>(
                 PlannerPrintRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 세션이 만료되면 로그인 창만 실행
+            if (HandleAuthError(PlannerPrintRes?.message))
+                return;
 
             if (PlannerPrintRes?.ok != true)
                 throw new InvalidOperationException($"server not ok: {PlannerPrintRes?.message}");
@@ -436,13 +460,17 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.ExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "ExerciseList", userId = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date, requestID = reqId };
+                var req = new { cmd = "ExerciseList", userID = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
 
                 var res = JsonSerializer.Deserialize<ExerciseListRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(res?.message))
+                    return;
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -520,13 +548,17 @@ namespace SlimMy.ViewModel
 
                 var waitTask = session.Responses.WaitAsync(MessageType.DeletePlannerRes, reqId, TimeSpan.FromSeconds(5));
 
-                var req = new { cmd = "DeletePlanner", plannerGroupId = SelectedPlannerGroup.PlannerGroupId, requestID = reqId };
+                var req = new { cmd = "DeletePlanner", userID = session.CurrentUser.UserId, plannerGroupId = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 await transport.SendFrameAsync((byte)MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));
 
                 var respPayload = await waitTask;
 
                 var res = JsonSerializer.Deserialize<DeletePlannerRes>(
                     respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 세션이 만료되면 로그인 창만 실행
+                if (HandleAuthError(res?.message))
+                    return;
 
                 if (res?.ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -565,6 +597,21 @@ namespace SlimMy.ViewModel
                 SelectedDate = DateTime.Now;
                 TotalCalories = null;
             }
+        }
+
+        // 세션 만료
+        private bool HandleAuthError(string message)
+        {
+            if (message == "unauthorized" || message == "expired token")
+            {
+                UserSession.Instance.Clear();
+
+                // 모든 창을 닫고 로그인 창만 생성
+                _navigationService.NavigateToLoginOnly();
+
+                return true;
+            }
+            return false;
         }
     }
 }
