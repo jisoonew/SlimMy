@@ -131,6 +131,7 @@ namespace SlimMy.Model
         DeleteChatRoomWithRelations = 125,
         DeleteChatRoomWithRelationsRes = 126,
         UserLoginRes = 129,
-        Sign_UpRes = 130
+        Sign_UpRes = 130,
+        SessionExpired = 252
     }
 }

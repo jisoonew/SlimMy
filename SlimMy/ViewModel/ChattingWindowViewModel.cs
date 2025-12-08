@@ -635,13 +635,19 @@ namespace SlimMy.ViewModel
             }
 
             var session = UserSession.Instance;
+            User currentUser = UserSession.Instance.CurrentUser;
+
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
             var reqId = Guid.NewGuid();
 
             var waitTask = session.Responses.WaitAsync(MessageType.SendNickNameRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "SendNickName", userID = session.CurrentUser.UserId, sender = sender, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            var req = new { cmd = "SendNickName", userID = currentUser.UserId, sender = sender, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+
+            var json = Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(req));
+            Debug.WriteLine("[SendNickName][Client JSON] " + json);
+
             await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
@@ -655,8 +661,6 @@ namespace SlimMy.ViewModel
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            User currentUser = UserSession.Instance.CurrentUser;
 
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (Guid.TryParse(sender, out var senderGuid) && senderGuid != currentUser.UserId)
@@ -706,7 +710,7 @@ namespace SlimMy.ViewModel
 
             var waitTask = session.Responses.WaitAsync(MessageType.SendNickNameRes, reqId, TimeSpan.FromSeconds(5));
 
-            var req = new { cmd = "SendNickName", sender = sender, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            var req = new { cmd = "SendNickName", userID = currentUser.UserId, sender = sender, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
