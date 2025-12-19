@@ -6,9 +6,11 @@ using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -165,60 +167,26 @@ namespace SlimMy.ViewModel
         // 오늘의 소모 칼로리의 총량
         public async Task TodayCaloriesPrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTodayCaloriesOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCaloriesRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTodayCaloriesRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            TodayCalories = res.totalCalories + "Kcal";
+            TodayCalories = res.TotalCalories + "Kcal";
         }
 
         // 오늘의 총 운동 시간
         public async Task TodayDurationPrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTodayDurationOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayDurationRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTodayDurationRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             int hour = 0, min = 0;
 
-            hour = res.todayDuration / 60;
-            min = res.todayDuration % 60;
+            hour = res.TodayDuration / 60;
+            min = res.TodayDuration % 60;
 
             TodayDuration = hour + "시간 " + min + "분";
         }
@@ -226,78 +194,36 @@ namespace SlimMy.ViewModel
         // 오늘의 운동 완료 수
         public async Task TodayCompletedPrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTodayCompletedOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            TodayCompleted = res.todayCompleted.ToString();
+            TodayCompleted = res.TodayCompleted.ToString();
         }
 
         // 목표 달성률
         public async Task GoalRatePrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-            var reqId = Guid.NewGuid();
-
-            // 완료한 운동 리스트
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTodayCompletedRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTodayCompletedOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
             // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
+            if (HandleAuthError(res?.Message))
                 return;
 
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var getTotalExerciseReqId = Guid.NewGuid();
-
-            // 전체 운동 리스트
-            var totalExerciseWaitTask = session.Responses.WaitAsync(MessageType.GetTotalExerciseRes, getTotalExerciseReqId, TimeSpan.FromSeconds(5));
-
-            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = getTotalExerciseReqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
-
-            var totalExerciseRespPayload = await totalExerciseWaitTask;
-
-            var totalExerciseRes = JsonSerializer.Deserialize<GetTotalExerciseRes>(
-                totalExerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var totalExerciseRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTotalExerciseOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
             // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(totalExerciseRes?.message))
+            if (HandleAuthError(totalExerciseRes?.Message))
                 return;
 
-            if (totalExerciseRes?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (totalExerciseRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            double percent = totalExerciseRes.totalExercise == 0 ? 0 : (double)res.todayCompleted / totalExerciseRes.totalExercise * 100;
+            double percent = totalExerciseRes.TotalExercise == 0 ? 0 : (double)res.TodayCompleted / totalExerciseRes.TotalExercise * 100;
 
             string percentStr = Math.Round(percent, 1) + "%";
 
@@ -307,32 +233,15 @@ namespace SlimMy.ViewModel
         // 주간 그래프
         public async Task LoadWeeklyCalorieChart()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetWeeklyCaloriesOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.GetWeeklyCaloriesRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetWeeklyCaloriesRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             var calorieValues = new ChartValues<int>();
             var labelList = new List<string>();
 
-            foreach (var item in res.list.OrderBy(x => x.Date))
+            foreach (var item in res.List.OrderBy(x => x.Date))
             {
                 calorieValues.Add(item.Calories);
                 labelList.Add(item.Date.ToString("MM/dd")); // x축 라벨
@@ -356,88 +265,37 @@ namespace SlimMy.ViewModel
         // 누적 운동 횟수
         public async Task TotalSessionPrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTotalSessionsOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalSessionsRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTotalSessionsRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            TotalSessions = res.totalSessionCount.ToString();
+            TotalSessions = res.TotalSessionCount.ToString();
         }
 
         // 누적 총 칼로리
         public async Task TotalCaloriesPrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTotalCaloriesOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalCaloriesRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTotalCaloriesRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            TotalCalories = res.totalCaloriesCount.ToString();
+            TotalCalories = res.TotalCaloriesCount.ToString();
         }
 
         // 누적 운동 시간
         public async Task TotalTimePrint()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetTotalTimeOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalTimeRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetTotalTimeRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             int hour = 0, min = 0;
 
-            hour = res.totalTimeCount / 60;
-            min = res.totalTimeCount % 60;
+            hour = res.TotalTimeCount / 60;
+            min = res.TotalTimeCount % 60;
 
             TotalTime = hour + "시간 " + min + "분";
         }
@@ -454,6 +312,229 @@ namespace SlimMy.ViewModel
                 return;
             }
 
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetRecentWorkoutsOnceAsync(), getMessage: r => r.Message, userData: currentUser);
+
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+            RecentWorkouts.Clear();
+
+            foreach (var item in res.RecentWorkoutList.Take(6))
+            {
+                RecentWorkouts.Add(item);
+            }
+        }
+
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
+        {
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        private async Task<GetTodayCaloriesRes> SendGetTodayCaloriesOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCaloriesRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayCalories", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTodayCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTodayDurationRes> SendGetTodayDurationOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayDurationRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayDuration", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayDuration, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTodayDurationRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTodayCompletedRes> SendGetTodayCompletedOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTodayCompletedRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTodayCompleted", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTodayCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTodayCompletedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTotalExerciseRes> SendGetTotalExerciseOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var getTotalExerciseReqId = Guid.NewGuid();
+
+            // 전체 운동 리스트
+            var totalExerciseWaitTask = session.Responses.WaitAsync(MessageType.GetTotalExerciseRes, getTotalExerciseReqId, TimeSpan.FromSeconds(5));
+
+            var totalExerciseReq = new { cmd = "GetTotalExercise", dateTime = now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = getTotalExerciseReqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalExercise, JsonSerializer.SerializeToUtf8Bytes(totalExerciseReq));
+
+            var totalExerciseRespPayload = await totalExerciseWaitTask;
+
+            return JsonSerializer.Deserialize<GetTotalExerciseRes>(
+                totalExerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetWeeklyCaloriesRes> SendGetWeeklyCaloriesOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetWeeklyCaloriesRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetWeeklyCalories", dateTime = DateTime.Now, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetWeeklyCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetWeeklyCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTotalSessionsRes> SendGetTotalSessionsOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalSessionsRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalSessions", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalSessions, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTotalSessionsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTotalCaloriesRes> SendGetTotalCaloriesOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalCaloriesRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalCalories", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalCalories, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTotalCaloriesRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetTotalTimeRes> SendGetTotalTimeOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetTotalTimeRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetTotalTime", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetTotalTime, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetTotalTimeRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<GetRecentWorkoutsRes> SendGetRecentWorkoutsOnceAsync()
+        {
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
@@ -466,23 +547,12 @@ namespace SlimMy.ViewModel
 
             var respPayload = await waitTask;
 
-            var res = JsonSerializer.Deserialize<GetRecentWorkoutsRes>(
+            return JsonSerializer.Deserialize<GetRecentWorkoutsRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            RecentWorkouts.Clear();
-
-            foreach (var item in res.recentWorkoutList.Take(6))
-            {
-                RecentWorkouts.Add(item);
-            }
         }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)

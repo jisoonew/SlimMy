@@ -6,10 +6,12 @@ using SlimMy.View;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -18,13 +20,6 @@ namespace SlimMy.ViewModel
 {
     public class MyPageViewModel : BaseViewModel
     {
-        private UserRepository _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
-        private WeightHistoryRepository _weightRepo;
-
-        private TcpClient client = null;
-
         // 화면 전환
         private INavigationService _navigationService;
 
@@ -153,10 +148,6 @@ namespace SlimMy.ViewModel
 
         private async Task Initialize()
         {
-            _repo = new UserRepository(_connstring); // Repo 초기화
-
-            _weightRepo = new WeightHistoryRepository(_connstring);
-
             _navigationService = new NavigationService();
 
             DietGoalList = new ObservableCollection<string>
@@ -205,35 +196,18 @@ namespace SlimMy.ViewModel
         {
             User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var session = UserSession.Instance;
+            // 사용자 키, 몸무게 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendMyDataOnceAsync(userDateBundle), getMessage: r => r.Message, userData: userDateBundle);
 
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "MyData", userID = userDateBundle.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<MyDataRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            UserSession.Instance.CurrentUser.Weight = res.userData.Weight;
-            UserSession.Instance.CurrentUser.Height = res.userData.Height;
-            UserSession.Instance.CurrentUser.BirthDate = res.userData.BirthDate;
-            UserSession.Instance.CurrentUser.Gender = res.userData.Gender;
-            UserSession.Instance.CurrentUser.DietGoal = res.userData.DietGoal;
-            UserSession.Instance.CurrentUser.NickName = res.userData.NickName;
+            UserSession.Instance.CurrentUser.Weight = res.UserData.Weight;
+            UserSession.Instance.CurrentUser.Height = res.UserData.Height;
+            UserSession.Instance.CurrentUser.BirthDate = res.UserData.BirthDate;
+            UserSession.Instance.CurrentUser.Gender = res.UserData.Gender;
+            UserSession.Instance.CurrentUser.DietGoal = res.UserData.DietGoal;
+            UserSession.Instance.CurrentUser.NickName = res.UserData.NickName;
 
             UserData = UserSession.Instance.CurrentUser;
             OnPropertyChanged(nameof(UserData));
@@ -272,27 +246,14 @@ namespace SlimMy.ViewModel
                 else
                 {
                     DateTime now = DateTime.Now;
-                    var session = UserSession.Instance;
-                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    var reqId = Guid.NewGuid();
+                    User userDateBundle = UserSession.Instance.CurrentUser;
 
-                    var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
+                    // 몸무게 정보 여부
+                    var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendTodayWeightCompletedOnceAsync(now), getMessage: r => r.Message, userData: userDateBundle);
 
-                    var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-                    await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
-
-                    var respPayload = await waitTask;
-
-                    var res = JsonSerializer.Deserialize<TodayWeightCompletedRes>(
-                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(res?.message))
-                        return;
-
-                    if (res?.ok != true)
-                        throw new InvalidOperationException($"server not ok: {res?.message}");
+                    if (res?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     // BMI 계산
                     double heightValue = double.Parse(Height) / 100.0;
@@ -301,97 +262,33 @@ namespace SlimMy.ViewModel
                     double bmiValue = weightValue / (heightValue * heightValue);
 
                     // 몸무게 정보
-                    if (res.count > 0)
+                    if (res.Count > 0)
                     {
-                        // 사용자 정보
-                        var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+                        // 사용자 정보 수정
+                        var userDataRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdateMyPageUserDataOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
-                        var updateMyPageUserDataReqId = Guid.NewGuid();
+                        if (userDataRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {userDataRes?.Message}");
 
-                        var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
+                        // MyPage : 몸무게 정보 수정
+                        var updateMyPageWeightRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdatetMyPageWeightOnceAsync(now, bmiValue), getMessage: r => r.Message, userData: userDateBundle);
 
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
-                        await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
-
-                        var userDataRespPayload = await myPageUserDatawaitTask;
-
-                        var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
-                            userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        // 세션이 만료되면 로그인 창만 실행
-                        if (HandleAuthError(userDataRes?.message))
-                            return;
-
-                        if (userDataRes?.ok != true)
-                            throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
-
-
-                        var updatetMyPageWeighttransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-                        var updatetMyPageWeightReqId = Guid.NewGuid();
-
-                        var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
-
-                        var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = updatetMyPageWeightReqId };
-                        await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
-
-                        var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
-
-                        var updatetMyPageWeightRes = JsonSerializer.Deserialize<UpdatetMyPageWeightRes>(
-                            updatetMyPageWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        // 세션이 만료되면 로그인 창만 실행
-                        if (HandleAuthError(updatetMyPageWeightRes?.message))
-                            return;
-
-                        if (updatetMyPageWeightRes?.ok != true)
-                            throw new InvalidOperationException($"server not ok: {res?.message}");
+                        if (updateMyPageWeightRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {res?.Message}");
                     }
                     else
                     {
-                        // 사용자 정보
-                        var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+                        // 사용자 정보 수정
+                        var userDataRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdateMyPageUserDataOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
-                        var updateMyPageUserDataReqId = Guid.NewGuid();
-
-                        var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
-
-                        var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
-                        await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
-
-                        var userDataRespPayload = await myPageUserDatawaitTask;
-
-                        var userDataRes = JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
-                            userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        // 세션이 만료되면 로그인 창만 실행
-                        if (HandleAuthError(userDataRes?.message))
-                            return;
-
-                        if (userDataRes?.ok != true)
-                            throw new InvalidOperationException($"server not ok: {userDataRes?.message}");
+                        if (userDataRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {userDataRes?.Message}");
 
                         // 몸무게 정보 저장
-                        var insertMyPageWeightTransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+                        var insertMyPageWeightRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertMyPageWeightOnceAsync(now, bmiValue), getMessage: r => r.Message, userData: userDateBundle);
 
-                        var insertMyPageWeightReqId = Guid.NewGuid();
-
-                        var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
-
-                        var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = insertMyPageWeightReqId };
-                        await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
-
-                        var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
-
-                        var insertMyPageWeightRes = JsonSerializer.Deserialize<InsertMyPageWeightRes>(
-                            insertMyPageWeightPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                        // 세션이 만료되면 로그인 창만 실행
-                        if (HandleAuthError(insertMyPageWeightRes?.message))
-                            return;
-
-                        if (insertMyPageWeightRes?.ok != true)
-                            throw new InvalidOperationException($"server not ok: {insertMyPageWeightRes?.message}");
+                        if (insertMyPageWeightRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {insertMyPageWeightRes?.Message}");
                     }
                 }
             }
@@ -408,6 +305,8 @@ namespace SlimMy.ViewModel
         // 사용자 탈퇴
         public async Task DeleteAccountViewFunction(object parameter)
         {
+            User userDateBundle = UserSession.Instance.CurrentUser;
+
             string msg = string.Format("정말로 회원 탈퇴를 진행하시겠습니까?\n탈퇴 시 작성한 게시글, 운동 기록, 채팅 내역 등이 모두 삭제되며 복구할 수 없습니다.");
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "회원 탈퇴 확인", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (messageBoxResult == MessageBoxResult.No)
@@ -417,27 +316,14 @@ namespace SlimMy.ViewModel
             else
             {
                 //테이블 deleted_at 컬럼에 해당 날짜와 시간 업데이트
-                var session = UserSession.Instance;
-                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-                var reqId = Guid.NewGuid();
-
-                var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
-
-                var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-                await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
-
-                var respPayload = await waitTask;
-
-                var res = JsonSerializer.Deserialize<DeleteAccountViewRes>(
-                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeleteAccountViewOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
                 // 세션이 만료되면 로그인 창만 실행
-                if (HandleAuthError(res?.message))
+                if (HandleAuthError(res?.Message))
                     return;
 
-                if (res?.ok != true)
-                    throw new InvalidOperationException($"server not ok: {res?.message}");
+                if (res?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                 //서버 연결 해제
                 if (UserSession.Instance.CurrentUser?.Client != null)
@@ -458,28 +344,11 @@ namespace SlimMy.ViewModel
         {
             User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetUserDataRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendVerifyPasswordOnceAsync(userDateBundle), getMessage: r => r.Message, userData: userDateBundle);
 
             // 현재 비밀번호 확인
-            PasswordCheck = res.match;
-            PasswordNoCheck = !res.match;
+            PasswordCheck = res.Match;
+            PasswordNoCheck = !res.Match;
         }
 
         // 새 비밀번호 일치 여부
@@ -498,11 +367,205 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 닉네임 변경 화면 전환
-        public async Task NickNameChangedFunction(object parameter)
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
         {
-            await _navigationService.NavigateToNickName();
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
         }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        // 사용자 키, 몸무게 출력
+        private async Task<MyDataRes> SendMyDataOnceAsync(User userDateBundle)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "MyData", userID = userDateBundle.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<MyDataRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 몸무게 정보 여부
+        private async Task<TodayWeightCompletedRes> SendTodayWeightCompletedOnceAsync(DateTime now)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<TodayWeightCompletedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 사용자 정보 수정
+        private async Task<UpdateMyPageUserDataRes> SendUpdateMyPageUserDataOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var myPageUserDatatransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var updateMyPageUserDataReqId = Guid.NewGuid();
+
+            var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
+
+            var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
+            await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
+
+            var userDataRespPayload = await myPageUserDatawaitTask;
+
+            return JsonSerializer.Deserialize<UpdateMyPageUserDataRes>(
+                userDataRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // MyPage : 몸무게 정보 수정
+        private async Task<UpdatetMyPageWeightRes> SendUpdatetMyPageWeightOnceAsync(DateTime now, double bmiValue)
+        {
+            var session = UserSession.Instance;
+            var updatetMyPageWeighttransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var updatetMyPageWeightReqId = Guid.NewGuid();
+
+            var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
+
+            var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = updatetMyPageWeightReqId };
+            await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
+
+            var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
+
+            return JsonSerializer.Deserialize<UpdatetMyPageWeightRes>(
+                updatetMyPageWeightRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 몸무게 정보 저장
+        private async Task<InsertMyPageWeightRes> SendInsertMyPageWeightOnceAsync(DateTime now, double bmiValue)
+        {
+            var session = UserSession.Instance;
+            var insertMyPageWeightTransport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var insertMyPageWeightReqId = Guid.NewGuid();
+
+            var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
+
+            var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = insertMyPageWeightReqId };
+            await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
+
+            var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
+
+            return JsonSerializer.Deserialize<InsertMyPageWeightRes>(
+                insertMyPageWeightPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        //테이블 deleted_at 컬럼에 해당 날짜와 시간 업데이트
+        private async Task<DeleteAccountViewRes> SendDeleteAccountViewOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<DeleteAccountViewRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 현재 비밀번호 일치 여부
+        private async Task<GetUserDataRes> SendVerifyPasswordOnceAsync(User userDateBundle)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetUserDataRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)
@@ -517,6 +580,12 @@ namespace SlimMy.ViewModel
                 return true;
             }
             return false;
+        }
+
+        // 닉네임 변경 화면 전환
+        public async Task NickNameChangedFunction(object parameter)
+        {
+            await _navigationService.NavigateToNickName();
         }
     }
 }

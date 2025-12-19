@@ -3,14 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
     public class GetWeeklyCaloriesRes
     {
-        public bool ok { get; set; }
-        public string message { get; set; }
-        public List<DailyCalorie> list { get; set; }
+        [JsonPropertyName("ok")]
+        public bool Ok { get; set; }
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+        [JsonPropertyName("list")]
+        public List<DailyCalorie> List { get; set; }
     }
 }

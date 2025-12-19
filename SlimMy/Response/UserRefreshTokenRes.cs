@@ -7,11 +7,15 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
-    public class UpdateMyPageUserDataRes
+    public class UserRefreshTokenRes
     {
         [JsonPropertyName("ok")]
         public bool Ok { get; set; }
         [JsonPropertyName("message")]
         public string Message { get; set; }
+        [JsonPropertyName("newAccessToken")]
+        public Guid NewAccessToken { get; set; }
+        [JsonPropertyName("requestID")]
+        public Guid RequestID { get; set; }
     }
 }

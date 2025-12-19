@@ -6,9 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -344,41 +346,22 @@ namespace SlimMy.ViewModel
         {
             try
             {
-                var session = UserSession.Instance;
-                var transport = session.CurrentUser?.Transport
-                    ?? throw new InvalidOperationException("not connected");
+                User userDateBundle = UserSession.Instance.CurrentUser;
 
-                var reqId = Guid.NewGuid();
+                // 특정 채팅방의 클라이언트 모든 아이디 출력
+                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomUserListOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: userDateBundle);
 
-                // 응답 대기 설치
-                var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
+                if (res?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-                // 요청 전송
-                var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-                await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
-
-                // 수신 루프가 응답을 잡아주면 도착
-                var respPayload = await waitTask;
-
-                // 특정 채팅방에 참가한 사용자들 아이디 모음
-                var res = JsonSerializer.Deserialize<ChatRoomUserListRes>(
-                    respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                // 세션이 만료되면 로그인 창만 실행
-                if (HandleAuthError(res?.message))
-                    return;
-
-                if (res?.ok != true)
-                    throw new InvalidOperationException($"server not ok: {res?.message}");
-
-                if (res.users == null || res.users.Count == 0)
+                if (res.Users == null || res.Users.Count == 0)
                 {
                     MessageBox.Show("No user IDs found for the selected chat room.", "Debug Info");
                     return;
                 }
 
                 // 문자열을 ChatUserList 객체로 변환
-                List<ChatUserList> userList = res.users.Select(id => new ChatUserList(id,"")).ToList();
+                List<ChatUserList> userList = res.Users.Select(id => new ChatUserList(id,"")).ToList();
 
                 CommunityViewModel.GroupChattingReceivers = userList;
             }
@@ -404,28 +387,10 @@ namespace SlimMy.ViewModel
         // 채팅 목록
         public async Task RefreshChatRooms()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport
-                ?? throw new InvalidOperationException("not connected");
+            User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var reqId = Guid.NewGuid();
-
-            // 응답 대기 설치
-            var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomPageListRes, reqId, TimeSpan.FromSeconds(5));
-
-            // 요청 전송
-            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            // 수신 루프가 응답을 잡아주면 도착
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<ChatRoomPageListRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
+            // 채팅방 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomPageListOnceAsync(), getMessage: r => r.message, userData: userDateBundle);
 
             if (res?.ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.message}");
@@ -447,31 +412,13 @@ namespace SlimMy.ViewModel
             else
                 CurrentPageData.Clear();
 
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport
-                ?? throw new InvalidOperationException("not connected");
+            User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var reqId = Guid.NewGuid();
+            // 검색한 채팅방 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendMyChatRoomSearchWordOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
-            // 응답 대기 설치
-            var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
-
-            // 요청 전송
-            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            // 수신 루프가 응답을 잡아주면 도착
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<MyChatRoomSearchWordRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             foreach (var chatRoom in res.rooms)
             {
@@ -537,6 +484,142 @@ namespace SlimMy.ViewModel
 
         private bool CanGoToNextPage() => CurrentPage < TotalPages;
         private bool CanGoToPreviousPage() => CurrentPage > 1;
+
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
+        {
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        // 특정 채팅방의 클라이언트 모든 아이디 출력
+        private async Task<ChatRoomUserListRes> SendChatRoomUserListOnceAsync(ChatRooms selectedChatRoom)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            // 특정 채팅방에 참가한 사용자들 아이디 모음
+            return JsonSerializer.Deserialize<ChatRoomUserListRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 채팅방 출력
+        private async Task<ChatRoomPageListRes> SendChatRoomPageListOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomPageListRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<ChatRoomPageListRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 검색한 채팅방 출력
+        private async Task<MyChatRoomSearchWordRes> SendMyChatRoomSearchWordOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<MyChatRoomSearchWordRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)

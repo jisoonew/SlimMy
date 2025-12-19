@@ -4,9 +4,11 @@ using SlimMy.Service;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -218,31 +220,21 @@ namespace SlimMy.ViewModel
         // 운동 목록 출력
         public async Task ExerciseList()
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "AllExerciseList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<AllExerciseListRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // 운동 아이디, 이름, 이미지 데이터 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendAllExerciseListOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
             // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
+            if (HandleAuthError(res?.Message))
                 return;
 
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             Exercises.Clear();
 
-            foreach (var exerciseBundle in res.exerciseList)
+            foreach (var exerciseBundle in res.ExerciseList)
             {
                 Exercises.Add(new Exercise
                 {
@@ -316,31 +308,19 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-            var reqId = Guid.NewGuid();
-
-            var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<SelectUserWeightRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            // 사용자 몸무게 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectUserWeightOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
 
             // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
+            if (HandleAuthError(res?.Message))
                 return;
 
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             double met = (double)SelectedChatRoomData.Met;
             minutes = Convert.ToInt32(PlannedMinutes);
-            int result = (int)(met * res.userWeight * 3.5 / 200) * minutes;
+            int result = (int)(met * res.UserWeight * 3.5 / 200) * minutes;
 
             Calories = result.ToString();
         }
@@ -384,6 +364,110 @@ namespace SlimMy.ViewModel
 
         private bool CanGoToNextPage() => CurrentPage < TotalPages;
         private bool CanGoToPreviousPage() => CurrentPage > 1;
+
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
+        {
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        // 운동 아이디, 이름, 이미지 데이터 출력
+        private async Task<AllExerciseListRes> SendAllExerciseListOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "AllExerciseList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<AllExerciseListRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 사용자 몸무게 출력
+        private async Task<SelectUserWeightRes> SendSelectUserWeightOnceAsync(User currentUser)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectUserWeightRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)

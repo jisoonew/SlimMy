@@ -4,9 +4,11 @@ using SlimMy.Response;
 using SlimMy.Service;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
@@ -96,29 +98,15 @@ namespace SlimMy.ViewModel
         // 닉네임 여부
         public async Task NickNameCheckPrint(object parameter)
         {
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            User currentUser = UserSession.Instance.CurrentUser;
 
-            var reqId = Guid.NewGuid();
+            // 닉네임 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendNickNameCheckPrintOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-            var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var req = new { cmd = "NickNameCheckPrint", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<NickNameCheckPrintRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            bool isDuplicate = res.nickNames.Any(name => name.Equals(NewNickname));
+            bool isDuplicate = res.NickNames.Any(name => name.Equals(NewNickname));
 
             // 닉네임 중복
             if (isDuplicate)
@@ -139,7 +127,7 @@ namespace SlimMy.ViewModel
         // 닉네임 지정
         public async Task NickNameSave(object parameter)
         {
-            User userData = UserSession.Instance.CurrentUser;
+            User userCurrentData = UserSession.Instance.CurrentUser;
 
             string msg = string.Format("'{0}'로 닉네임을 변경하시겠습니까?", NewNickname);
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -158,35 +146,121 @@ namespace SlimMy.ViewModel
                 // 닉네임 지정
                 if (NickNameCheck)
                 {
-                    await _repo.NickNameSave(userData.UserId, NewNickname);
+                    // 닉네임 수정
+                    var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendNickNameSaveOnceAsync(userCurrentData), getMessage: r => r.Message, userData: userCurrentData);
 
-                    var session = UserSession.Instance;
-                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
-
-                    var reqId = Guid.NewGuid();
-
-                    var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
-
-                    var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-                    await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
-
-                    var respPayload = await waitTask;
-
-                    var res = JsonSerializer.Deserialize<NickNameSaveRes>(
-                        respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(res?.message))
-                        return;
-
-                    if (res?.ok != true)
-                        throw new InvalidOperationException($"server not ok: {res?.message}");
+                    if (res?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     // 닉네임 화면 닫기
                     await _navigationService.NavigateToNickNameClose();
                 }
             }
         }
+
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
+        {
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        // 닉네임 출력
+        private async Task<NickNameCheckPrintRes> SendNickNameCheckPrintOnceAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "NickNameCheckPrint", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<NickNameCheckPrintRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 닉네임 수정
+        private async Task<NickNameSaveRes> SendNickNameSaveOnceAsync(User userData)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<NickNameSaveRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)

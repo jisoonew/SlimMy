@@ -22,6 +22,7 @@ using ClosedXML.Excel;
 using System.Text.Json;
 using SlimMy.Response;
 using SlimMy.Service;
+using System.Threading;
 
 namespace SlimMy.ViewModel
 {
@@ -171,29 +172,14 @@ namespace SlimMy.ViewModel
         public async Task ExerciseHistoryPrint()
         {
             User currentUser = UserSession.Instance.CurrentUser;
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-            var reqId = Guid.NewGuid();
+            // 사용자의 운동 계획 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetExerciseHistoryOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            foreach (var history in res.historyItem)
+            foreach (var history in res.HistoryItem)
             {
                 FilteredExerciseLogs.Add(history);
             }
@@ -332,29 +318,13 @@ namespace SlimMy.ViewModel
 
             User currentUser = UserSession.Instance.CurrentUser;
 
-            var session = UserSession.Instance;
-            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+            // 사용자의 운동 계획 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetExerciseHistoryOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
 
-            var reqId = Guid.NewGuid();
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-            var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
-
-            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
-
-            var respPayload = await waitTask;
-
-            var res = JsonSerializer.Deserialize<GetExerciseHistoryRes>(
-                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.message))
-                return;
-
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
-
-            foreach (var history in res.historyItem)
+            foreach (var history in res.HistoryItem)
             {
                 AllExerciseLogs.Add(history);
             }
@@ -715,6 +685,91 @@ namespace SlimMy.ViewModel
             // 저장
             workbook.SaveAs(filePath);
         }
+
+        private static readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+        // 토큰 발급
+        private async Task<bool> TryRefreshAsync(User userData)
+        {
+            await _refreshLock.WaitAsync();
+
+            try
+            {
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+                var authErrorResReqId = Guid.NewGuid();
+                var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
+
+                var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
+                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+
+                var authErrorRespPayload = await authErrorWaitTask;
+
+                var authErrorWeightRes = JsonSerializer.Deserialize<UserRefreshTokenRes>(
+                    authErrorRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                Debug.WriteLine($"[확인] Refresh OK, newToken={authErrorWeightRes.NewAccessToken}, " + authErrorWeightRes.Ok);
+
+                if (authErrorWeightRes.Ok == true)
+                {
+                    UserSession.Instance.AccessToken = authErrorWeightRes.NewAccessToken;
+
+                    Debug.WriteLine($"[CLIENT] Refresh OK, newToken={UserSession.Instance.AccessToken}");
+
+                    return true;
+                }
+                return false;
+            }
+            finally
+            {
+                _refreshLock.Release();
+            }
+        }
+
+        private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
+        {
+            var res = await sendOnceAsync();
+
+            // 토큰 만료가 아니라면
+            if (!IsAuthExpired(getMessage(res)))
+            {
+                return res;
+            }
+
+            // 토큰 발급
+            var refreched = await TryRefreshAsync(userData);
+
+            // 토큰 발급이 정상적으로 진행이 안되었다면
+            if (!refreched)
+            {
+                return res;
+            }
+
+            return await sendOnceAsync();
+        }
+
+        // 사용자의 운동 계획 출력
+        private async Task<GetExerciseHistoryRes> SendGetExerciseHistoryOnceAsync(User currentUser)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetExerciseHistoryRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "GetExerciseHistory", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync((byte)MessageType.GetExerciseHistory, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetExerciseHistoryRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 토큰 만료
+        private bool IsAuthExpired(string? message) => string.Equals(message, "expired token", StringComparison.OrdinalIgnoreCase) || string.Equals(message, "unauthorized", StringComparison.OrdinalIgnoreCase);
 
         // 세션 만료
         private bool HandleAuthError(string message)

@@ -3,14 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
     public class GetWeightHistoryRes
     {
-        public bool ok { get; set; }
-        public string message { get; set; } = "ok";
-        public List<WeightRecordItem> weightRecordItem { get; set; }
+        [JsonPropertyName("ok")]
+        public bool Ok { get; set; }
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+        [JsonPropertyName("weightRecordItem")]
+        public List<WeightRecordItem> WeightRecordItem { get; set; }
     }
 }

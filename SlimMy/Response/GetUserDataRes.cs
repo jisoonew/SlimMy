@@ -3,14 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
     public class GetUserDataRes
     {
-        public bool ok { get; set; }
-        public string message { get; set; } = "ok";
-        public bool match { get; set; }
+        [JsonPropertyName("ok")]
+        public bool Ok { get; set; }
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
+        [JsonPropertyName("match")]
+        public bool Match { get; set; }
     }
 }
