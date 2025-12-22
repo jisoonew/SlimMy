@@ -9,9 +9,7 @@ namespace SlimMy.Response
 {
     public class DeletePlannerRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
     }
 }

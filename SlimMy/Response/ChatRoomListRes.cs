@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class ChatRoomListRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
-        public string Message { get; set; } = "ok";
-        [JsonPropertyName("rooms")]
+        public string Message { get; set; }
         public List<ChatRooms> Rooms { get; set; } = new();
     }
 }

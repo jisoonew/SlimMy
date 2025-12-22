@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class PlannerPrintRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("plannerPrint")]
         public List<PlannerWithGroup> PlannerPrint { get; set; }
     }
 }

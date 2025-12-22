@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class GetMemoContentRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("memoContent")]
         public WeightMemoItem MemoContent { get; set; }
     }
 }

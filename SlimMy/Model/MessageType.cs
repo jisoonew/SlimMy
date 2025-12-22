@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Model
 {
-    public enum MessageType : byte
+    public enum MessageType : ushort
     {
         UserJoinChatRoom = 1,
         ChatContent = 2,

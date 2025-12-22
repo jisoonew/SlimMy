@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class GetHostUserIdByRoomIdRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("hostUserId")]
         public Guid HostUserId { get; set; }
     }
 }

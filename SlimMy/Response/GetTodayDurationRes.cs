@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class GetTodayDurationRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("todayDuration")]
         public int TodayDuration { get; set; }
     }
 }

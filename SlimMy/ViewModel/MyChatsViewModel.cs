@@ -390,15 +390,15 @@ namespace SlimMy.ViewModel
             User userDateBundle = UserSession.Instance.CurrentUser;
 
             // 채팅방 출력
-            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomPageListOnceAsync(), getMessage: r => r.message, userData: userDateBundle);
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomPageListOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
-            if (res?.ok != true)
-                throw new InvalidOperationException($"server not ok: {res?.message}");
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
                 ChatRooms.Clear();
-                foreach (var r in res.rooms)
+                foreach (var r in res.Rooms)
                     ChatRooms.Add(r);
                 OnPropertyChanged(nameof(ChatRooms));
             });
@@ -561,7 +561,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.ChatRoomUserListRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, ChatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
@@ -608,7 +608,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MyChatRoomSearchWordRes, reqId, TimeSpan.FromSeconds(5));
 
             // 요청 전송
-            var req = new { cmd = "MyChatRoomSearchWord", SearchWord = SearchWord, UserID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            var req = new { cmd = "MyChatRoomSearchWord", searchWord = SearchWord, userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
             await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착

@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class GetTodayWeightCompletedRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("weightCount")]
         public int WeightCount { get; set; }
     }
 }

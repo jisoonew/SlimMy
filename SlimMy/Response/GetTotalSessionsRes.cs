@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class GetTotalSessionsRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("totalSessionCount")]
         public int TotalSessionCount { get; set; }
     }
 }

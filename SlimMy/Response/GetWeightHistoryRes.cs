@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class GetWeightHistoryRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("weightRecordItem")]
         public List<WeightRecordItem> WeightRecordItem { get; set; }
     }
 }

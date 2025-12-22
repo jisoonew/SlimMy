@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class GetUserDataRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("match")]
         public bool Match { get; set; }
     }
 }

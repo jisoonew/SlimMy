@@ -9,9 +9,7 @@ namespace SlimMy.Response
 {
     class UpdatetMyPageWeightRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
     }
 }

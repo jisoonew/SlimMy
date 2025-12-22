@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class SelectUserWeightRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("userWeight")]
         public double UserWeight { get; set; }
     }
 }

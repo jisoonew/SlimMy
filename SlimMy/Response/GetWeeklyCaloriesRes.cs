@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class GetWeeklyCaloriesRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("list")]
         public List<DailyCalorie> List { get; set; }
     }
 }

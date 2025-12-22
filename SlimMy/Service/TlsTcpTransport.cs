@@ -1,5 +1,6 @@
 using SlimMy.Model;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,38 +29,45 @@ namespace SlimMy.Service
             });
         }
 
-        public async Task SendFrameAsync(byte type, ReadOnlyMemory<byte> payload, CancellationToken ct = default)
+        public async Task SendFrameAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken ct = default)
         {
             await _sendLock.WaitAsync(ct);
             try
             {
-                int totalLen = 1 + payload.Length;
-                byte[] len = BitConverter.GetBytes(totalLen);
-                await _ssl.WriteAsync(len, ct);
-                await _ssl.WriteAsync(new byte[] { type }, ct);
-                if (payload.Length > 0) await _ssl.WriteAsync(payload, ct);
+                int totalLen = 2 + payload.Length;
+
+                byte[] lenBuf = BitConverter.GetBytes(totalLen);
+                byte[] typeBuf = BitConverter.GetBytes((ushort)type);
+
+                await _ssl.WriteAsync(lenBuf, ct);
+                await _ssl.WriteAsync(typeBuf, ct);
+
+                if (payload.Length > 0)
+                    await _ssl.WriteAsync(payload, ct);
+
                 await _ssl.FlushAsync(ct);
             }
             finally { _sendLock.Release(); }
         }
 
-        public Task SendFrameAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken ct = default) => SendFrameAsync((byte)type, payload, ct);
-
         public async Task<(MessageType type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default)
         {
             byte[] lenBuf = await ReadExactAsync(_ssl, 4, ct);
             int totalLen = BitConverter.ToInt32(lenBuf, 0);
-            if (totalLen < 1)
-                throw new IOException($"invalid frame length: {totalLen}");
+            if (totalLen < 2) throw new IOException($"invalid frame length: {totalLen}");
 
-            byte[] typeBuf = await ReadExactAsync(_ssl, 1, ct);
-            var type = (MessageType)typeBuf[0];
+            byte[] typeBuf = await ReadExactAsync(_ssl, 2, ct);
+            ushort t = BitConverter.ToUInt16(typeBuf, 0);
+            var type = (MessageType)t;
 
-            int pl = totalLen - 1;
+            int pl = totalLen - 2;
             byte[] payload = pl > 0 ? await ReadExactAsync(_ssl, pl, ct) : Array.Empty<byte>();
 
             return (type, payload);
         }
+
+        public Task SendFrameAsync(byte type, ReadOnlyMemory<byte> payload, CancellationToken ct = default)
+            => SendFrameAsync((MessageType)type, payload, ct);
 
         private static async Task<byte[]> ReadExactAsync(Stream s, int n, CancellationToken ct)
         {

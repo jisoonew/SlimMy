@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class GetExerciseHistoryRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("historyItem")]
         public List<WorkoutHistoryItem> HistoryItem { get; set; }
     }
 }

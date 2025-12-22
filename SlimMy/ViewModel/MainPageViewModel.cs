@@ -306,7 +306,7 @@ namespace SlimMy.ViewModel
             var wait = hub.WaitAsync(MessageType.UserLoginRes, reqId, TimeSpan.FromSeconds(5));
 
             var loginReq = new { cmd = "LOGIN", email = email, password = passwordWD, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.UserLogin, JsonSerializer.SerializeToUtf8Bytes(loginReq));
+            await transport.SendFrameAsync(MessageType.UserLogin, JsonSerializer.SerializeToUtf8Bytes(loginReq));
 
             var payload = await wait;
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };

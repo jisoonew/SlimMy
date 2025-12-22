@@ -9,13 +9,9 @@ namespace SlimMy.Response
 {
     public class SendNickNameRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("senderNickName")]
         public string SenderNickName { get; set; }
-        [JsonPropertyName("requestID")]
         public Guid RequestID { get; set; }
     }
 }

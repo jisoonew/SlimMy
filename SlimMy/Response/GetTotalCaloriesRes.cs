@@ -9,11 +9,8 @@ namespace SlimMy.Response
 {
     public class GetTotalCaloriesRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("totalCaloriesCount")]
         public int TotalCaloriesCount { get; set; }
     }
 }

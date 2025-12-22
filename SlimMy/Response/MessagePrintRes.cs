@@ -10,11 +10,8 @@ namespace SlimMy.Response
 {
     public class MessagePrintRes
     {
-        [JsonPropertyName("ok")]
         public bool Ok { get; set; }
-        [JsonPropertyName("message")]
         public string Message { get; set; }
-        [JsonPropertyName("messageBundle")]
         public IEnumerable<Message> MessageBundle { get; set; }
     }
 }
