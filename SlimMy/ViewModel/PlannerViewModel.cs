@@ -17,8 +17,6 @@ namespace SlimMy.ViewModel
 {
     public class PlannerViewModel : BaseViewModel
     {
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
         private readonly INavigationService _navigationService;
 
         public ICommand ExerciseCommand { get; set; }
@@ -139,6 +137,9 @@ namespace SlimMy.ViewModel
                                 Calories = ex.Calories
                             }));
 
+                        PlannerTitle = _selectedPlannerGroup.PlannerTitle;
+
+                        OnPropertyChanged(nameof(PlannerTitle));
                         OnPropertyChanged(nameof(Items));
 
                         // 선택한 플래너의 총 칼로리
@@ -164,13 +165,9 @@ namespace SlimMy.ViewModel
         {
             _navigationService = new NavigationService();
 
-            ExerciseCommand = new Command(AddExerciseNavigation);
-
             Items = new ObservableCollection<PlanItem>();
 
             SelectedPlnnaerCommand = new RelayCommand(PrintPlannerData);
-
-            UpdateCommand = new RelayCommand(UpdatePlannerData);
 
             DeleteCommand = new RelayCommand(DeletePlannerPrint);
 
@@ -192,6 +189,10 @@ namespace SlimMy.ViewModel
             SaveCommand = new AsyncRelayCommand(InsertPlannerPrint);
 
             DeletePlannerGroupCommand = new AsyncRelayCommand(AllDeletePlanner);
+
+            UpdateCommand = new AsyncRelayCommand(UpdatePlannerData);
+
+            ExerciseCommand = new AsyncRelayCommand(AddExerciseNavigation);
         }
 
         public static async Task<PlannerViewModel> CreateAsync()
@@ -202,9 +203,9 @@ namespace SlimMy.ViewModel
         }
 
         // 운동 추가 뷰
-        public void AddExerciseNavigation(object parameter)
+        public async Task AddExerciseNavigation(object parameter)
         {
-            _navigationService.NavigateToAddExercise();
+            await _navigationService.NavigateToAddExercise();
         }
 
         // 리스트 선택한 운동 데이터 출력
@@ -217,7 +218,7 @@ namespace SlimMy.ViewModel
         }
 
         // 리스트 선택한 운동 데이터 수정
-        public void UpdatePlannerData(object parameter)
+        public async Task UpdatePlannerData(object parameter)
         {
             // 운동 추가 뷰모델에게 데이터 수정을 알림
             ExerciseViewModel.IsEditMode = true;
@@ -225,7 +226,7 @@ namespace SlimMy.ViewModel
             UpdateIndex = Items.IndexOf(SelectedPlannerData);
 
             // 운동 추가 뷰 생성
-            _navigationService.NavigateToAddExercise();
+            await _navigationService.NavigateToAddExercise();
         }
 
         // 플래너 수정

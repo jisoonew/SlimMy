@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace SlimMy.ViewModel
 {
@@ -240,10 +242,24 @@ namespace SlimMy.ViewModel
                 {
                     ExerciseID = exerciseBundle.ExerciseID,
                     ExerciseName = exerciseBundle.ExerciseName,
-                    ImagePath = exerciseBundle.ImagePath,
+                    ImagePath = ToBitmapImage(exerciseBundle.ImagePathByte),
                     Met = exerciseBundle.Met
                 });
             }
+        }
+
+        public static BitmapImage ToBitmapImage(byte[]? bytes)
+        {
+            if (bytes == null || bytes.Length == 0) return null;
+
+            var bmp = new BitmapImage();
+            using var ms = new MemoryStream(bytes);
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.StreamSource = ms;
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
         }
 
         // 운동 선택
