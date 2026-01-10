@@ -12,7 +12,7 @@ namespace SlimMy.Service
     {
         Task ConnectAsync(string host, int port, CancellationToken ct = default);
 
-        Task SendFrameAsync(byte type, ReadOnlyMemory<byte> payload, CancellationToken ct = default);
+        Task SendFrameAsync(MessageType type, ReadOnlyMemory<byte> payload, CancellationToken ct = default);
 
         Task<(MessageType type, byte[] payload)> ReadFrameAsync(CancellationToken ct = default);
     }

@@ -134,6 +134,18 @@ namespace SlimMy.Model
         Sign_UpRes = 130,
         SessionExpired = 252,
         UserRefreshToken = 253,
-        UserRefreshTokenRes = 254
+        UserRefreshTokenRes = 254,
+        UpdatePlannerList = 257,
+        UpdatePlannerListRes = 258,
+        SavePlannerChanges = 259,
+        SavePlannerChangesRes = 260,
+        NotSavedPlanner = 261,
+        NotSavedPlannerRes = 262,
+        SaveDietGoal = 263,
+        SaveDietGoalRes = 264,
+        DietGoalPrint = 265,
+        DietGoalPrintRes = 266,
+        RoomBanMessage = 267,
+        RoomBanMessageRes = 268
     }
 }

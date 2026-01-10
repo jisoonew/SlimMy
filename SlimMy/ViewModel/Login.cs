@@ -179,7 +179,7 @@ namespace SlimMy.ViewModel
 
                 var loginReq = new { name = User.Name, gender = User.Gender, nickname = User.NickName, email = User.Email, password = User.Password, birth = User.BirthDate, height = User.Height, weight = User.Weight, diet = User.DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
                 byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(loginReq));
-                await transport.SendFrameAsync((byte)MessageType.Sign_Up, payload);
+                await transport.SendFrameAsync(MessageType.Sign_Up, payload);
 
                 var (respType, respPayload) = await transport.ReadFrameAsync();
                 var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };

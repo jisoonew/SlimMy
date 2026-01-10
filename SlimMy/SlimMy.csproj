@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Model\DietGoal.cs~RFe82ec37d.TMP" />
     <None Remove="Resources\plus.png" />
   </ItemGroup>
 

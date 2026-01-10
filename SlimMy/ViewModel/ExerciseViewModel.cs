@@ -29,6 +29,8 @@ namespace SlimMy.ViewModel
     {
         private readonly INavigationService _navigationService;
 
+        private readonly PlannerViewModel _planner;
+
         private int _currentPage; // 현재 페이지 번호
         private int _totalPages; // 전체 데이터에서 생성된 총 페이지 수
         private int _pageSize = 20; // 페이지당 항목 수
@@ -169,6 +171,12 @@ namespace SlimMy.ViewModel
 
         public ExerciseViewModel()
         {
+        }
+
+        public ExerciseViewModel(PlannerViewModel planner)
+        {
+            _planner = planner;
+
             // 결합도를 낮추기 위한 뷰 전환 서비스
             _navigationService = new NavigationService();
         }
@@ -206,15 +214,15 @@ namespace SlimMy.ViewModel
             SelectedCalorieMode = CalorieMode.TimeBased; // 기본값
 
             // 플래너 운동 추가
-            AddExerciseCommand = new RelayCommand(AddExerciseData);
+            AddExerciseCommand = new AsyncRelayCommand(AddExerciseData);
 
             // 칼로리 계산
             CalculateCaloriesCommand = new AsyncRelayCommand(CalculateCalories);
         }
 
-        public static async Task<ExerciseViewModel> CreateAsync()
+        public static async Task<ExerciseViewModel> CreateAsync(PlannerViewModel plannerVm)
         {
-            var instance = new ExerciseViewModel();
+            var instance = new ExerciseViewModel(plannerVm);
             await instance.Initialize();
             return instance;
         }
@@ -226,10 +234,6 @@ namespace SlimMy.ViewModel
 
             // 운동 아이디, 이름, 이미지 데이터 출력
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendAllExerciseListOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.Message))
-                return;
 
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
@@ -284,7 +288,7 @@ namespace SlimMy.ViewModel
         }
 
         // 플래너 운동 추가하기
-        public void AddExerciseData(object parameter)
+        public async Task AddExerciseData(object parameter)
         {
             string msg = string.Format("{0}를 선택하시겠습니까?", SelectedChatRoomData.ExerciseName);
             MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -294,27 +298,33 @@ namespace SlimMy.ViewModel
             }
             else
             {
-                // MessageBox.Show("AllData : " + exerciseData.ExerciseID + "이름 : " + exerciseData.ExerciseName);
                 // 운동 선택 윈도우 창 닫기
                 // _navigationService.NavigateToClose("AddExercise");
 
-                CalculateCalories(null);
-
-                if (IsEditMode)
+                try
                 {
-                    // 선택된 운동 아이디 플래너에게 전달
-                    PlannerViewModel.Instance.UpdatePlannerPrint(SelectedChatRoomData, Calories, minutes);
+                    await CalculateCalories(null);
 
-                    // 운동 선택창 닫기
-                    _navigationService.NavigateToExerciseWindow();
+                    if (IsEditMode)
+                    {
+                        // 선택된 운동 아이디 플래너에게 전달
+                        _planner.UpdatePlannerPrint(SelectedChatRoomData, Calories, minutes);
+
+                        // 운동 선택창 닫기
+                        _navigationService.NavigateToExerciseWindow();
+                    }
+                    else
+                    {
+                        // 선택된 운동 아이디 플래너에게 전달
+                        _planner.SelectedPlannerPrint(SelectedChatRoomData, Calories, minutes);
+
+                        // 운동 선택창 닫기
+                        _navigationService.NavigateToExerciseWindow();
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // 선택된 운동 아이디 플래너에게 전달
-                    PlannerViewModel.Instance.SelectedPlannerPrint(SelectedChatRoomData, Calories, minutes);
-
-                    // 운동 선택창 닫기
-                    _navigationService.NavigateToExerciseWindow();
+                    Debug.WriteLine("운동 예외: " + ex);
                 }
             }
         }
@@ -326,10 +336,6 @@ namespace SlimMy.ViewModel
 
             // 사용자 몸무게 출력
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectUserWeightOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.Message))
-                return;
 
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
@@ -397,7 +403,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -455,7 +461,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.AllExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "AllExerciseList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.AllExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -474,7 +480,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.SelectUserWeightRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "SelectUserWeight", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.SelectUserWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 

@@ -63,7 +63,6 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="날짜" Binding="{Binding Date, StringFormat=\{0:yyyy-MM-dd\}}" Width="120"/>
                     <DataGridTextColumn Header="몸무게 (kg)" Binding="{Binding Weight}" Width="100"/>
-                    <DataGridTextColumn Header="목표 몸무게 (kg)" Binding="{Binding TargetWeight}" Width="150"/>
                     <DataGridTextColumn Header="변화량" Binding="{Binding WeightDiffFromPrevious, StringFormat=+#.0;-#.0;0}" Width="100"/>
                     <DataGridTextColumn Header="BMI" Binding="{Binding BMI}" Width="80"/>
                 </DataGrid.Columns>

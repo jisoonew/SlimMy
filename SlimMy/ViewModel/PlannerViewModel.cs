@@ -33,6 +33,10 @@ namespace SlimMy.ViewModel
 
         public ICommand SaveCommand { get; set; }
 
+        public ICommand DietGoalCommand { get; set; }
+
+        private PlanItem? _editingItem;
+
         // 새로 만들기
         public ICommand NewPlannerCommand { get; set; }
 
@@ -66,7 +70,8 @@ namespace SlimMy.ViewModel
         public DateTime SelectedDate
         {
             get { return _selectedDate; }
-            set {
+            set
+            {
                 if (_selectedDate != value)
                 {
                     _selectedDate = value;
@@ -89,12 +94,13 @@ namespace SlimMy.ViewModel
         public ICommand MoveUpCommand => new RelayCommand(_ =>
         {
             int index = Items.IndexOf(SelectedPlannerData);
-            if(index > 0)
+            if (index > 0)
                 Items.Move(index, index - 1);
         }, _ => SelectedPlannerData != null && Items.IndexOf(SelectedPlannerData) > 0);
 
         // 해당 운동 리스트 아래로
-        public ICommand MoveDownCommand => new RelayCommand(_ => {
+        public ICommand MoveDownCommand => new RelayCommand(_ =>
+        {
             int index = Items.IndexOf(SelectedPlannerData);
             if (index < Items.Count - 1)
                 Items.Move(index, index + 1);
@@ -193,6 +199,8 @@ namespace SlimMy.ViewModel
             UpdateCommand = new AsyncRelayCommand(UpdatePlannerData);
 
             ExerciseCommand = new AsyncRelayCommand(AddExerciseNavigation);
+
+            DietGoalCommand = new AsyncRelayCommand(DietGoalNavigation);
         }
 
         public static async Task<PlannerViewModel> CreateAsync()
@@ -205,7 +213,13 @@ namespace SlimMy.ViewModel
         // 운동 추가 뷰
         public async Task AddExerciseNavigation(object parameter)
         {
-            await _navigationService.NavigateToAddExercise();
+            await _navigationService.NavigateToAddExerciseViewAsync(this);
+        }
+
+        // 목표 설정 뷰
+        public async Task DietGoalNavigation(object parameter)
+        {
+            await _navigationService.NavigateToDietGoalViewAsync();
         }
 
         // 리스트 선택한 운동 데이터 출력
@@ -223,30 +237,29 @@ namespace SlimMy.ViewModel
             // 운동 추가 뷰모델에게 데이터 수정을 알림
             ExerciseViewModel.IsEditMode = true;
 
-            UpdateIndex = Items.IndexOf(SelectedPlannerData);
+            _editingItem = SelectedPlannerData;
 
             // 운동 추가 뷰 생성
-            await _navigationService.NavigateToAddExercise();
+            await _navigationService.NavigateToAddExerciseViewAsync(this);
         }
 
         // 플래너 수정
         public void UpdatePlannerPrint(Exercise exerciseData, string calories, int minutes)
         {
-            if (UpdateIndex >= 0)
-            {
-                Items[UpdateIndex].ExerciseID = exerciseData.ExerciseID;
-                Items[UpdateIndex].Name = exerciseData.ExerciseName;
-                Items[UpdateIndex].Minutes = minutes;
-                Items[UpdateIndex].Calories = int.Parse(calories);
+            if (_editingItem == null) return;
 
-                TotalCaloriesCalculate();
-            }
+            _editingItem.ExerciseID = exerciseData.ExerciseID;
+            _editingItem.Name = exerciseData.ExerciseName;
+            _editingItem.Minutes = minutes;
+            _editingItem.Calories = int.Parse(calories);
+
+            TotalCaloriesCalculate();
         }
 
         // 플래너 목록(리스트) 삭제
         public void DeletePlannerPrint(object parameter)
         {
-            if(SelectedPlannerData != null)
+            if (SelectedPlannerData != null)
             {
                 string msg = string.Format("{0}를 삭제하시겠습니까?", SelectedPlannerData.Name);
                 MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -258,6 +271,8 @@ namespace SlimMy.ViewModel
                 {
                     Items.Remove(SelectedPlannerData);
                     SelectedPlannerData = null;
+
+                    TotalCaloriesCalculate();
                 }
             }
             else
@@ -288,57 +303,122 @@ namespace SlimMy.ViewModel
                     if (res?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
-                    // 현재 플래너 목록의 플래너 아이디를 가져온다
-                    var currentItemIds = new HashSet<Guid>(Items.Select(i => i.PlannerID));
+                    // 플래너 출력
+                    var plannerPrintRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendPlannerPrintOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
+
+                    if (plannerPrintRes?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {plannerPrintRes?.Message}");
+
+                    var dbItems = plannerPrintRes.PlannerPrint.SelectMany(g => g.Exercises);
+
+                    // DB snapshot: PlannerID -> DbItem
+                    var dbMap = dbItems.ToDictionary(x => x.PlannerID);
+
+                    // UI snapshot: PlannerID -> (UiItem, OrderNo)
+                    var uiMap = Items.Select((item, idx) => new { item, OrderNo = idx })
+                                     .ToDictionary(x => x.item.PlannerID, x => (x.item, x.OrderNo));
 
                     // 현재 플래너 목록의 플래너 아이디에 DB에 존재하는 데이터와 일치하지 않는 아이디
                     // 즉, DB에는 있고, 현재 플래너 목록에는 없는 플래너 아이디를 추출
-                    var deletedItems = res.PlannerID.Where(dbItem => !currentItemIds.Contains(dbItem.PlannerID));
+                    var deletedItems = dbMap.Keys.Except(uiMap.Keys).ToList();
 
-                    if (deletedItems != null)
+                    // 선택된 플래너에서 일부를 삭제하고 저장하려고 한다면
+                    foreach (var deletedItemBundle in deletedItems)
                     {
-                        foreach (var deletedItemBundle in deletedItems)
-                        {
-                            // 현재 플래너 목록에 없는 플래너 아이디는 모두 삭제
-                            var deleteRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeletePlannerListOnceAsync(deletedItemBundle), getMessage: r => r.Message, userData: currentUser);
+                        // 현재 플래너 목록에 없는 플래너 아이디는 모두 삭제
+                        var deleteRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeletePlannerListOnceAsync(deletedItemBundle), getMessage: r => r.Message, userData: currentUser);
 
-                            if (deleteRes?.Ok != true)
-                                throw new InvalidOperationException($"server not ok: {deleteRes?.Message}");
-                        }
+                        if (deleteRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {deleteRes?.Message}");
+                    }
+
+                    // 공통 ID
+                    var commonIds = uiMap.Keys.Intersect(dbMap.Keys).ToList();
+
+                    var notSavedIds = uiMap.Keys.Except(dbMap.Keys).ToList();
+
+                    var notSavedExercises = notSavedIds
+                        .Select(id =>
+                        {
+                            var (ui, orderNo) = uiMap[id];
+
+                            return new PlannerExercise
+                            {
+                                PlannerID = ui.PlannerID,
+                                Exercise_Info_ID = ui.ExerciseID,
+                                ExerciseName = ui.Name,
+                                Minutes = ui.Minutes,
+                                Calories = ui.Calories,
+                                IsCompleted = ui.IsCompleted,
+                                Indexnum = orderNo
+                            };
+                        })
+                        .Where(x => x != null).ToList();
+
+                    // 플래너 일부 데이터 추가
+                    foreach (var notSavedItem in notSavedExercises)
+                    {
+                        var deleteRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendNotSavedPlannerOnceAsync((PlannerExercise)notSavedItem), getMessage: r => r.Message, userData: currentUser);
+
+                        if (deleteRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {deleteRes?.Message}");
+                    }
+
+                    var changedExercises = commonIds
+                        .Select(id =>
+                        {
+                            var db = dbMap[id];
+                            var (ui, orderNo) = uiMap[id];
+
+                            var changed = 
+                            db.Exercise_Info_ID != ui.ExerciseID ||
+                            db.Minutes != ui.Minutes ||
+                            db.Calories != ui.Calories ||
+                            db.IsCompleted != ui.IsCompleted ||
+                            db.Indexnum != orderNo;
+
+                            if (!changed) return null;
+
+                            return new PlannerExercise
+                            {
+                                PlannerID = ui.PlannerID,
+                                Exercise_Info_ID = ui.ExerciseID,
+                                ExerciseName = ui.Name,
+                                Minutes = ui.Minutes,
+                                Calories = ui.Calories,
+                                IsCompleted = ui.IsCompleted,
+                                Indexnum = orderNo
+                            };
+                        })
+                        .Where(x => x != null).ToList();
+
+                    // 플래너 일부 데이터 수정
+                    foreach (var updateItem in changedExercises)
+                    {
+                        var deleteRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSavePlannerChangesOnceAsync((PlannerExercise)updateItem), getMessage: r => r.Message, userData: currentUser);
+
+                        if (deleteRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {deleteRes?.Message}");
                     }
                 }
 
                 // 해당 사용자의 플래너 여부
                 var exerciseRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendExerciseCheckOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
 
-                // 세션이 만료되면 로그인 창만 실행
-                if (HandleAuthError(exerciseRes?.Message))
-                    return;
-
                 if (exerciseRes?.Ok != true)
                     throw new InvalidOperationException($"server not ok: {exerciseRes?.Message}");
 
                 // 해당 사용자가 작성한 플래너가 있다면
-                if (exerciseRes.ExerciseCheck)
+                if (!exerciseRes.ExerciseCheck)
                 {
-                    // 플래너 리스트 수정
-                    var updatePlannerRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdatePlannerOnceAsync(), getMessage: r => r.Message, userData: currentUser);
+                    // 플래너 리스트 전체 수정
+                    //var updatePlannerRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdatePlannerOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(updatePlannerRes?.Message))
-                        return;
+                    //if (updatePlannerRes?.Ok != true)
+                    //    throw new InvalidOperationException($"server not ok: {updatePlannerRes?.Message}");
 
-                    if (updatePlannerRes?.Ok != true)
-                        throw new InvalidOperationException($"server not ok: {updatePlannerRes?.Message}");
-                }
-                else
-                {
-                    // 플래너 저장
+                    // 플래너 전체 저장
                     var insertPlannerRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertPlannerOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
-
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(insertPlannerRes?.Message))
-                        return;
 
                     if (insertPlannerRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {insertPlannerRes?.Message}");
@@ -356,10 +436,6 @@ namespace SlimMy.ViewModel
 
             // 플래너 출력
             var plannerPrintRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendPlannerPrintOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
-
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(plannerPrintRes?.Message))
-                return;
 
             if (plannerPrintRes?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {plannerPrintRes?.Message}");
@@ -452,12 +528,18 @@ namespace SlimMy.ViewModel
                 // 플래너 전체 삭제
                 var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeletePlannerOnceAsync(), getMessage: r => r.Message, userData: currentUser);
 
-                // 세션이 만료되면 로그인 창만 실행
-                if (HandleAuthError(res?.Message))
-                    return;
-
                 if (res?.Ok != true)
+                {
                     throw new InvalidOperationException($"server not ok: {res?.Message}");
+                }
+                else
+                {
+                    Items.Clear();
+                    PlannerGroups.Clear();
+                    PlannerTitle = null;
+                    SelectedDate = DateTime.Now;
+                    TotalCalories = null;
+                }
             }
         }
 
@@ -511,7 +593,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -569,7 +651,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.InsertPlannerPrintRes, insertPlannerPrintReqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "InsertPlannerPrint", userID = session.CurrentUser.UserId, plannerGroup = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = insertPlannerPrintReqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.InsertPlannerPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -578,7 +660,7 @@ namespace SlimMy.ViewModel
         }
 
         // 현재 플래너 목록에 없는 플래너 아이디는 모두 삭제
-        private async Task<DeletePlannerListRes> SendDeletePlannerListOnceAsync(PlanItem deletedItems)
+        private async Task<DeletePlannerListRes> SendDeletePlannerListOnceAsync(Guid deletedItems)
         {
             var deleteSession = UserSession.Instance;
             var deleteTransport = deleteSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
@@ -587,13 +669,51 @@ namespace SlimMy.ViewModel
 
             var deleteWaitTask = deleteSession.Responses.WaitAsync(MessageType.DeletePlannerListRes, deletePlannerListReqId, TimeSpan.FromSeconds(5));
 
-            var deleteReq = new { cmd = "DeletePlannerList", userID = deleteSession.CurrentUser.UserId, plannerID = deletedItems.PlannerID, accessToken = UserSession.Instance.AccessToken, requestID = deletePlannerListReqId };
-            await deleteTransport.SendFrameAsync((byte)MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
+            var deleteReq = new { cmd = "DeletePlannerList", userID = deleteSession.CurrentUser.UserId, plannerID = deletedItems, accessToken = UserSession.Instance.AccessToken, requestID = deletePlannerListReqId };
+            await deleteTransport.SendFrameAsync(MessageType.DeletePlannerList, JsonSerializer.SerializeToUtf8Bytes(deleteReq));
 
             var deleteRespPayload = await deleteWaitTask;
 
             return JsonSerializer.Deserialize<DeletePlannerListRes>(
                 deleteRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 현재 플래너 목록 중 일부 데이터 수정
+        private async Task<SavePlannerChangesRes> SendSavePlannerChangesOnceAsync(PlannerExercise updatedItems)
+        {
+            var updateSession = UserSession.Instance;
+            var updateTransport = updateSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var updatePlannerListReqId = Guid.NewGuid();
+
+            var updateWaitTask = updateSession.Responses.WaitAsync(MessageType.SavePlannerChangesRes, updatePlannerListReqId, TimeSpan.FromSeconds(5));
+
+            var updateReq = new { cmd = "SavePlannerChanges", userID = updateSession.CurrentUser.UserId, plannerBundle = updatedItems, plannerGroupID = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = updatePlannerListReqId };
+            await updateTransport.SendFrameAsync(MessageType.SavePlannerChanges, JsonSerializer.SerializeToUtf8Bytes(updateReq));
+
+            var updateRespPayload = await updateWaitTask;
+
+            return JsonSerializer.Deserialize<SavePlannerChangesRes>(
+                updateRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 현재 플래너 목록 중 일부 데이터 추가
+        private async Task<NotSavedPlannerRes> SendNotSavedPlannerOnceAsync(PlannerExercise updatedItems)
+        {
+            var updateSession = UserSession.Instance;
+            var updateTransport = updateSession.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var updatePlannerListReqId = Guid.NewGuid();
+
+            var updateWaitTask = updateSession.Responses.WaitAsync(MessageType.NotSavedPlannerRes, updatePlannerListReqId, TimeSpan.FromSeconds(5));
+
+            var updateReq = new { cmd = "NotSavedPlanner", userID = updateSession.CurrentUser.UserId, plannerBundle = updatedItems, plannerGroupID = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = updatePlannerListReqId };
+            await updateTransport.SendFrameAsync(MessageType.NotSavedPlanner, JsonSerializer.SerializeToUtf8Bytes(updateReq));
+
+            var updateRespPayload = await updateWaitTask;
+
+            return JsonSerializer.Deserialize<NotSavedPlannerRes>(
+                updateRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
         // 해당 사용자의 플래너 여부
@@ -607,7 +727,7 @@ namespace SlimMy.ViewModel
             var exerciseWaitTask = exerciseSession.Responses.WaitAsync(MessageType.ExerciseCheckRes, reqId, TimeSpan.FromSeconds(5));
 
             var exerciseReq = new { cmd = "ExerciseCheck", userID = currentUser.UserId, selectedDate = SelectedDate, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await exerciseTransport.SendFrameAsync((byte)MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
+            await exerciseTransport.SendFrameAsync(MessageType.ExerciseCheck, JsonSerializer.SerializeToUtf8Bytes(exerciseReq));
 
             var exerciseRespPayload = await exerciseWaitTask;
 
@@ -615,7 +735,7 @@ namespace SlimMy.ViewModel
                 exerciseRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
-        // 플래너 리스트 수정
+        // 플래너 리스트 전체 수정
         private async Task<UpdatePlannerRes> SendUpdatePlannerOnceAsync()
         {
             var UpdatePlannerSession = UserSession.Instance;
@@ -626,7 +746,7 @@ namespace SlimMy.ViewModel
             var UpdatePlannerWaitTask = UpdatePlannerSession.Responses.WaitAsync(MessageType.UpdatePlannerRes, updatePlannerReqId, TimeSpan.FromSeconds(5));
 
             var UpdatePlannerReq = new { cmd = "UpdatePlanner", userID = UpdatePlannerSession.CurrentUser.UserId, plannerGroupId = SelectedPlannerGroup.PlannerGroupId, plannerTitle = PlannerTitle, items = Items.ToList(), accessToken = UserSession.Instance.AccessToken, requestID = updatePlannerReqId };
-            await UpdatePlannerTransport.SendFrameAsync((byte)MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
+            await UpdatePlannerTransport.SendFrameAsync(MessageType.UpdatePlanner, JsonSerializer.SerializeToUtf8Bytes(UpdatePlannerReq));
 
             var UpdatePlannerRespPayload = await UpdatePlannerWaitTask;
 
@@ -634,7 +754,7 @@ namespace SlimMy.ViewModel
                 UpdatePlannerRespPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
-        // 플래너 저장
+        // 플래너 전체 저장
         private async Task<InsertPlannerRes> SendInsertPlannerOnceAsync(User currentUser)
         {
             var InsertPlannerSession = UserSession.Instance;
@@ -645,7 +765,7 @@ namespace SlimMy.ViewModel
             var InsertPlannerWaitTask = InsertPlannerSession.Responses.WaitAsync(MessageType.InsertPlannerRes, insertPlannerReqId, TimeSpan.FromSeconds(5));
 
             var InsertPlannerReq = new { cmd = "InsertPlanner", userID = currentUser.UserId, plannerTitle = PlannerTitle, selectedDate = SelectedDate, items = Items.ToList(), accessToken = UserSession.Instance.AccessToken, requestID = insertPlannerReqId };
-            await InsertPlannerTransport.SendFrameAsync((byte)MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
+            await InsertPlannerTransport.SendFrameAsync(MessageType.InsertPlanner, JsonSerializer.SerializeToUtf8Bytes(InsertPlannerReq));
 
             var InsertPlannerRespPayload = await InsertPlannerWaitTask;
 
@@ -664,7 +784,7 @@ namespace SlimMy.ViewModel
             var PlannerPrintWaitTask = PlannerPrintSession.Responses.WaitAsync(MessageType.PlannerPrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var PlannerPrintReq = new { cmd = "PlannerPrint", userId = currentUser.UserId, selectedDate = SelectedDate, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await PlannerPrintTransport.SendFrameAsync((byte)MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
+            await PlannerPrintTransport.SendFrameAsync(MessageType.PlannerPrint, JsonSerializer.SerializeToUtf8Bytes(PlannerPrintReq));
 
             var PlannerPrintRespPayload = await PlannerPrintWaitTask;
 
@@ -683,7 +803,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.ExerciseListRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "ExerciseList", userID = UserSession.Instance.CurrentUser.UserId, selectedDate = SelectedDate.Date, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.ExerciseList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -702,7 +822,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.DeletePlannerRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "DeletePlanner", userID = session.CurrentUser.UserId, plannerGroupId = SelectedPlannerGroup.PlannerGroupId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.DeletePlanner, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 

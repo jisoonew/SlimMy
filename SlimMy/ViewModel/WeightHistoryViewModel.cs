@@ -226,7 +226,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 몸무게 기록 출력
+        // 몸무게 기록 초기화
         public async Task WeightRecordListPrint()
         {
             User userCurrentData = UserSession.Instance.CurrentUser;
@@ -241,9 +241,14 @@ namespace SlimMy.ViewModel
                 WeightRecords.Add(weightData);
             }
 
+            var targetWeightRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDietGoalPrintOnceAsync(userCurrentData), getMessage: r => r.Message, userData: userCurrentData);
+
+            if (targetWeightRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
+
             InputHeight = WeightRecords.Last().Height.ToString();
             InputWeight = WeightRecords.Last().Weight.ToString();
-            TargetWeight = WeightRecords.Last().TargetWeight.ToString();
+            TargetWeight = targetWeightRes.DietGoalData.GoalWeight.ToString();
         }
 
         // 몸무게 변화량
@@ -327,10 +332,6 @@ namespace SlimMy.ViewModel
             // 메모장 내용 가져오기
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetMemoContentOnceAsync(userCurrentData), getMessage: r => r.Message, userData: userCurrentData);
 
-            // 세션이 만료되면 로그인 창만 실행
-            if (HandleAuthError(res?.Message))
-                return;
-
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
 
@@ -380,15 +381,24 @@ namespace SlimMy.ViewModel
                     // 몸무게 이력 삭제
                     var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeleteWeightOnceAsync(), getMessage: r => r.Message, userData: userCurrentData);
 
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(res?.Message))
-                        return;
-
                     if (res?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     NoteContent = string.Empty;
                 }
+            }
+
+            WeightRecords.Clear();
+
+            // 몸무게 이력 목록 초기화
+            var refreshRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetWeightHistoryOnceAsync(userCurrentData), getMessage: r => r.Message, userData: userCurrentData);
+
+            if (refreshRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {refreshRes?.Message}");
+
+            foreach (var weightData in refreshRes.WeightRecordItem)
+            {
+                WeightRecords.Add(weightData);
             }
         }
 
@@ -616,7 +626,7 @@ namespace SlimMy.ViewModel
             var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
             var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-            await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+            await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
             var authErrorRespPayload = await authErrorWaitTask;
 
@@ -674,7 +684,7 @@ namespace SlimMy.ViewModel
                 requestID = reqId
             };
 
-            await transport.SendFrameAsync((byte)MessageType.InsertWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.InsertWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var payload = await wait;
 
@@ -693,7 +703,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetTodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetTodayWeightCompleted", dateTime = InputDate, userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetTodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetTodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -712,7 +722,7 @@ namespace SlimMy.ViewModel
             var updatetWeightWaitTask = session.Responses.WaitAsync(MessageType.UpdateWeightRes, updateWeightReqId, TimeSpan.FromSeconds(5));
 
             var updateWeightReq = new { cmd = "UpdateWeight", userID = userData.UserId, dateTime = InputDate, inputWeight = double.Parse(InputWeight), inputHeight = double.Parse(InputHeight), bmiValue = bmiValue, targetWeight = double.Parse(TargetWeight), noteContent = NoteContent, accessToken = UserSession.Instance.AccessToken, requestID = updateWeightReqId };
-            await transport.SendFrameAsync((byte)MessageType.UpdateWeight, JsonSerializer.SerializeToUtf8Bytes(updateWeightReq));
+            await transport.SendFrameAsync(MessageType.UpdateWeight, JsonSerializer.SerializeToUtf8Bytes(updateWeightReq));
 
             var updateWeightRespPayload = await updatetWeightWaitTask;
 
@@ -731,7 +741,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetMemoContent", dateTime = SelectedRecord.Date, userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -750,7 +760,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.DeleteWeightRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "DeleteWeight", userID = session.CurrentUser.UserId, bodyID = SelectedRecord.BodyID, memoID = memoID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.DeleteWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.DeleteWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -769,7 +779,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedMemoContentRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetSearchedMemoContent", userID = userData.UserId, searchKeyword = SearchKeyword, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetSearchedMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetSearchedMemoContent, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
             
@@ -788,7 +798,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedDateRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetSearchedDate", userID = userCurrentData.UserId, parsedDate = parsedDate, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetSearchedDate, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetSearchedDate, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -807,7 +817,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetSearchedWeightRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetSearchedWeight", userID = userCurrentData.UserId, searchKeyword = double.Parse(SearchKeyword), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetSearchedWeight, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetSearchedWeight, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -828,11 +838,30 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetWeightHistoryRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetWeightHistory", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetWeightHistory, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetWeightHistory, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<GetWeightHistoryRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 목표 데이터 출력
+        private async Task<DietGoalPrintRes> SendDietGoalPrintOnceAsync(User currentUser)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.DietGoalPrintRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "DietGoalPrint", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.DietGoalPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<DietGoalPrintRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

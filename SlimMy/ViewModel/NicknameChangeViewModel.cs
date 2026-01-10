@@ -17,9 +17,6 @@ namespace SlimMy.ViewModel
 {
     public class NicknameChangeViewModel : BaseViewModel
     {
-        private UserRepository _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
         // 화면 전환
         private INavigationService _navigationService;
 
@@ -38,6 +35,8 @@ namespace SlimMy.ViewModel
             {
                 _newNickname = value;
                 OnPropertyChanged(nameof(NewNickname));
+                NickNameCheck = false;
+                NickNameNoCheck = false;
             }
         }
 
@@ -72,7 +71,6 @@ namespace SlimMy.ViewModel
 
         private async Task Initialize()
         {
-            _repo = new UserRepository(_connstring); // Repo 초기화
             _navigationService = new NavigationService();
 
             CheckNicknameCommand = new AsyncRelayCommand(NickNameCheckPrint);
@@ -137,6 +135,12 @@ namespace SlimMy.ViewModel
             }
             else
             {
+                // 닉네임 중복 체크를 안했다면
+                if(!NickNameNoCheck && !NickNameCheck)
+                {
+                    MessageBox.Show("닉네임 중복 여부를 확인해주세요.");
+                }
+
                 // 닉네임 중복
                 if (NickNameNoCheck)
                 {
@@ -174,7 +178,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -232,7 +236,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.NickNameCheckPrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "NickNameCheckPrint", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.NickNameCheckPrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -251,7 +255,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.NickNameSaveRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "NickNameSave", userID = userData.UserId, userNickName = NewNickname, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.NickNameSave, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 

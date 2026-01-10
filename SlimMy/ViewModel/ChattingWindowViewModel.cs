@@ -105,7 +105,7 @@ namespace SlimMy.ViewModel
             set
             {
                 _userSelectedItem = value;
-                OnPropertyChanged(nameof(_userSelectedItem));
+                OnPropertyChanged(nameof(UserSelectedItem));
             }
         }
 
@@ -118,7 +118,7 @@ namespace SlimMy.ViewModel
             set
             {
                 _userBanSelectedItem = value;
-                OnPropertyChanged(nameof(_userBanSelectedItem));
+                OnPropertyChanged(nameof(UserBanSelectedItem));
             }
         }
 
@@ -184,12 +184,6 @@ namespace SlimMy.ViewModel
             // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
             Application.Current.Dispatcher.Invoke(async () =>
             {
-                // var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
-                //if (listView != null)
-                //{
-                //    listView.ItemsSource = MessageList;
-                //}
-
                 // 내가 참가한 순간부터 메시지를 가져온다
                 var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendMessagePrintOnceAsync(roomId, currentUser), getMessage: r => r.Message, userData: currentUser);
 
@@ -234,9 +228,6 @@ namespace SlimMy.ViewModel
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
-            // 방장 위임 후보 리스트 초기화
-            UpdateHost();
-
             // KickMemberCommand = new RelayCommand(KickMember);
             // LeaveRoomCommand = new RelayCommand(LeaveRoom);
 
@@ -248,17 +239,21 @@ namespace SlimMy.ViewModel
             });
 
             // Toggle 방장 위임 팝업
-            ToggleDelegatePopupCommand = new RelayCommand(_ =>
+            ToggleDelegatePopupCommand = new AsyncRelayCommand(async _ =>
             {
-                IsDelegatePopupOpen = !IsDelegatePopupOpen;
-                if (IsDelegatePopupOpen) IsMainPopupOpen = false; IsBanPopupOpen = false;
+                await UpdateHost();
+                IsDelegatePopupOpen = true;
+                IsMainPopupOpen = false;
+                IsBanPopupOpen = false;
             });
 
             // Toggle 방출하기 팝업
-            ToggleBanPopupCommand = new RelayCommand(_ =>
+            ToggleBanPopupCommand = new AsyncRelayCommand(async _ =>
             {
-                IsBanPopupOpen = !IsBanPopupOpen;
-                if (IsBanPopupOpen) IsDelegatePopupOpen = false; IsMainPopupOpen = false;
+                await UpdateHost();
+                IsBanPopupOpen = true;
+                IsMainPopupOpen = false;
+                IsDelegatePopupOpen = false;
             });
 
             // 모든 팝업 닫기
@@ -382,9 +377,6 @@ namespace SlimMy.ViewModel
 
                 Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
 
-                // 방장 위임 후보 리스트 초기화
-                UpdateHost();
-
                 // Toggle 메인 팝업
                 TogglePopupCommand = new RelayCommand(_ =>
                 {
@@ -468,7 +460,7 @@ namespace SlimMy.ViewModel
                     parsedMessage = $"{currentChatRooms.ChatRoomId}:{message}:{myUid}";
                     byte[] parsedMessageByte = Encoding.UTF8.GetBytes(parsedMessage);
 
-                    await transport.SendFrameAsync((byte)MessageType.ChatContent, parsedMessageByte);
+                    await transport.SendFrameAsync(MessageType.ChatContent, parsedMessageByte);
                 }
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -775,7 +767,7 @@ namespace SlimMy.ViewModel
                 parsedMsg = $"{parsedChatRoomId}:{UserSelectedItem.UsersID}";
                 byte[] parsedMsgData = Encoding.UTF8.GetBytes(parsedMsg);
 
-                await transport.SendFrameAsync((byte)MessageType.HostChanged, parsedMsgData);
+                await transport.SendFrameAsync(MessageType.HostChanged, parsedMsgData);
 
                 // 위임 받을 사용자 닉네임
                 var hostUserNickRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSendNickNameOnceAsync(UserSelectedItem.UsersID), getMessage: r => r.Message, userData: currentUser);
@@ -841,7 +833,7 @@ namespace SlimMy.ViewModel
                         throw new InvalidOperationException($"server not ok: {exitUserChatRoomRes?.Message}");
 
                     // 클라이언트에게 메시지 전송
-                    await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
+                    await transport.SendFrameAsync(MessageType.UserLeaveRoom, leaveRoomDataByte);
                 }
                 else
                 {
@@ -852,7 +844,7 @@ namespace SlimMy.ViewModel
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     // 클라이언트에게 메시지 전송
-                    await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
+                    await transport.SendFrameAsync(MessageType.UserLeaveRoom, leaveRoomDataByte);
                 }
 
                 // UI 이동
@@ -890,10 +882,6 @@ namespace SlimMy.ViewModel
                     // 사용자와 채팅방 간의 관계 정보 삭제
                     var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeleteBanUserChatRoomOnceAsync(currentChatRoom), getMessage: r => r.Message, userData: currentUser);
 
-                    // 세션이 만료되면 로그인 창만 실행
-                    if (HandleAuthError(res?.Message))
-                        return;
-
                     if (res?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
@@ -902,6 +890,12 @@ namespace SlimMy.ViewModel
 
                     if (insertBanUserRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {insertBanUserRes?.Message}");
+
+                    string banRoomData = $"{currentChatRoom.ChatRoomId}:{UserBanSelectedItem.UsersID}";
+                    byte[] banRoomDataByte = Encoding.UTF8.GetBytes(banRoomData);
+
+                    // 방출 당한 사용자에게 알림 보내기
+                    await transport.SendFrameAsync(MessageType.RoomBanMessage, banRoomDataByte);
                 }
             }
         }
@@ -970,7 +964,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -1027,7 +1021,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MessagePrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "MessagePrint", chatRoomID = roomId, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1045,14 +1039,14 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetHostUserIdByRoomIdRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetHostUserIdByRoomId", userID = session.CurrentUser.UserId, chatRoomID = currentChattingData.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetHostUserIdByRoomId, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<GetHostUserIdByRoomIdRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
-        
+
         private async Task<MessagePrintRes> SendMessagePrintOnceAsync(ChatRooms currentChattingData, User currentUser)
         {
             var session = UserSession.Instance;
@@ -1063,7 +1057,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MessagePrintRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "MessagePrint", chatRoomID = currentChattingData.ChatRoomId, userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.MessagePrint, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1087,7 +1081,7 @@ namespace SlimMy.ViewModel
             var json = Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(req));
             Debug.WriteLine("[SendNickName][Client JSON] " + json);
 
-            await transport.SendFrameAsync((byte)MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1105,7 +1099,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.SelectChatUserNickNameRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "SelectChatUserNickName", userID = session.CurrentUser.UserId, currentChatRoomId = currentChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.SelectChatUserNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.SelectChatUserNickName, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1123,7 +1117,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.UpdateHostRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "UpdateHost", userID = session.CurrentUser.UserId, chatRoomID = currentChattingData.ChatRoomId, userIDBundle = UserSelectedItem.UsersID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.UpdateHost, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.UpdateHost, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1141,7 +1135,7 @@ namespace SlimMy.ViewModel
             var insertMessageWaitTask = session.Responses.WaitAsync(MessageType.InsertMessageRes, reqId, TimeSpan.FromSeconds(5));
 
             var insertMessageNickReq = new { cmd = "InsertMessage", parsedChatRoomId = Guid.Parse(parsedChatRoomId), userID = Guid.Parse(UserSelectedItem.UsersID), senderNickName = hostUserNickRes.SenderNickName, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertMessage, JsonSerializer.SerializeToUtf8Bytes(insertMessageNickReq));
+            await transport.SendFrameAsync(MessageType.InsertMessage, JsonSerializer.SerializeToUtf8Bytes(insertMessageNickReq));
 
             var insertMessageRespPayload = await insertMessageWaitTask;
 
@@ -1160,7 +1154,7 @@ namespace SlimMy.ViewModel
             var exitUserChatRoomWaitTask = session.Responses.WaitAsync(MessageType.ExitUserChatRoomRes, exitUserChatRoomReqId, TimeSpan.FromSeconds(5));
 
             var exitUserChatRoomReq = new { cmd = "ExitUserChatRoom", userID = currentUser.UserId, ChatRoomID = currentChatRoom.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = exitUserChatRoomReqId };
-            await transport.SendFrameAsync((byte)MessageType.ExitUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(exitUserChatRoomReq));
+            await transport.SendFrameAsync(MessageType.ExitUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(exitUserChatRoomReq));
 
             var exitUserChatRoomRespPayload = await exitUserChatRoomWaitTask;
 
@@ -1179,7 +1173,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.DeleteChatRoomWithRelationsRes, deleteChatRoomWithRelationReqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "DeleteChatRoomWithRelations", userID = session.CurrentUser.UserId, chatRoomID = currentChatRoom.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = deleteChatRoomWithRelationReqId };
-            await transport.SendFrameAsync((byte)MessageType.DeleteChatRoomWithRelations, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.DeleteChatRoomWithRelations, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1198,7 +1192,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.DeleteBanUserChatRoomRes, deleteBanUserChatRoomReqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "DeleteBanUserChatRoom", userID = session.CurrentUser.UserId, chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = Guid.Parse(UserBanSelectedItem.UsersID), accessToken = UserSession.Instance.AccessToken, requestID = deleteBanUserChatRoomReqId };
-            await transport.SendFrameAsync((byte)MessageType.DeleteBanUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.DeleteBanUserChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -1217,7 +1211,7 @@ namespace SlimMy.ViewModel
             var insertBanUserWaitTask = session.Responses.WaitAsync(MessageType.InsertBanUserRes, insertBanUserReqId, TimeSpan.FromSeconds(5));
 
             var insertBanUserReq = new { cmd = "InsertBanUser", userID = session.CurrentUser.UserId, chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = UserBanSelectedItem.UsersID, accessToken = UserSession.Instance.AccessToken, requestID = insertBanUserReqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertBanUser, JsonSerializer.SerializeToUtf8Bytes(insertBanUserReq));
+            await transport.SendFrameAsync(MessageType.InsertBanUser, JsonSerializer.SerializeToUtf8Bytes(insertBanUserReq));
 
             var insertBanUserRespPayload = await insertBanUserWaitTask;
 

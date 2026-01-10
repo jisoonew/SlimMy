@@ -13,9 +13,13 @@ namespace SlimMy.Service
 
         void NavigateToFrame(Type page);
 
-        Task NavigateToAddExercise();
+        // 운동 선택
+        Task NavigateToAddExerciseViewAsync(PlannerViewModel plannerVm);
 
         Task NavigateToFrameAsync(Type pageType);
+
+        // 목표 설정
+        Task NavigateToDietGoalViewAsync();
 
         Task NavigateToCommunityFrameAsync(Type pageType);
 

@@ -270,7 +270,7 @@ namespace SlimMy.ViewModel
                         if (userDataRes?.Ok != true)
                             throw new InvalidOperationException($"server not ok: {userDataRes?.Message}");
 
-                        // MyPage : 몸무게 정보 수정
+                        // 몸무게 정보 수정
                         var updateMyPageWeightRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUpdatetMyPageWeightOnceAsync(now, bmiValue), getMessage: r => r.Message, userData: userDateBundle);
 
                         if (updateMyPageWeightRes?.Ok != true)
@@ -290,6 +290,15 @@ namespace SlimMy.ViewModel
                         if (insertMyPageWeightRes?.Ok != true)
                             throw new InvalidOperationException($"server not ok: {insertMyPageWeightRes?.Message}");
                     }
+
+                    Password = null;
+                    PasswordConfirm = null;
+                    CurrentPassword = null;
+
+                    PasswordCheck = false;
+                    PasswordNoCheck = false;
+                    NewPasswordCheck = false;
+                    NewPasswordNoCheck = false;
                 }
             }
             else if (PasswordCheck == false || NewPasswordCheck == false)
@@ -315,12 +324,8 @@ namespace SlimMy.ViewModel
             }
             else
             {
-                //테이블 deleted_at 컬럼에 해당 날짜와 시간 업데이트
+                // 테이블 deleted_at 컬럼에 해당 날짜와 시간 업데이트
                 var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendDeleteAccountViewOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
-
-                // 세션이 만료되면 로그인 창만 실행
-                if (HandleAuthError(res?.Message))
-                    return;
 
                 if (res?.Ok != true)
                     throw new InvalidOperationException($"server not ok: {res?.Message}");
@@ -383,7 +388,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -442,7 +447,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.MyDataRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "MyData", userID = userDateBundle.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.MyData, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -461,7 +466,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.TodayWeightCompletedRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "TodayWeightCompleted", dateTime = now, userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.TodayWeightCompleted, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -480,7 +485,7 @@ namespace SlimMy.ViewModel
             var myPageUserDatawaitTask = session.Responses.WaitAsync(MessageType.UpdateMyPageUserDataRes, updateMyPageUserDataReqId, TimeSpan.FromSeconds(5));
 
             var myPageUserDatareq = new { cmd = "UpdateMyPageUserData", userID = UserData.UserId, height = double.Parse(Height), password = Password, dietGoal = DietGoal, accessToken = UserSession.Instance.AccessToken, requestID = updateMyPageUserDataReqId };
-            await myPageUserDatatransport.SendFrameAsync((byte)MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
+            await myPageUserDatatransport.SendFrameAsync(MessageType.UpdateMyPageUserData, JsonSerializer.SerializeToUtf8Bytes(myPageUserDatareq));
 
             var userDataRespPayload = await myPageUserDatawaitTask;
 
@@ -499,7 +504,7 @@ namespace SlimMy.ViewModel
             var updatetMyPageWeightwaitTask = session.Responses.WaitAsync(MessageType.UpdatetMyPageWeightRes, updatetMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
             var updatetMyPageWeightreq = new { cmd = "UpdatetMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = updatetMyPageWeightReqId };
-            await updatetMyPageWeighttransport.SendFrameAsync((byte)MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
+            await updatetMyPageWeighttransport.SendFrameAsync(MessageType.UpdatetMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(updatetMyPageWeightreq));
 
             var updatetMyPageWeightRespPayload = await updatetMyPageWeightwaitTask;
 
@@ -518,7 +523,7 @@ namespace SlimMy.ViewModel
             var insertMyPageWeightWaitTask = session.Responses.WaitAsync(MessageType.InsertMyPageWeightRes, insertMyPageWeightReqId, TimeSpan.FromSeconds(5));
 
             var insertMyPageWeightReq = new { cmd = "InsertMyPageWeight", userID = UserData.UserId, dateTime = now, weight = double.Parse(Weight), height = double.Parse(Height), bmi = bmiValue, accessToken = UserSession.Instance.AccessToken, requestID = insertMyPageWeightReqId };
-            await insertMyPageWeightTransport.SendFrameAsync((byte)MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
+            await insertMyPageWeightTransport.SendFrameAsync(MessageType.InsertMyPageWeight, JsonSerializer.SerializeToUtf8Bytes(insertMyPageWeightReq));
 
             var insertMyPageWeightPayload = await insertMyPageWeightWaitTask;
 
@@ -537,7 +542,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.DeleteAccountViewRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "DeleteAccountView", userID = UserData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.DeleteAccountView, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -556,7 +561,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.VerifyPasswordRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "VerifyPassword", userID = userDateBundle.UserId, password = CurrentPassword, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.VerifyPassword, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 

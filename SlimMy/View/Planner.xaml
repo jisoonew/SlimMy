@@ -100,7 +100,7 @@
                             </Style>
                         </DatePicker.CalendarStyle>
                     </DatePicker>
-                    <Button Grid.Column="1" Content="목표 설정" Width="130" Height="40" FontSize="18" HorizontalAlignment="Right" Margin="10,0,0,0" Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"/>
+                    <Button Grid.Column="1" Content="목표 설정" Command="{Binding DietGoalCommand}" Width="130" Height="40" FontSize="18" HorizontalAlignment="Right" Margin="10,0,0,0" Background="#FFEEEEEE" Foreground="Black" BorderBrush="Gray"/>
                 </Grid>
 
                 <!-- 몸무게 입력 및 운동 선택 -->

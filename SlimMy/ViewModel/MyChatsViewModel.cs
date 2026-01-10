@@ -22,8 +22,6 @@ namespace SlimMy.ViewModel
     {
         private User _user;
         private ChatRooms _chat;
-        private Repo _repo;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
         private ChatUserList _chatUserList;
         public static event Action CountChanged;
         public static string myName = null;
@@ -272,7 +270,6 @@ namespace SlimMy.ViewModel
         // 초기화 메서드
         private async Task Initialize()
         {
-            _repo = new Repo(_connstring); // Repo 초기화
             await RefreshChatRooms(); // 채팅 방 불러오기
             InsertCommand = new AsyncRelayCommand(ChatRoomSelected);
 
@@ -347,6 +344,8 @@ namespace SlimMy.ViewModel
             try
             {
                 User userDateBundle = UserSession.Instance.CurrentUser;
+                var session = UserSession.Instance;
+                var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
                 // 특정 채팅방의 클라이언트 모든 아이디 출력
                 var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomUserListOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: userDateBundle);
@@ -361,9 +360,21 @@ namespace SlimMy.ViewModel
                 }
 
                 // 문자열을 ChatUserList 객체로 변환
-                List<ChatUserList> userList = res.Users.Select(id => new ChatUserList(id,"")).ToList();
+                List<ChatUserList> userList = res.Users.Select(id => new ChatUserList(id, "")).ToList();
 
                 CommunityViewModel.GroupChattingReceivers = userList;
+
+                if (transport == null)
+                {
+                    MessageBox.Show("네트워크 세션이 없습니다. 다시 로그인해 주세요.");
+                    return;
+                }
+
+                User userData = UserSession.Instance.CurrentUser;
+                string joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}";
+                byte[] payload = Encoding.UTF8.GetBytes(joinMsg);
+
+                await transport.SendFrameAsync(MessageType.UserJoinChatRoom, payload);
             }
             catch (Exception ex)
             {
@@ -501,7 +512,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -562,7 +573,7 @@ namespace SlimMy.ViewModel
 
             // 요청 전송
             var req = new { cmd = "ChatRoomUserList", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.ChatRoomUserList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
             var respPayload = await waitTask;
@@ -586,7 +597,7 @@ namespace SlimMy.ViewModel
 
             // 요청 전송
             var req = new { cmd = "ChatRoomPageList", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.ChatRoomPageList, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
             var respPayload = await waitTask;
@@ -609,7 +620,7 @@ namespace SlimMy.ViewModel
 
             // 요청 전송
             var req = new { cmd = "MyChatRoomSearchWord", searchWord = SearchWord, userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.MyChatRoomSearchWord, JsonSerializer.SerializeToUtf8Bytes(req));
 
             // 수신 루프가 응답을 잡아주면 도착
             var respPayload = await waitTask;

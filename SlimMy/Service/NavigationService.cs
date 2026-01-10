@@ -31,10 +31,18 @@ namespace SlimMy.Service
         }
 
         // 운동 추가
-        public async Task NavigateToAddExercise()
+        public async Task NavigateToAddExerciseViewAsync(PlannerViewModel plannerVm)
         {
-            var exerciseViewModel = await ViewModel.ExerciseViewModel.CreateAsync();
+            var exerciseViewModel = await ExerciseViewModel.CreateAsync(plannerVm);
             var pageInstance = new View.AddExercise { DataContext = exerciseViewModel };
+            pageInstance.Show();
+        }
+
+        // 운동 설정
+        public async Task NavigateToDietGoalViewAsync()
+        {
+            var dietGoalViewModel = await DietGoalViewModel.CreateAsync();
+            var pageInstance = new View.DietGoal { DataContext = dietGoalViewModel };
             pageInstance.Show();
         }
 

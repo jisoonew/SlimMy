@@ -112,7 +112,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -169,7 +169,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.InsertChatRoomRes, insertChatRoomReqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "InsertChatRoom", userID = session.CurrentUser.UserId, chatRoomName = _chat.ChatRoomName, description = _chat.Description, category = _chat.Category, dateTime = now, accessToken = UserSession.Instance.AccessToken, requestID = insertChatRoomReqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.InsertChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -188,7 +188,7 @@ namespace SlimMy.ViewModel
             var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
             var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = userId, chatRoomID = res.ChatRoomID, dateTime = now, isowner = 1, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
+            await transport.SendFrameAsync(MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
             var userChatRoomRespPayload = await userChatRoomWaitTask;
 

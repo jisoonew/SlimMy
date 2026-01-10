@@ -402,7 +402,7 @@ namespace SlimMy.ViewModel
                 string joinMsg = $"{userData.UserId}:{selectedChatRoom.ChatRoomId}";
                 byte[] payload = Encoding.UTF8.GetBytes(joinMsg);
 
-                await transport.SendFrameAsync((byte)MessageType.UserJoinChatRoom, payload);
+                await transport.SendFrameAsync(MessageType.UserJoinChatRoom, payload);
             }
             catch (Exception ex)
             {
@@ -593,7 +593,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
@@ -652,7 +652,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.SelectChatRoomRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { Cmd = "SelectChatRoom", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.SelectChatRoom, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -671,7 +671,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.CheckUserChatRoomsRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "CheckUserChatRooms", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.CheckUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.CheckUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 
@@ -693,7 +693,7 @@ namespace SlimMy.ViewModel
             var userChatRoomWaitTask = session.Responses.WaitAsync(MessageType.InsertUserChatRoomsRes, insertUserChatRoomsReqId, TimeSpan.FromSeconds(5));
 
             var userChatRoomReq = new { cmd = "InsertUserChatRooms", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, dateTime = now, isowner = 0, accessToken = UserSession.Instance.AccessToken, requestID = insertUserChatRoomsReqId };
-            await transport.SendFrameAsync((byte)MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
+            await transport.SendFrameAsync(MessageType.InsertUserChatRooms, JsonSerializer.SerializeToUtf8Bytes(userChatRoomReq));
 
             var userChatRoomRespPayload = await userChatRoomWaitTask;
 
@@ -712,7 +712,7 @@ namespace SlimMy.ViewModel
             var waitTask = session.Responses.WaitAsync(MessageType.GetChatRoomUserIdsRes, reqId, TimeSpan.FromSeconds(5));
 
             var req = new { cmd = "GetChatRoomUserIds", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId.ToString(), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
-            await transport.SendFrameAsync((byte)MessageType.GetChatRoomUserIds, JsonSerializer.SerializeToUtf8Bytes(req));
+            await transport.SendFrameAsync(MessageType.GetChatRoomUserIds, JsonSerializer.SerializeToUtf8Bytes(req));
 
             var respPayload = await waitTask;
 

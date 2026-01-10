@@ -46,11 +46,10 @@
                                 <materialDesign:PackIcon Kind="Menu" Width="20" Height="20"/>
                             </Button>
 
-                            <!-- 첫 번째 Popup (기본 옵션) -->
                             <Popup x:Name="MainOptionsPopup"
                    IsOpen="{Binding IsMainPopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
-                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   PlacementTarget="{Binding ElementName=MenuButton}"
                    HorizontalOffset="52"
                    VerticalOffset="-32">
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
@@ -74,14 +73,15 @@
                             <Popup x:Name="DelegatePopup"
                    IsOpen="{Binding IsDelegatePopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
-                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   PlacementTarget="{Binding ElementName=MenuButton}"
                    HorizontalOffset="52"
                    VerticalOffset="-32"
-                                   StaysOpen="False">
+                                   StaysOpen="False"
+                                   DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock Text="방장 위임 목록" FontWeight="Bold" Margin="0,5"/>
-                                        <!-- 예: 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
+                                        <!-- 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
                                         <ListBox ItemsSource="{Binding DelegateCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
                                         <Button Content="위임하기" Command="{Binding ConfirmDelegateCommand}" Margin="0,5"/>
                                         <Button Content="취소" Command="{Binding CancelDelegateCommand}" Margin="0,5"/>
@@ -93,10 +93,11 @@
                             <Popup x:Name="BanPopup"
                    IsOpen="{Binding IsBanPopupOpen, Mode=TwoWay}"
                    Placement="Bottom"
-                   PlacementTarget="{Binding ElementName=OptionsButton}"
+                   PlacementTarget="{Binding ElementName=MenuButton}"
                    HorizontalOffset="52"
                    VerticalOffset="-32"
-                                   StaysOpen="False">
+                                   StaysOpen="False"
+                                   DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock Text="멤버 목록" FontWeight="Bold" Margin="0,5"/>

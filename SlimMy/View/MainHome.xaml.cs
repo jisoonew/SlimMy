@@ -24,6 +24,8 @@ namespace SlimMy.View
     {
         private NavigationService _navigationService;
 
+        public bool IsLoggingOut { get; set; }
+
         public MainHome(MainPageViewModel viewModel)
         {
             InitializeComponent();
@@ -41,12 +43,12 @@ namespace SlimMy.View
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            //MessageBoxResult messageBoxResult = MessageBox.Show("SlimMy를 종료하시겠습니까?", "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            //if (messageBoxResult == MessageBoxResult.No)
-            //{
-            //    e.Cancel = true;
-            //    return;
-            //}
+            if (IsLoggingOut)
+            {
+                // 로그아웃으로 닫히는 중이면 앱 종료 금지
+                base.OnClosing(e);
+                return;
+            }
 
             Application.Current.Shutdown();
         }

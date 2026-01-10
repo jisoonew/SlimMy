@@ -312,10 +312,11 @@ namespace SlimMy.ViewModel
             var opts = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var loginRes = JsonSerializer.Deserialize<LoginReply>(payload, opts);
 
-            if (loginRes?.ok == true)
+            var isInactive = string.Equals(loginRes?.status, "INACTIVE", StringComparison.OrdinalIgnoreCase);
+            var hasStatus = !string.IsNullOrWhiteSpace(loginRes?.status);
+
+            if (loginRes?.ok == true && hasStatus && !isInactive)
             {
-                Debug.WriteLine("서버 데이터 도착");
-                Debug.WriteLine("아이디 : " + loginRes.userId);
                 NickName = loginRes.nick;
                 User.Password = password;
 
@@ -348,7 +349,9 @@ namespace SlimMy.ViewModel
             }
             else
             {
-                MessageBox.Show(loginRes?.message ?? "로그인 실패");
+                var msg = loginRes?.ok != true ? (loginRes?.message ?? "로그인 실패") : !hasStatus ? "계정 상태를 확인할 수 없습니다. 다시 시도해주세요." : "탈퇴한 계정은 로그인할 수 없습니다.";
+
+                MessageBox.Show(msg);
                 _recvCts?.Cancel();
                 transport.Dispose();
                 return;
@@ -381,32 +384,33 @@ namespace SlimMy.ViewModel
         // 로그아웃
         public async Task LogoutBtn(object parameter)
         {
-            _recvCts.Cancel();
+            _recvCts?.Cancel();
 
-            // 서버 연결 해제
-            if (UserSession.Instance.CurrentUser?.Client != null)
-            {
-                UserSession.Instance.CurrentUser.Client.Close();
+            // 연결 해제
+            UserSession.Instance.CurrentUser?.Client?.Close();
+            if (UserSession.Instance.CurrentUser != null)
                 UserSession.Instance.CurrentUser.Client = null;
-            }
-
-            // 세션 제거
             UserSession.Instance.CurrentUser = null;
 
-            // 현재 모든 창 닫기 (MainHome 등)
-            foreach (Window window in Application.Current.Windows.OfType<Window>().ToList())
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                if (window is not View.Login)
-                    window.Close();
-            }
+                // 로그인 창 먼저 띄우기
+                var loginView = new View.Login();
+                loginView.DataContext = new MainPageViewModel(new DataService(), loginView);
+                Application.Current.MainWindow = loginView;
+                loginView.Show();
 
-            // 로그인 창 새로 열기
-            var loginView = new View.Login();
-            var loginViewModel = new MainPageViewModel(new DataService(), loginView);
-            loginView.DataContext = loginViewModel;
+                // 기존 창 닫기 (MainHome는 IsLoggingOut=true 세팅 후 닫기)
+                foreach (Window w in Application.Current.Windows.OfType<Window>().ToList())
+                {
+                    if (ReferenceEquals(w, loginView)) continue;
 
-            Application.Current.MainWindow = loginView;
-            loginView.Show();
+                    if (w is View.MainHome mh)
+                        mh.IsLoggingOut = true;
+
+                    w.Close();
+                }
+            });
         }
 
 
@@ -445,17 +449,24 @@ namespace SlimMy.ViewModel
                         _ = Task.Run(() => ParsingReceiveMessage(list, type));
                 }
             }
-            catch (IOException ex)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                Debug.WriteLine($"[RECV] remote closed: {ex.Message}");
+                // 로그아웃/종료로 인한 정상 취소
+                Debug.WriteLine("[RECV] canceled (normal shutdown).");
             }
-            catch (Exception e)
+            catch (ObjectDisposedException)
             {
-                Debug.WriteLine($"[RECV] exception: {e}");
-                // MessageBox.Show("서버와의 연결이 끊어졌습니다.", "Server Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                // MessageBox.Show(e.Message);
-                // MessageBox.Show(e.StackTrace);
-                // Environment.Exit(1);
+                // 소켓/스트림 닫힘
+                Debug.WriteLine("[RECV] disposed (normal shutdown).");
+            }
+            catch (IOException ioEx)
+            {
+                // 네트워크 단절
+                Debug.WriteLine($"[RECV] IO error: {ioEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[RECV] exception: {ex}");
             }
         }
 
@@ -545,6 +556,16 @@ namespace SlimMy.ViewModel
                         messageList.Clear();
                         return;
                     }
+
+                    // 방출 메시지
+                    if (type == MessageType.RoomBanMessageRes)
+                    {
+                        await HandleBanMessage(chattingPartner, message);
+
+                        // 처리한 메시지 리스트를 비우기
+                        messageList.Clear();
+                        return;
+                    }
                 }
             }
             messageList.Clear();
@@ -625,6 +646,27 @@ namespace SlimMy.ViewModel
                 Debug.WriteLine($"[HOST_CHANGED] window not found -> chatKey={chatKey}");
             }
         }
+        
+        // 방출 메시지
+        private async Task HandleBanMessage(string chattingPartner, string message)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            var parts = chattingPartner.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return;
+
+            var roomId = parts[0]; // 방 ID
+            var newHostUserId = parts[1]; // 방출 사용자 ID
+
+            await MainHome.MainHomeLoaded.Task;
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await CloseChatRoomAsync(roomId);
+            }, DispatcherPriority.Normal);
+
+            Debug.WriteLine(currentUser.NickName + " 방출되었습니다.");
+            MessageBox.Show(currentUser.NickName + " 방출되었습니다.");
+        }
 
         private async Task HandleUserBundleChanged(string chattingPartner, string message)
         {
@@ -660,7 +702,6 @@ namespace SlimMy.ViewModel
 
             return chattingThreadDic.ContainsKey(reqKey) ? reqKey : "-1";
         }
-
 
         private Dictionary<string, View.ChattingWindow> chattingWindows = new Dictionary<string, View.ChattingWindow>();
 
@@ -716,11 +757,11 @@ namespace SlimMy.ViewModel
                         string leaveRoomData = $"{chatroomID}:{userId}";
                         byte[] leaveRoomDataByte = Encoding.UTF8.GetBytes(leaveRoomData);
 
-                        await transport.SendFrameAsync((byte)MessageType.UserLeaveRoom, leaveRoomDataByte);
+                        await transport.SendFrameAsync(MessageType.UserLeaveRoom, leaveRoomDataByte);
                     };
 
                     // 열 때, 동일한 chatKey 로 저장
-                    chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey);
+                    chattingThreadDic[chatKey] = new ChattingThreadData(Thread.CurrentThread, vm, chatKey, win);
 
                     win.Loaded += (s2, e2) => readyTcs.TrySetResult(true);
                     win.Show();
@@ -734,6 +775,27 @@ namespace SlimMy.ViewModel
             }, DispatcherPriority.ContextIdle);
 
             await readyTcs.Task;
+        }
+
+        // 채팅방 닫기
+        private async Task CloseChatRoomAsync(string chatroomID)
+        {
+            var userId = UserSession.Instance.CurrentUser.UserId.ToString();
+            var chatKey = $"{userId}:{chatroomID}";
+
+            await Application.Current.Dispatcher.InvokeAsync(() =>
+            {
+                if (!chattingThreadDic.TryGetValue(chatKey, out var data))
+                {
+                    Debug.WriteLine($"[CloseChatRoomAsync] not found: ");
+                    return;
+                }
+
+                data.Window.Close();
+
+                chattingThreadDic.Remove(chatKey);
+                chatWindowReadyMap.Remove(chatKey);
+            });
         }
 
         private static Guid TryExtractRequestId(byte[] payload)
@@ -773,7 +835,7 @@ namespace SlimMy.ViewModel
                 var authErrorWaitTask = session.Responses.WaitAsync(MessageType.UserRefreshTokenRes, authErrorResReqId, TimeSpan.FromSeconds(5));
 
                 var authErrorReq = new { cmd = "UserRefreshToken", userID = userData.UserId, accessToken = UserSession.Instance.AccessToken, requestID = authErrorResReqId };
-                await transport.SendFrameAsync((byte)MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
+                await transport.SendFrameAsync(MessageType.UserRefreshToken, JsonSerializer.SerializeToUtf8Bytes(authErrorReq));
 
                 var authErrorRespPayload = await authErrorWaitTask;
 
