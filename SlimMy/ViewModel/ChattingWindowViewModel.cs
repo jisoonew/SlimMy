@@ -886,12 +886,12 @@ namespace SlimMy.ViewModel
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     // 방출 사용자 정보 저장
-                    var insertBanUserRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertBanUserOnceAsync(currentChatRoom), getMessage: r => r.Message, userData: currentUser);
+                    var insertBanUserRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertBanUserOnceAsync(currentChatRoom, currentUser), getMessage: r => r.Message, userData: currentUser);
 
                     if (insertBanUserRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {insertBanUserRes?.Message}");
 
-                    string banRoomData = $"{currentChatRoom.ChatRoomId}:{UserBanSelectedItem.UsersID}";
+                    string banRoomData = $"{currentChatRoom.ChatRoomId}:{UserBanSelectedItem.UsersID}:{insertBanUserRes.BanID}";
                     byte[] banRoomDataByte = Encoding.UTF8.GetBytes(banRoomData);
 
                     // 방출 당한 사용자에게 알림 보내기
@@ -1200,7 +1200,7 @@ namespace SlimMy.ViewModel
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
-        private async Task<InsertBanUserRes> SendInsertBanUserOnceAsync(ChatRooms currentChatRoom)
+        private async Task<InsertBanUserRes> SendInsertBanUserOnceAsync(ChatRooms currentChatRoom, User currentUser)
         {
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
@@ -1210,7 +1210,7 @@ namespace SlimMy.ViewModel
             // 방출 사용자 정보 저장
             var insertBanUserWaitTask = session.Responses.WaitAsync(MessageType.InsertBanUserRes, insertBanUserReqId, TimeSpan.FromSeconds(5));
 
-            var insertBanUserReq = new { cmd = "InsertBanUser", userID = session.CurrentUser.UserId, chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = UserBanSelectedItem.UsersID, accessToken = UserSession.Instance.AccessToken, requestID = insertBanUserReqId };
+            var insertBanUserReq = new { cmd = "InsertBanUser", userID = session.CurrentUser.UserId, chatRoomID = currentChatRoom.ChatRoomId, userIDBundle = UserBanSelectedItem.UsersID, bannedBy = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = insertBanUserReqId };
             await transport.SendFrameAsync(MessageType.InsertBanUser, JsonSerializer.SerializeToUtf8Bytes(insertBanUserReq));
 
             var insertBanUserRespPayload = await insertBanUserWaitTask;

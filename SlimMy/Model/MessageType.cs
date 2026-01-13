@@ -146,6 +146,10 @@ namespace SlimMy.Model
         DietGoalPrint = 265,
         DietGoalPrintRes = 266,
         RoomBanMessage = 267,
-        RoomBanMessageRes = 268
+        RoomBanMessageRes = 268,
+        BanIsNotified = 269,
+        BanIsNotifiedRes = 270,
+        NotifiedCheck = 271,
+        NotifiedCheckRes = 272
     }
 }

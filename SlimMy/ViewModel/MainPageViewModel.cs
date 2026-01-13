@@ -334,11 +334,37 @@ namespace SlimMy.ViewModel
                 // 이후 모든 송수신은 ssl을 사용
                 // _ = Task.Run(() => RecieveMessage(transport));
 
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                var reqNotifiedId = Guid.NewGuid();
+
+                var waitNotified = hub.WaitAsync(MessageType.NotifiedCheckRes, reqNotifiedId, TimeSpan.FromSeconds(5));
+
+                var loginNotifiedReq = new { cmd = "NotifiedCheck", userId = UserSession.Instance.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqNotifiedId };
+                await transport.SendFrameAsync(MessageType.NotifiedCheck, JsonSerializer.SerializeToUtf8Bytes(loginNotifiedReq));
+
+                var payNotifiedload = await waitNotified;
+                var notifiedRes = JsonSerializer.Deserialize<NotifiedCheckRes>(payNotifiedload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
                     var mainView = new MainHome(this);
                     Application.Current.MainWindow = mainView;
                     mainView.Show();
+
+                    if(notifiedRes.NotifiedCheck != null)
+                    {
+                        foreach (var msg in notifiedRes.NotifiedCheck)
+                        {
+                            MessageBox.Show("방장에 의해 채팅방에서 퇴장되었습니다.\n" + msg.ChatRoomName + "\n" + msg.BanAt);
+
+                            // CHATROOM_BAN 테이블 ISNOTIFIED 1로 update하는게 서버에 요청
+                            User userData = UserSession.Instance.CurrentUser;
+
+                            var selectChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendBanIsNotifiedOnceAsync(userData, msg.BanID.ToString()), getMessage: r => r.Message, userData: userData);
+
+                            if (selectChatRoomRes?.Ok != true)
+                                throw new InvalidOperationException($"server not ok: {selectChatRoomRes?.Message}");
+                        }
+                    }
 
                     // 떠 있는 로그인 창 닫기
                     var loginWindow = Application.Current.Windows
@@ -657,6 +683,7 @@ namespace SlimMy.ViewModel
 
             var roomId = parts[0]; // 방 ID
             var newHostUserId = parts[1]; // 방출 사용자 ID
+            var banId = parts[2];
 
             await MainHome.MainHomeLoaded.Task;
             await Application.Current.Dispatcher.InvokeAsync(async () =>
@@ -664,8 +691,15 @@ namespace SlimMy.ViewModel
                 await CloseChatRoomAsync(roomId);
             }, DispatcherPriority.Normal);
 
-            Debug.WriteLine(currentUser.NickName + " 방출되었습니다.");
             MessageBox.Show(currentUser.NickName + " 방출되었습니다.");
+
+            // CHATROOM_BAN 테이블 ISNOTIFIED 1로 update하는게 서버에 요청
+            User userData = UserSession.Instance.CurrentUser;
+
+            var selectChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendBanIsNotifiedOnceAsync(userData, banId), getMessage: r => r.Message, userData: userData);
+
+            if (selectChatRoomRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {selectChatRoomRes?.Message}");
         }
 
         private async Task HandleUserBundleChanged(string chattingPartner, string message)
@@ -858,6 +892,26 @@ namespace SlimMy.ViewModel
             {
                 _refreshLock.Release();
             }
+        }
+
+        // 방출 메시지 출력 완료
+        private async Task<BanIsNotifiedRes?> SendBanIsNotifiedOnceAsync(User userData, string banID)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.BanIsNotifiedRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "BanIsNotified", userID = session.CurrentUser.UserId, banID = banID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.BanIsNotified, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<BanIsNotifiedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
         private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
