@@ -150,6 +150,12 @@ namespace SlimMy.Model
         BanIsNotified = 269,
         BanIsNotifiedRes = 270,
         NotifiedCheck = 271,
-        NotifiedCheckRes = 272
+        NotifiedCheckRes = 272,
+        IsBanned = 273,
+        IsBannedRes = 274,
+        BanUserList = 275,
+        BanUserListRes = 276,
+        UnBanUser = 277,
+        UnBanUserRes = 278
     }
 }

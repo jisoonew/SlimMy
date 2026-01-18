@@ -309,48 +309,63 @@ namespace SlimMy.ViewModel
                 else
                 {
                     User currentUser = UserSession.Instance.CurrentUser;
-                    myName = currentUser.NickName;
-                    myUid = currentUser.UserId;
-                    _dataService.SetUserId(currentUser.UserId.ToString());
 
-                    var session = UserSession.Instance;
-                    var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+                    // 방출 채팅방 여부
+                    var isBannedRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendIsBannedOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
 
-                    // 사용자 채팅방 참여 여부
-                    var checkUserChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendCheckUserChatRoomOnceAsync(currentUser, selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
+                    if (isBannedRes?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {isBannedRes?.Message}");
 
-                    if (checkUserChatRoomRes == null)
+                    // 방출 당한 상태가 아니라면
+                    if (!isBannedRes.IsBannedCheck)
                     {
-                        Debug.WriteLine("[CheckUserChatRooms] res is null");
-                        return;
-                    }
+                        myName = currentUser.NickName;
+                        myUid = currentUser.UserId;
+                        _dataService.SetUserId(currentUser.UserId.ToString());
 
-                    if (checkUserChatRoomRes?.Ok != true)
-                        throw new InvalidOperationException($"server not ok: {checkUserChatRoomRes?.Message}");
+                        var session = UserSession.Instance;
+                        var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
 
-                    // 만약 사용자가 채팅방에 참가하지 않은 상태라면?
-                    // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
-                    if (checkUserChatRoomRes.CheckUserChatRooms)
-                    {
-                        // 사용자와 채팅방 간의 관계 생성
-                        var userChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertUserChatRoomOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
+                        // 사용자 채팅방 참여 여부
+                        var checkUserChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendCheckUserChatRoomOnceAsync(currentUser, selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
 
-                        if (userChatRoomRes?.Ok != true)
-                            throw new InvalidOperationException($"server not ok: {userChatRoomRes?.Message}");
-
-                        ServerInfo serverInfo = new ServerInfo
+                        if (checkUserChatRoomRes == null)
                         {
-                            UserID = currentUser.UserId.ToString(),
-                            IPAddress = currentUser.IpNum
-                        };
+                            Debug.WriteLine("[CheckUserChatRooms] res is null");
+                            return;
+                        }
 
-                        // 채팅방에 참여한 사용자 아이디들을 서버로 전송
-                        await SendRoomUserIds(selectedChatRoom, currentUser);
+                        if (checkUserChatRoomRes?.Ok != true)
+                            throw new InvalidOperationException($"server not ok: {checkUserChatRoomRes?.Message}");
+
+                        // 만약 사용자가 채팅방에 참가하지 않은 상태라면?
+                        // UserChatRooms테이블에 사용자와 채팅방 관계를 추가한다
+                        if (checkUserChatRoomRes.CheckUserChatRooms)
+                        {
+                            // 사용자와 채팅방 간의 관계 생성
+                            var userChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertUserChatRoomOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
+
+                            if (userChatRoomRes?.Ok != true)
+                                throw new InvalidOperationException($"server not ok: {userChatRoomRes?.Message}");
+
+                            ServerInfo serverInfo = new ServerInfo
+                            {
+                                UserID = currentUser.UserId.ToString(),
+                                IPAddress = currentUser.IpNum
+                            };
+
+                            // 채팅방에 참여한 사용자 아이디들을 서버로 전송
+                            await SendRoomUserIds(selectedChatRoom, currentUser);
+                        }
+                        else
+                        {
+                            // 채팅방에 참여한 사용자 아이디들을 서버로 전송
+                            await SendRoomUserIds(selectedChatRoom, currentUser);
+                        }
                     }
                     else
                     {
-                        // 채팅방에 참여한 사용자 아이디들을 서버로 전송
-                        await SendRoomUserIds(selectedChatRoom, currentUser);
+                        MessageBox.Show("해당 채팅방에서 방출되었습니다.");
                     }
                 }
             }
@@ -676,6 +691,25 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<CheckUserChatRoomsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 방출 채팅방 여부
+        private async Task<IsBannedRes?> SendIsBannedOnceAsync(ChatRooms selectedChatRoom)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.IsBannedRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "IsBanned", userID = session.CurrentUser.UserId, chatRoomID = selectedChatRoom.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.IsBanned, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<IsBannedRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

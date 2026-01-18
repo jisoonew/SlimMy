@@ -68,6 +68,18 @@ namespace SlimMy.ViewModel
             }
         }
 
+        private ObservableCollection<UnBanCandidateList> unBanCandidateList = new ObservableCollection<UnBanCandidateList>();
+
+        public ObservableCollection<UnBanCandidateList> UnBanCandidateList
+        {
+            get => unBanCandidateList;
+            set
+            {
+                unBanCandidateList = value;
+                OnPropertyChanged();
+            }
+        }
+
         public ICommand CancelDelegateCommand { get; private set; }
 
         private string _messageText;
@@ -122,6 +134,15 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 방출 해제
+        private UnBanCandidateList _userUnBanSelectedItem;
+
+        public UnBanCandidateList UserUnBanSelectedItem
+        {
+            get { return _userUnBanSelectedItem; }
+            set { _userUnBanSelectedItem = value; OnPropertyChanged(nameof(UserUnBanSelectedItem)); }
+        }
+
         // 팝업 열림/닫힘을 각각 다른 속성으로
         private bool _isMainPopupOpen;
         public bool IsMainPopupOpen
@@ -144,10 +165,18 @@ namespace SlimMy.ViewModel
             set { _isBanPopupOpen = value; OnPropertyChanged(); }
         }
 
+        private bool _isUnBanPopupOpen;
+        public bool IsUnBanPopupOpen
+        {
+            get { return _isUnBanPopupOpen; }
+            set { _isUnBanPopupOpen = value; OnPropertyChanged(); }
+        }
+
 
         public ICommand UpdateHostCommand { get; }
         public ICommand KickMemberCommand { get; }
         public ICommand LeaveRoomCommand { get; }
+        public ICommand UnBanCommand { get; }
 
         // 채팅방 설정
         public ICommand TogglePopupCommand { get; }
@@ -155,6 +184,9 @@ namespace SlimMy.ViewModel
         public ICommand ToggleDelegatePopupCommand { get; }
         // 방출하기
         public ICommand ToggleBanPopupCommand { get; }
+
+        // 방출 해제
+        public ICommand ToggleUnBanPopupCommand { get; }
 
         public ICommand CloseAllPopupsCommand { get; }
         public ICommand ConfirmDelegateCommand { get; }
@@ -235,7 +267,7 @@ namespace SlimMy.ViewModel
             TogglePopupCommand = new RelayCommand(_ =>
             {
                 IsMainPopupOpen = !IsMainPopupOpen;
-                if (IsMainPopupOpen) IsDelegatePopupOpen = false; IsBanPopupOpen = false;
+                if (IsMainPopupOpen) IsDelegatePopupOpen = false; IsBanPopupOpen = false; IsUnBanPopupOpen = false;
             });
 
             // Toggle 방장 위임 팝업
@@ -245,6 +277,7 @@ namespace SlimMy.ViewModel
                 IsDelegatePopupOpen = true;
                 IsMainPopupOpen = false;
                 IsBanPopupOpen = false;
+                IsUnBanPopupOpen = false;
             });
 
             // Toggle 방출하기 팝업
@@ -254,6 +287,17 @@ namespace SlimMy.ViewModel
                 IsBanPopupOpen = true;
                 IsMainPopupOpen = false;
                 IsDelegatePopupOpen = false;
+                IsUnBanPopupOpen = false;
+            });
+
+            // Toggle 방출 해제 팝업
+            ToggleUnBanPopupCommand = new AsyncRelayCommand(async _ =>
+            {
+                await UpdateHost();
+                IsUnBanPopupOpen = true;
+                IsMainPopupOpen = false;
+                IsDelegatePopupOpen = false;
+                IsBanPopupOpen = false;
             });
 
             // 모든 팝업 닫기
@@ -262,6 +306,7 @@ namespace SlimMy.ViewModel
                 IsMainPopupOpen = false;
                 IsDelegatePopupOpen = false;
                 IsBanPopupOpen = false;
+                IsUnBanPopupOpen = false;
             });
 
             _navigationService = new NavigationService();
@@ -274,6 +319,8 @@ namespace SlimMy.ViewModel
 
             // 멤버 방출하기
             BanCommand = new AsyncRelayCommand(BanMember);
+
+            UnBanCommand = new AsyncRelayCommand(RevokeBan);
 
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
@@ -696,8 +743,11 @@ namespace SlimMy.ViewModel
             // 같은 채팅방의 사용자 닉네임을 담은 리스트(방장 위임 리스트)
             DelegateCandidateList = new ObservableCollection<ChatUserList>();
 
-            // 같은 채팅방의 사용자 닉네임을 담은 리스트(멤버 내보내기)
+            // 같은 채팅방의 사용자 닉네임을 담은 리스트(방출하기)
             BanCandidateList = new ObservableCollection<ChatUserList>();
+
+            // 방출 해제
+            UnBanCandidateList = new ObservableCollection<UnBanCandidateList>();
 
             // 현재 채팅방 ID 가져오기
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
@@ -708,8 +758,13 @@ namespace SlimMy.ViewModel
             // SelectChatUserNickName으로 데이터 가져오기
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectChatUserNickNameOnceAsync(currentChatRoomId), getMessage: r => r.Message, userData: currentUser);
 
+            var banres = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendBanNickNameOnceAsync(currentChatRoomId), getMessage: r => r.Message, userData: currentUser);
+
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+            if (banres?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {banres?.Message}");
 
             await Application.Current.Dispatcher.InvokeAsync(() =>
             {
@@ -718,6 +773,12 @@ namespace SlimMy.ViewModel
                 {
                     DelegateCandidateList.Add(user);
                     BanCandidateList.Add(user);
+                }
+
+                // 벤 사용자 목록
+                foreach (var user in banres.BanUserList)
+                {
+                    UnBanCandidateList.Add(user);
                 }
             });
 
@@ -793,6 +854,33 @@ namespace SlimMy.ViewModel
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     MessageBox.Show("ERROR : " + ex);
+                });
+            }
+        }
+
+        // 방출 해제
+        public async Task RevokeBan(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+
+            string msg = string.Format("\"{0}\"님을 방출 해제 하시겠습니까?", UserUnBanSelectedItem.NickName);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                return;
+            }
+            else
+            {
+                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUnBanUserOnceAsync(currentChattingData, UserUnBanSelectedItem.UserID), getMessage: r => r.Message, userData: currentUser);
+
+                if (res?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    MessageBox.Show(UserUnBanSelectedItem.NickName + "님 방출 해제 완료");
                 });
             }
         }
@@ -1047,6 +1135,24 @@ namespace SlimMy.ViewModel
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
+        private async Task<UnBanUserRes> SendUnBanUserOnceAsync(ChatRooms currentChattingData, Guid unBanUserID)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.UnBanUserRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "UnBanUser", userID = session.CurrentUser.UserId, chatRoomID = currentChattingData.ChatRoomId.ToString(), unBanUserID = unBanUserID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.UnBanUser, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<UnBanUserRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
         private async Task<MessagePrintRes> SendMessagePrintOnceAsync(ChatRooms currentChattingData, User currentUser)
         {
             var session = UserSession.Instance;
@@ -1104,6 +1210,24 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<SelectChatUserNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        private async Task<BanUserListRes> SendBanNickNameOnceAsync(Guid currentChatRoomId)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.BanUserListRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "BanUserList", userID = session.CurrentUser.UserId, currentChatRoomId = currentChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.BanUserList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<BanUserListRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

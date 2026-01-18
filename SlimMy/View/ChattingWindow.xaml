@@ -62,6 +62,10 @@
                                 Command="{Binding ToggleDelegatePopupCommand}" 
                                 Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}, Mode=TwoWay}"  
                                 Margin="0,5"/>
+                                        <Button Content="방출 해제" 
+                                Command="{Binding ToggleUnBanPopupCommand}" 
+                                Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}, Mode=TwoWay}"  
+                                Margin="0,5"/>
                                         <Button Content="채팅방 나가기" 
                                 Command="{Binding ExitChatRoomCommand}" 
                                 Margin="0,5"/>
@@ -81,7 +85,6 @@
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock Text="방장 위임 목록" FontWeight="Bold" Margin="0,5"/>
-                                        <!-- 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
                                         <ListBox ItemsSource="{Binding DelegateCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
                                         <Button Content="위임하기" Command="{Binding ConfirmDelegateCommand}" Margin="0,5"/>
                                         <Button Content="취소" Command="{Binding CancelDelegateCommand}" Margin="0,5"/>
@@ -101,10 +104,28 @@
                                 <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
                                     <StackPanel Orientation="Vertical">
                                         <TextBlock Text="멤버 목록" FontWeight="Bold" Margin="0,5"/>
-                                        <!-- 예: 위임 가능한 멤버 목록이 ListBox로 표시된다 가정 -->
                                         <ListBox ItemsSource="{Binding BanCandidateList}" DisplayMemberPath="UsersNickName" SelectedItem="{Binding UserBanSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
                                         <Button Content="방출하기" Command="{Binding BanCommand}" Margin="0,5"/>
                                         <Button Content="취소" Command="{Binding CancelBanCommand}" Margin="0,5"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+
+                            <!-- 방출 해제 Popup -->
+                            <Popup x:Name="UnBanPopup"
+                   IsOpen="{Binding IsUnBanPopupOpen, Mode=TwoWay}"
+                   Placement="Bottom"
+                   PlacementTarget="{Binding ElementName=MenuButton}"
+                   HorizontalOffset="52"
+                   VerticalOffset="-32"
+                                   StaysOpen="False"
+                                   DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                <Border Background="White" BorderBrush="Gray" BorderThickness="1" Padding="10">
+                                    <StackPanel Orientation="Vertical">
+                                        <TextBlock Text="멤버 목록" FontWeight="Bold" Margin="0,5"/>
+                                        <ListBox ItemsSource="{Binding UnBanCandidateList}" DisplayMemberPath="NickName" SelectedItem="{Binding UserUnBanSelectedItem, Mode=TwoWay}" Margin="0,5" Height="100"/>
+                                        <Button Content="방출 해제" Command="{Binding UnBanCommand}" Margin="0,5"/>
+                                        <Button Content="취소" Command="{Binding CancelUnBanCommand}" Margin="0,5"/>
                                     </StackPanel>
                                 </Border>
                             </Popup>

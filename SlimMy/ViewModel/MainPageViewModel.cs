@@ -338,6 +338,7 @@ namespace SlimMy.ViewModel
 
                 var waitNotified = hub.WaitAsync(MessageType.NotifiedCheckRes, reqNotifiedId, TimeSpan.FromSeconds(5));
 
+                // 받지 못한 방출 메시지 출력
                 var loginNotifiedReq = new { cmd = "NotifiedCheck", userId = UserSession.Instance.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqNotifiedId };
                 await transport.SendFrameAsync(MessageType.NotifiedCheck, JsonSerializer.SerializeToUtf8Bytes(loginNotifiedReq));
 
