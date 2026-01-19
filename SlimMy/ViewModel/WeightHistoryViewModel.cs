@@ -302,6 +302,8 @@ namespace SlimMy.ViewModel
 
                     if (insertWeightRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {insertWeightRes?.Message}");
+
+                    MessageBox.Show("몸무게 저장이 완료되었습니다.");
                 }
                 else
                 {
@@ -314,6 +316,8 @@ namespace SlimMy.ViewModel
 
                     if (updateWeightRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {updateWeightRes?.Message}");
+
+                    MessageBox.Show("몸무게 수정이 완료되었습니다.");
                 }
             }
         }
@@ -383,6 +387,8 @@ namespace SlimMy.ViewModel
 
                     if (res?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+                    MessageBox.Show("몸무게 이력 삭제되었습니다.");
 
                     NoteContent = string.Empty;
                 }

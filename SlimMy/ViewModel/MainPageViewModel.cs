@@ -351,7 +351,9 @@ namespace SlimMy.ViewModel
                     Application.Current.MainWindow = mainView;
                     mainView.Show();
 
-                    if(notifiedRes.NotifiedCheck != null)
+                    await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
+
+                    if (notifiedRes.NotifiedCheck != null)
                     {
                         foreach (var msg in notifiedRes.NotifiedCheck)
                         {

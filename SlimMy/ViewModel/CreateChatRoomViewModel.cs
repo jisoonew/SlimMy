@@ -82,6 +82,8 @@ namespace SlimMy.ViewModel
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
 
+            MessageBox.Show("채팅방이 생성되었습니다.");
+
             Guid userId = UserSession.Instance.CurrentUser.UserId;
 
             var userChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertUserChatRoomsOnceAsync(userId, res, now), getMessage: r => r.Message, userData: currentUser);

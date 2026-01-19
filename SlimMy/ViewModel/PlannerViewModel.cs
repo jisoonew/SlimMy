@@ -422,6 +422,8 @@ namespace SlimMy.ViewModel
 
                     if (insertPlannerRes?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {insertPlannerRes?.Message}");
+
+                    MessageBox.Show("플래너 저장이 완료되었습니다.");
                 }
 
             }

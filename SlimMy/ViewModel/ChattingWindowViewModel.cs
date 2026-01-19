@@ -912,6 +912,7 @@ namespace SlimMy.ViewModel
 
             try
             {
+                // 현재 사용자가 해당 채팅방 방장이 아니라면
                 if (!hostUserIDRes.HostUserId.Equals(currentUser.UserId))
                 {
                     // 사용자와 채팅방 간의 관계 테이블에서 사용자 정보 삭제

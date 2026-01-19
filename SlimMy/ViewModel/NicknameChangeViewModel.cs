@@ -156,6 +156,8 @@ namespace SlimMy.ViewModel
                     if (res?.Ok != true)
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
+                    MessageBox.Show("닉네임이 변경되었습니다.");
+
                     // 닉네임 화면 닫기
                     await _navigationService.NavigateToNickNameClose();
                 }
