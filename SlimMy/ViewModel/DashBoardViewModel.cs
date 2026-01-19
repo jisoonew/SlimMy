@@ -121,32 +121,56 @@ namespace SlimMy.ViewModel
         {
             RecentWorkouts = new ObservableCollection<string>();
 
-            // 총 소모 칼로리
-            await TodayCaloriesPrint();
+            //// 총 소모 칼로리
+            //await TodayCaloriesPrint();
 
-            // 총 운동 시간
-            await TodayDurationPrint();
+            //// 총 운동 시간
+            //await TodayDurationPrint();
 
-            // 운동 완료 수
-            await TodayCompletedPrint();
+            //// 운동 완료 수
+            //await TodayCompletedPrint();
 
-            // 목표 달성률
-            await GoalRatePrint();
+            //// 목표 달성률
+            //await GoalRatePrint();
 
-            // 주간 그래프
-            await LoadWeeklyCalorieChart();
+            //// 주간 그래프
+            //await LoadWeeklyCalorieChart();
 
-            // 누적 운동 횟수
-            await TotalSessionPrint();
+            //// 누적 운동 횟수
+            //await TotalSessionPrint();
 
-            // 누적 칼로리
-            await TotalCaloriesPrint();
+            //// 누적 칼로리
+            //await TotalCaloriesPrint();
 
-            // 누적 운동 시간
-            await TotalTimePrint();
+            //// 누적 운동 시간
+            //await TotalTimePrint();
 
-            await RecentWorkoutsPrint();
+            //await RecentWorkoutsPrint();
 
+            await Step(nameof(TodayCaloriesPrint), TodayCaloriesPrint);
+            await Step(nameof(TodayDurationPrint), TodayDurationPrint);
+            await Step(nameof(TodayCompletedPrint), TodayCompletedPrint);
+            await Step(nameof(GoalRatePrint), GoalRatePrint);
+            await Step(nameof(LoadWeeklyCalorieChart), LoadWeeklyCalorieChart);
+            await Step(nameof(TotalSessionPrint), TotalSessionPrint);
+            await Step(nameof(TotalCaloriesPrint), TotalCaloriesPrint);
+            await Step(nameof(TotalTimePrint), TotalTimePrint);
+            await Step(nameof(RecentWorkoutsPrint), RecentWorkoutsPrint);
+        }
+
+        private static async Task Step(string stepName, Func<Task> action)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] START {stepName}");
+                await action();
+                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] END   {stepName}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] FAIL  {stepName}: {ex}");
+                throw new InvalidOperationException($"{stepName} failed: {ex.Message}", ex);
+            }
         }
 
         public static async Task<DashBoardViewModel> CreateAsync()
