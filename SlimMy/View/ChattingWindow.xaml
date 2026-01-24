@@ -66,6 +66,9 @@
                                 Command="{Binding ToggleUnBanPopupCommand}" 
                                 Visibility="{Binding IsHost, Converter={StaticResource BoolToVisibilityConverter}, Mode=TwoWay}"  
                                 Margin="0,5"/>
+                                        <Button Content="신고" 
+                                Command="{Binding ReportCommand}" 
+                                Margin="0,5"/>
                                         <Button Content="채팅방 나가기" 
                                 Command="{Binding ExitChatRoomCommand}" 
                                 Margin="0,5"/>
@@ -135,20 +138,57 @@
             </Grid>
         </StackPanel>
 
-        <ListView x:Name="messageListView" VirtualizingStackPanel.IsVirtualizing="False"
-          VirtualizingStackPanel.ScrollUnit="Pixel" Grid.Row="1" Margin="0,0,0,10">
-            <ItemsControl x:Name="MessageList" ItemsSource="{Binding MessageList}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock x:Name="MessageSenderText"
-           Text="{Binding Message}"
-           Margin="5"
-           TextAlignment="{Binding Alignment}"
-           TextWrapping="Wrap"
-           HorizontalAlignment="Stretch"/>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <ListView x:Name="messageListView"
+          Grid.Row="1"
+          Margin="0,0,0,10"
+          ItemsSource="{Binding MessageList}"
+          ScrollViewer.VerticalScrollBarVisibility="Auto"
+          VirtualizingStackPanel.IsVirtualizing="False"
+          VirtualizingStackPanel.ScrollUnit="Pixel">
+
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 신고일 때만 체크박스 표시 -->
+                        <CheckBox Grid.Column="0"
+          Margin="6,0,10,0"
+          VerticalAlignment="Top"
+          IsChecked="{Binding IsSelectedForReport, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+          Visibility="{Binding DataContext.IsReportModeVisibility,
+                               RelativeSource={RelativeSource AncestorType=ListView}}">
+
+                            <i:Interaction.Triggers>
+                                <i:EventTrigger EventName="Checked">
+                                    <i:InvokeCommandAction
+                Command="{Binding DataContext.ReportCheckChangedCommand,
+                                  RelativeSource={RelativeSource AncestorType=ListView}}"
+                CommandParameter="{Binding}" />
+                                </i:EventTrigger>
+
+                                <i:EventTrigger EventName="Unchecked">
+                                    <i:InvokeCommandAction
+                Command="{Binding DataContext.ReportCheckChangedCommand,
+                                  RelativeSource={RelativeSource AncestorType=ListView}}"
+                CommandParameter="{Binding}" />
+                                </i:EventTrigger>
+                            </i:Interaction.Triggers>
+                        </CheckBox>
+
+                        <!-- 메시지 -->
+                        <TextBlock Grid.Column="1"
+                           Text="{Binding Message}"
+                           Margin="5"
+                           TextAlignment="{Binding Alignment}"
+                           TextWrapping="Wrap"
+                           HorizontalAlignment="Stretch"/>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
         </ListView>
 
         <Grid Grid.Row="2">

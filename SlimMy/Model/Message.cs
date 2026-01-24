@@ -12,6 +12,7 @@ namespace SlimMy.Model
         private Guid sendUserID;
         private string sendUserNickName;
         private string sendMessage;
+        private Guid messageID;
 
         public Guid SendUserID
         {
@@ -29,6 +30,12 @@ namespace SlimMy.Model
         {
             get { return sendMessage; }
             set { sendMessage = value; OnPropertyChanged(nameof(sendMessage)); }
+        }
+
+        public Guid MessageID
+        {
+            get { return messageID; }
+            set { messageID = value; OnPropertyChanged(nameof(messageID)); }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

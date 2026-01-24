@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace SlimMy.ViewModel
@@ -109,68 +110,48 @@ namespace SlimMy.ViewModel
             set { _recentWorkouts = value; OnPropertyChanged(nameof(RecentWorkouts)); }
         }
 
+        // 목표 설정
+        public ICommand SetGoalCommand { get; set; }
+
         public DashBoardViewModel()
         {
             now = DateTime.Now.Date;
             TodayDisplay = now.ToString("yyyy-MM-dd (dddd)");
 
             _navigationService = new NavigationService();
+
+            SetGoalCommand = new AsyncRelayCommand(SetGoal);
         }
 
         private async Task Initialize()
         {
             RecentWorkouts = new ObservableCollection<string>();
 
-            //// 총 소모 칼로리
-            //await TodayCaloriesPrint();
+            // 총 소모 칼로리
+            await TodayCaloriesPrint();
 
-            //// 총 운동 시간
-            //await TodayDurationPrint();
+            // 총 운동 시간
+            await TodayDurationPrint();
 
-            //// 운동 완료 수
-            //await TodayCompletedPrint();
+            // 운동 완료 수
+            await TodayCompletedPrint();
 
-            //// 목표 달성률
-            //await GoalRatePrint();
+            // 목표 달성률
+            await GoalRatePrint();
 
-            //// 주간 그래프
-            //await LoadWeeklyCalorieChart();
+            // 주간 그래프
+            await LoadWeeklyCalorieChart();
 
-            //// 누적 운동 횟수
-            //await TotalSessionPrint();
+            // 누적 운동 횟수
+            await TotalSessionPrint();
 
-            //// 누적 칼로리
-            //await TotalCaloriesPrint();
+            // 누적 칼로리
+            await TotalCaloriesPrint();
 
-            //// 누적 운동 시간
-            //await TotalTimePrint();
+            // 누적 운동 시간
+            await TotalTimePrint();
 
-            //await RecentWorkoutsPrint();
-
-            await Step(nameof(TodayCaloriesPrint), TodayCaloriesPrint);
-            await Step(nameof(TodayDurationPrint), TodayDurationPrint);
-            await Step(nameof(TodayCompletedPrint), TodayCompletedPrint);
-            await Step(nameof(GoalRatePrint), GoalRatePrint);
-            await Step(nameof(LoadWeeklyCalorieChart), LoadWeeklyCalorieChart);
-            await Step(nameof(TotalSessionPrint), TotalSessionPrint);
-            await Step(nameof(TotalCaloriesPrint), TotalCaloriesPrint);
-            await Step(nameof(TotalTimePrint), TotalTimePrint);
-            await Step(nameof(RecentWorkoutsPrint), RecentWorkoutsPrint);
-        }
-
-        private static async Task Step(string stepName, Func<Task> action)
-        {
-            try
-            {
-                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] START {stepName}");
-                await action();
-                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] END   {stepName}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[DashBoard Init] FAIL  {stepName}: {ex}");
-                throw new InvalidOperationException($"{stepName} failed: {ex.Message}", ex);
-            }
+            await RecentWorkoutsPrint();
         }
 
         public static async Task<DashBoardViewModel> CreateAsync()
@@ -186,6 +167,12 @@ namespace SlimMy.ViewModel
                 MessageBox.Show("DashBoardViewModel 생성 실패: " + ex.Message);
                 return null;
             }
+        }
+
+        // 목표 설정
+        public async Task SetGoal(object parameter)
+        {
+            await _navigationService.NavigateToDietGoalViewAsync();
         }
 
         // 오늘의 소모 칼로리의 총량

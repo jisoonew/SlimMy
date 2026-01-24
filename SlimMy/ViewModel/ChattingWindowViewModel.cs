@@ -1,3 +1,4 @@
+using GalaSoft.MvvmLight.Command;
 using SlimMy.Model;
 using SlimMy.Response;
 using SlimMy.Service;
@@ -40,7 +41,7 @@ namespace SlimMy.ViewModel
             set
             {
                 messageList = value;
-                OnPropertyChanged();
+                OnPropertyChanged(nameof(MessageList));
             }
         }
 
@@ -172,11 +173,32 @@ namespace SlimMy.ViewModel
             set { _isUnBanPopupOpen = value; OnPropertyChanged(); }
         }
 
+        private bool _isSelectedForReport;
+        public bool IsSelectedForReport
+        {
+            get { return _isSelectedForReport; }
+            set { _isSelectedForReport = value; OnPropertyChanged(nameof(IsSelectedForReport)); }
+        }
+
+        private Visibility _isReportModeVisibility = Visibility.Collapsed;
+        public Visibility IsReportModeVisibility
+        {
+            get => _isReportModeVisibility;
+            set
+            {
+                if (_isReportModeVisibility == value) return;
+                _isReportModeVisibility = value;
+                OnPropertyChanged(nameof(IsReportModeVisibility));
+            }
+        }
 
         public ICommand UpdateHostCommand { get; }
         public ICommand KickMemberCommand { get; }
         public ICommand LeaveRoomCommand { get; }
         public ICommand UnBanCommand { get; }
+        public ICommand ReportCommand { get; }
+
+        public ICommand ReportCheckChangedCommand { get; }
 
         // 채팅방 설정
         public ICommand TogglePopupCommand { get; }
@@ -213,7 +235,7 @@ namespace SlimMy.ViewModel
             this.transport = client;
             this.chattingPartner = chattingPartner;
 
-            // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
+            // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정
             Application.Current.Dispatcher.Invoke(async () =>
             {
                 // 내가 참가한 순간부터 메시지를 가져온다
@@ -223,26 +245,34 @@ namespace SlimMy.ViewModel
                     throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                 // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-                if (res.MessageBundle != null)
+                if (res.MessagePrint != null)
                 {
-                    foreach (var messageList in res.MessageBundle)
+                    foreach (var messageList in res.MessagePrint)
                     {
+                        ChatMessage msg;
+
                         if (currentUser.UserId == messageList.SendUserID)
                         {
-                            MessageList.Add(new ChatMessage
+                            msg = new ChatMessage
                             {
+                                MessageID = messageList.MessageID,
                                 Message = $"나: {messageList.SendMessage}",
+                                MessageContent = messageList.SendMessage,
                                 Alignment = TextAlignment.Right
-                            });
+                            };
                         }
                         else
                         {
-                            MessageList.Add(new ChatMessage
+                            msg = new ChatMessage
                             {
+                                MessageID = messageList.MessageID,
                                 Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
+                                MessageContent = messageList.SendMessage,
                                 Alignment = TextAlignment.Left
-                            });
+                            };
                         }
+
+                        MessageList.Add(msg);
                     }
                 }
 
@@ -259,6 +289,15 @@ namespace SlimMy.ViewModel
             SendCommand = new AsyncRelayCommand(Send_btn_Click);
 
             Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+            OnPropertyChanged(nameof(IsReportModeVisibility));
+
+            // 신고
+            ReportCheckChangedCommand = new RelayCommand<object>(param =>
+            {
+                if (param is ChatMessage msg)
+                    OnReportCheckChanged(msg);
+            });
 
             // KickMemberCommand = new RelayCommand(KickMember);
             // LeaveRoomCommand = new RelayCommand(LeaveRoom);
@@ -322,6 +361,8 @@ namespace SlimMy.ViewModel
 
             UnBanCommand = new AsyncRelayCommand(RevokeBan);
 
+            ReportCommand = new AsyncRelayCommand(Report);
+
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
         }
@@ -363,12 +404,6 @@ namespace SlimMy.ViewModel
                 // Dispatcher를 사용하여 UI 스레드에서 ListView를 찾고 설정합니다.
                 Application.Current.Dispatcher.Invoke(async () =>
                 {
-                    var listView = Application.Current.MainWindow.FindName("MessageList") as ItemsControl;
-                    if (listView != null)
-                    {
-                        listView.ItemsSource = MessageList;
-                    }
-
                     string enteredUser = "";
                     foreach (var item in targetChattingPartners)
                     {
@@ -382,26 +417,34 @@ namespace SlimMy.ViewModel
                         throw new InvalidOperationException($"server not ok: {res?.Message}");
 
                     // 해당 채팅방에 전달한 메시지가 있다면 메시지 출력
-                    if (res.MessageBundle != null)
+                    if (res.MessagePrint != null)
                     {
-                        foreach (var messageList in res.MessageBundle)
+                        foreach (var messageList in res.MessagePrint)
                         {
+                            ChatMessage msg;
+
                             if (currentUser.UserId == messageList.SendUserID)
                             {
-                                MessageList.Add(new ChatMessage
+                                msg = new ChatMessage
                                 {
+                                    MessageID = messageList.MessageID,
                                     Message = $"나: {messageList.SendMessage}",
+                                    MessageContent = messageList.SendMessage,
                                     Alignment = TextAlignment.Right
-                                });
+                                };
                             }
                             else
                             {
-                                MessageList.Add(new ChatMessage
+                                msg = new ChatMessage
                                 {
+                                    MessageID = messageList.MessageID,
                                     Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
+                                    MessageContent = messageList.SendMessage,
                                     Alignment = TextAlignment.Left
-                                });
+                                };
                             }
+
+                            MessageList.Add(msg);
                         }
                     }
 
@@ -423,6 +466,15 @@ namespace SlimMy.ViewModel
                 SendCommand = new AsyncRelayCommand(Send_btn_Click);
 
                 Window_PreviewKeyDownCommand = new Command(Window_PreviewKeyDown);
+
+                OnPropertyChanged(nameof(IsReportModeVisibility));
+
+                // 신고
+                ReportCheckChangedCommand = new RelayCommand<object>(param =>
+                {
+                    if (param is ChatMessage msg)
+                        OnReportCheckChanged(msg);
+                });
 
                 // Toggle 메인 팝업
                 TogglePopupCommand = new RelayCommand(_ =>
@@ -625,6 +677,18 @@ namespace SlimMy.ViewModel
                         Alignment = TextAlignment.Left
                     });
                 });
+            }
+        }
+
+        // 신고 메시지 선택
+        private async Task OnReportCheckChanged(ChatMessage? msg)
+        {
+            if (msg == null) return;
+
+            // msg.IsSelectedForReport 값으로 체크/해제 구분 가능
+            if (msg.IsSelectedForReport)
+            {
+                _navigationService.AddReportMessage(msg);
             }
         }
 
@@ -883,6 +947,20 @@ namespace SlimMy.ViewModel
                     MessageBox.Show(UserUnBanSelectedItem.NickName + "님 방출 해제 완료");
                 });
             }
+        }
+
+        // 신고
+        public async Task Report(object parameter)
+        {
+            // 메시지 신고 체크 박스
+            IsReportModeVisibility = Visibility.Visible;
+
+            OnPropertyChanged(nameof(IsSelectedForReport));
+
+            await _navigationService.NavigateToReportDialogViewAsync(() =>
+            {
+                IsReportModeVisibility = Visibility.Collapsed;
+            });
         }
 
         // 채팅방 나가기

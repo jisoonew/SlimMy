@@ -1,3 +1,4 @@
+using SlimMy.Model;
 using SlimMy.View;
 using SlimMy.ViewModel;
 using System;
@@ -44,6 +45,60 @@ namespace SlimMy.Service
             var dietGoalViewModel = await DietGoalViewModel.CreateAsync();
             var pageInstance = new View.DietGoal { DataContext = dietGoalViewModel };
             pageInstance.Show();
+        }
+
+        private View.ReportDialog? _reportDialog;
+        private ReportDialogViewModel? _reportDialogVm;
+
+        // 신고
+        public async Task NavigateToReportDialogViewAsync(Action onClosed)
+        {
+            if (_reportDialog != null)
+            {
+                if (_reportDialog.WindowState == WindowState.Minimized)
+                    _reportDialog.WindowState = WindowState.Normal;
+
+                _reportDialog.Activate();
+                return;
+            }
+
+            _reportDialogVm = await ReportDialogViewModel.CreateAsync();
+
+            _reportDialog = new View.ReportDialog
+            {
+                DataContext = _reportDialogVm
+            };
+
+            _reportDialog.Closed += (s, e) =>
+            {
+                _reportDialog = null;
+                _reportDialogVm = null;
+                onClosed?.Invoke();
+            };
+
+            _reportDialog.Show();
+        }
+
+        // 현재 신고창 VM에 메시지 추가
+        public void AddReportMessage(ChatMessage msg)
+        {
+            if (_reportDialogVm == null) return;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _reportDialogVm.ReportMessage(msg);
+            });
+        }
+
+        // 현재 신고창 VM에 메시지 삭제
+        public void RemoveReportMessage(ChatMessage msg)
+        {
+            if (_reportDialogVm == null) return;
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _reportDialogVm.SelectedMessages.Remove(msg);
+            });
         }
 
         // 닉네임 변경 화면 전환

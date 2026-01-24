@@ -1,3 +1,4 @@
+using SlimMy.Model;
 using SlimMy.ViewModel;
 using System;
 using System.Collections.Generic;
@@ -48,5 +49,14 @@ namespace SlimMy.Service
 
         // 로그인 화면
         Task NavigateToCloseAndLoginAsync(string viewCloseName);
+
+        // 신고
+        Task NavigateToReportDialogViewAsync(Action onClosed);
+
+        // 현재 신고창 VM에 메시지 추가
+        void AddReportMessage(ChatMessage msg);
+
+        // 현재 신고창 VM에 메시지 삭제
+        void RemoveReportMessage(ChatMessage msg);
     }
 }

@@ -107,7 +107,6 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <!-- 왼쪽: 텍스트 -->
                         <TextBlock Text="🏁 개인 목표"
                FontSize="20"
                FontWeight="Bold"
@@ -115,7 +114,6 @@
                HorizontalAlignment="Left"
                Grid.Column="0" />
 
-                        <!-- 오른쪽: 버튼 -->
                         <Button Content="목표 설정"
             Width="120"
             Height="30"
