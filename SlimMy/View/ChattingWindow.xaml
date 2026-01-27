@@ -154,6 +154,20 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="메시지 신고"
+                  Command="{Binding DataContext.ReportMessageCommand,
+                                    RelativeSource={RelativeSource AncestorType=ListView}}"
+                  CommandParameter="{Binding}" />
+
+                                <MenuItem Header="사용자 신고"
+                  Command="{Binding DataContext.ReportUserFromMessageCommand,
+                                    RelativeSource={RelativeSource AncestorType=ListView}}"
+                  CommandParameter="{Binding}" />
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+
                         <!-- 신고일 때만 체크박스 표시 -->
                         <CheckBox Grid.Column="0"
           Margin="6,0,10,0"

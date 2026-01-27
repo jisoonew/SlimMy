@@ -51,7 +51,7 @@ namespace SlimMy.Service
         private ReportDialogViewModel? _reportDialogVm;
 
         // 신고
-        public async Task NavigateToReportDialogViewAsync(Action onClosed)
+        public async Task NavigateToReportDialogViewAsync(ReportTarget target, Action onClosed)
         {
             if (_reportDialog != null)
             {
@@ -62,7 +62,7 @@ namespace SlimMy.Service
                 return;
             }
 
-            _reportDialogVm = await ReportDialogViewModel.CreateAsync();
+            _reportDialogVm = await ReportDialogViewModel.CreateAsync(target);
 
             _reportDialog = new View.ReportDialog
             {
@@ -101,8 +101,23 @@ namespace SlimMy.Service
             });
         }
 
-        // 닉네임 변경 화면 전환
-        public async Task NavigateToNickName()
+        // 신고 화면 닫기
+        public void NavigateToReportClose()
+        {
+            if (_reportDialog == null) return;
+
+            if (_reportDialog.Dispatcher.CheckAccess())
+            {
+                _reportDialog.Close();
+            }
+            else
+            {
+                _reportDialog.Dispatcher.Invoke(() => _reportDialog.Close());
+            }
+        }
+
+            // 닉네임 변경 화면 전환
+            public async Task NavigateToNickName()
         {
             var myChatsViewModel = await ViewModel.NicknameChangeViewModel.CreateAsync();
             var pageInstance = new View.NicknameChange { DataContext = myChatsViewModel };

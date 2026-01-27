@@ -51,12 +51,15 @@ namespace SlimMy.Service
         Task NavigateToCloseAndLoginAsync(string viewCloseName);
 
         // 신고
-        Task NavigateToReportDialogViewAsync(Action onClosed);
+        Task NavigateToReportDialogViewAsync(ReportTarget target, Action onClosed);
 
         // 현재 신고창 VM에 메시지 추가
         void AddReportMessage(ChatMessage msg);
 
         // 현재 신고창 VM에 메시지 삭제
         void RemoveReportMessage(ChatMessage msg);
+
+        // 신고창 닫기
+        void NavigateToReportClose();
     }
 }

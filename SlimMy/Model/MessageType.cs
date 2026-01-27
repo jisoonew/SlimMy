@@ -158,6 +158,10 @@ namespace SlimMy.Model
         UnBanUser = 277,
         UnBanUserRes = 278,
         GetChatRoomDetail = 279,
-        GetChatRoomDetailRes = 280
+        GetChatRoomDetailRes = 280,
+        SubmitReport = 281,
+        SubmitReportRes = 282,
+        SubmitReportMessage = 283,
+        SubmitReportMessageRes = 284
     }
 }

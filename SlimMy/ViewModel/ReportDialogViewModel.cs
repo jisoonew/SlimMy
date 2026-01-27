@@ -54,6 +54,7 @@ namespace SlimMy.ViewModel
             {
                 _selectedReason = value;
                 OnPropertyChanged(nameof(SelectedReason));
+                OnPropertyChanged(nameof(IsOtherReasonSelected));
             }
         }
 
@@ -77,22 +78,75 @@ namespace SlimMy.ViewModel
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+        // 기타 사유
+        public Visibility IsOtherReasonSelected
+            => (SelectedReason.Code == "OTHER")
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        // 신고 대상
+        private string _targetTypeLabel;
+        public string TargetTypeLabel
+        {
+            get { return _targetTypeLabel; }
+            set { _targetTypeLabel = value; OnPropertyChanged(nameof(TargetTypeLabel)); }
+        }
+
+        // 채팅방 아이디
+        private string _chatRoomId;
+        public string ChatRoomId
+        {
+            get { return _chatRoomId; }
+            set { _chatRoomId = value; OnPropertyChanged(nameof(ChatRoomId)); }
+        }
+
+        // 신고 닉네임
+        private string _targetUserNickName;
+        public string TargetUserNickName
+        {
+            get { return _targetUserNickName; }
+            set { _targetUserNickName = value; OnPropertyChanged(nameof(TargetUserNickName)); }
+        }
+
+        // 상세 내용
+        private string _detailText;
+        public string DetailText
+        {
+            get { return _detailText; }
+            set { _detailText = value; OnPropertyChanged(nameof(DetailText)); }
+        }
+
+        // 신고
+        private ReportTarget _reportTarget;
+        public ReportTarget ReportTarget
+        {
+            get { return _reportTarget; }
+            set { _reportTarget = value; OnPropertyChanged(nameof(ReportTarget)); }
+        }
+
         // 메시지 삭제
         public ICommand RemoveSelectedMessageCommand { get; }
+
+        // 신고 제출
+        public ICommand SubmitCommand { get; set; }
+
+        public event Action? RequestClose;
+
+        private void CloseMe() => RequestClose?.Invoke();
 
         public ReportDialogViewModel()
         {
             RemoveSelectedMessageCommand = new RelayCommand<ChatMessage>(RemoveSelectedMessage);
         }
 
-        public static async Task<ReportDialogViewModel> CreateAsync()
+        public static async Task<ReportDialogViewModel> CreateAsync(ReportTarget target)
         {
             var instance = new ReportDialogViewModel();
-            await instance.Initialize();
+            await instance.Initialize(target);
             return instance;
         }
 
-        private async Task Initialize()
+        private async Task Initialize(ReportTarget target)
         {
             SelectedMessages = new ObservableCollection<ChatMessage>();
 
@@ -103,8 +157,24 @@ namespace SlimMy.ViewModel
                 OnPropertyChanged(nameof(SelectedListVisibility));
             };
 
+            // 신고 대상
+            ApplyTarget(target);
+
             // 신고 채팅방 데이터 출력
             await ChatRoomData();
+
+            // 신고 제출
+            SubmitCommand = new AsyncRelayCommand(SubmitReportAsync);
+        }
+
+        // 신고 대상
+        public void ApplyTarget(ReportTarget target)
+        {
+            TargetTypeLabel = target.TargetType == ReportTargetType.User ? "사용자" : "채팅방";
+            ChatRoomTitle = target.ChatRoomTitle ?? "";
+            ChatRoomId = target.ChatRoomId == Guid.Empty ? "" : target.ChatRoomId.ToString();
+            TargetUserNickName = target.TargetUserNickName;
+            ReportTarget = target;
         }
 
         // 신고 채팅방 데이터 출력
@@ -138,9 +208,41 @@ namespace SlimMy.ViewModel
             {
                 SelectedMessages.Add(new ChatMessage
                 {
-                    MessageContent = msg.MessageContent
+                    MessageID = msg.MessageID,
+                    MessageContent = msg.MessageContent,
+                    Timestamp = msg.Timestamp
                 });
             });
+        }
+
+        // 신고 저장
+        public async Task SubmitReportAsync(object parameter)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            // 채팅방 신고
+            if(ReportTarget.TargetType == 0)
+            {
+                // 신고 정보 저장
+                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportOnceAsync(ReportTarget, SelectedReason.Code, DetailText), getMessage: r => r.Message, userData: currentUser);
+
+                if (res?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+                // 신고 사유 메시지 저장
+                foreach(var messageData in SelectedMessages)
+                {
+                    var messageRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportMessageOnceAsync(messageData, res.ReportID), getMessage: r => r.Message, userData: currentUser);
+
+                    if (messageRes?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {messageRes?.Message}");
+                }
+
+                MessageBox.Show("신고가 완료되었습니다.");
+
+                // 신고창 닫기
+                RequestClose?.Invoke();
+            }
         }
 
         private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)
@@ -182,6 +284,44 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<GetChatRoomDetailRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 신고 제출
+        private async Task<SubmitReportRes> SendSubmitReportOnceAsync(ReportTarget target, string code, string detailText)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SubmitReportRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SubmitReport", userID = session.CurrentUser.UserId, reportTarget = target, reasonCode = code, detailText = detailText, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SubmitReport, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SubmitReportRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 신고 사유 메시지
+        private async Task<SubmitReportMessageRes> SendSubmitReportMessageOnceAsync(ChatMessage selectedMessages, Guid reportID)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SubmitReportMessageRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SubmitReportMessage", userID = session.CurrentUser.UserId, selectedMessage = selectedMessages, reportID = reportID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SubmitReportMessage, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SubmitReportMessageRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

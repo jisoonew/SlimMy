@@ -258,6 +258,7 @@ namespace SlimMy.ViewModel
                                 MessageID = messageList.MessageID,
                                 Message = $"나: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
+                                Timestamp = messageList.SentAt,
                                 Alignment = TextAlignment.Right
                             };
                         }
@@ -268,6 +269,7 @@ namespace SlimMy.ViewModel
                                 MessageID = messageList.MessageID,
                                 Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
+                                Timestamp = messageList.SentAt,
                                 Alignment = TextAlignment.Left
                             };
                         }
@@ -430,6 +432,7 @@ namespace SlimMy.ViewModel
                                     MessageID = messageList.MessageID,
                                     Message = $"나: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
+                                    Timestamp = messageList.SentAt,
                                     Alignment = TextAlignment.Right
                                 };
                             }
@@ -440,6 +443,7 @@ namespace SlimMy.ViewModel
                                     MessageID = messageList.MessageID,
                                     Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
+                                    Timestamp = messageList.SentAt,
                                     Alignment = TextAlignment.Left
                                 };
                             }
@@ -952,15 +956,22 @@ namespace SlimMy.ViewModel
         // 신고
         public async Task Report(object parameter)
         {
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+
             // 메시지 신고 체크 박스
             IsReportModeVisibility = Visibility.Visible;
 
             OnPropertyChanged(nameof(IsSelectedForReport));
 
-            await _navigationService.NavigateToReportDialogViewAsync(() =>
-            {
-                IsReportModeVisibility = Visibility.Collapsed;
-            });
+            await _navigationService.NavigateToReportDialogViewAsync(
+                target: new ReportTarget
+                {
+                    TargetType = ReportTargetType.ChatRoom,
+                    ChatRoomId = currentChattingData.ChatRoomId,
+                    ChatRoomTitle = currentChattingData.ChatRoomName
+                },
+                onClosed: () => IsReportModeVisibility = Visibility.Collapsed
+            );
         }
 
         // 채팅방 나가기

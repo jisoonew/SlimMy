@@ -1,4 +1,5 @@
-﻿using System;
+using SlimMy.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,6 +23,27 @@ namespace SlimMy.View
         public ReportDialog()
         {
             InitializeComponent();
+
+            Loaded += (_, __) =>
+            {
+                if (DataContext is ReportDialogViewModel vm)
+                {
+                    vm.RequestClose -= OnRequestClose; // 중복 방지
+                    vm.RequestClose += OnRequestClose;
+                }
+            };
+
+            Unloaded += (_, __) =>
+            {
+                if (DataContext is ReportDialogViewModel vm)
+                    vm.RequestClose -= OnRequestClose;
+            };
+        }
+
+        private void OnRequestClose()
+        {
+            if (Dispatcher.CheckAccess()) Close();
+            else Dispatcher.Invoke(Close);
         }
     }
 }

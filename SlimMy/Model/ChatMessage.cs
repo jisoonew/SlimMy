@@ -13,6 +13,7 @@ namespace SlimMy.Model
         public Guid MessageID { get; set; }
         public string Message { get; set; }
         public string MessageContent { get; set; }
+        public DateTime Timestamp { get; set; }
         public TextAlignment Alignment { get; set; }
 
         private bool _isSelectedForReport;
