@@ -162,6 +162,8 @@ namespace SlimMy.Model
         SubmitReport = 281,
         SubmitReportRes = 282,
         SubmitReportMessage = 283,
-        SubmitReportMessageRes = 284
+        SubmitReportMessageRes = 284,
+        SelectedMessageData = 285,
+        SelectedMessageDataRes = 286
     }
 }

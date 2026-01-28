@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -200,6 +201,9 @@ namespace SlimMy.ViewModel
 
         public ICommand ReportCheckChangedCommand { get; }
 
+        // 사용자 신고
+        public ICommand ReportUserFromMessageCommand { get; }
+
         // 채팅방 설정
         public ICommand TogglePopupCommand { get; }
 
@@ -256,9 +260,12 @@ namespace SlimMy.ViewModel
                             msg = new ChatMessage
                             {
                                 MessageID = messageList.MessageID,
+                                SenderID = messageList.SendUserID,
+                                SendUserNickName = messageList.SendUserNickName,
                                 Message = $"나: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
                                 Timestamp = messageList.SentAt,
+                                IsMine = true,
                                 Alignment = TextAlignment.Right
                             };
                         }
@@ -267,9 +274,12 @@ namespace SlimMy.ViewModel
                             msg = new ChatMessage
                             {
                                 MessageID = messageList.MessageID,
+                                SenderID = messageList.SendUserID,
+                                SendUserNickName = messageList.SendUserNickName,
                                 Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
                                 Timestamp = messageList.SentAt,
+                                IsMine = false,
                                 Alignment = TextAlignment.Left
                             };
                         }
@@ -281,6 +291,7 @@ namespace SlimMy.ViewModel
                 MessageList.Add(new ChatMessage
                 {
                     Message = $"{chattingPartner}님이 입장하였습니다.",
+                    IsMine = true,
                     Alignment = TextAlignment.Left
                 });
                 //this.Title = chattingPartner + "님과의 채팅방";
@@ -363,7 +374,11 @@ namespace SlimMy.ViewModel
 
             UnBanCommand = new AsyncRelayCommand(RevokeBan);
 
+            // 채팅방 신고
             ReportCommand = new AsyncRelayCommand(Report);
+
+            // 사용자 신고
+            ReportUserFromMessageCommand = new AsyncRelayCommand(UserReport);
 
             // MessageList.CollectionChanged += (s, e) => ScrollToBot(); // 메시지 추가 시 자동 스크롤
             ScrollToBot();
@@ -430,9 +445,12 @@ namespace SlimMy.ViewModel
                                 msg = new ChatMessage
                                 {
                                     MessageID = messageList.MessageID,
+                                    SenderID = messageList.SendUserID,
+                                    SendUserNickName = messageList.SendUserNickName,
                                     Message = $"나: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
                                     Timestamp = messageList.SentAt,
+                                    IsMine = true,
                                     Alignment = TextAlignment.Right
                                 };
                             }
@@ -441,9 +459,12 @@ namespace SlimMy.ViewModel
                                 msg = new ChatMessage
                                 {
                                     MessageID = messageList.MessageID,
+                                    SenderID = messageList.SendUserID,
+                                    SendUserNickName = messageList.SendUserNickName,
                                     Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
                                     Timestamp = messageList.SentAt,
+                                    IsMine = false,
                                     Alignment = TextAlignment.Left
                                 };
                             }
@@ -455,6 +476,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{enteredUser}이 입장하였습니다.",
+                        IsMine = true,
                         Alignment = TextAlignment.Left
                     });
                     //this.Title = enteredUser + "과의 채팅방";
@@ -520,6 +542,14 @@ namespace SlimMy.ViewModel
                 // 멤버 방출하기
                 BanCommand = new AsyncRelayCommand(BanMember);
 
+                UnBanCommand = new AsyncRelayCommand(RevokeBan);
+
+                // 채팅방 신고
+                ReportCommand = new AsyncRelayCommand(Report);
+
+                // 사용자 신고
+                ReportUserFromMessageCommand = new AsyncRelayCommand(UserReport);
+
                 ScrollToBot();
             }
             catch (Exception ex)
@@ -571,6 +601,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"나: {message}",
+                        IsMine = true,
                         Alignment = TextAlignment.Right
                     });
                 });
@@ -629,6 +660,7 @@ namespace SlimMy.ViewModel
             MessageList.Add(new ChatMessage
             {
                 Message = $"나: {message}",
+                IsMine = true,
                 Alignment = TextAlignment.Right
             });
 
@@ -639,16 +671,17 @@ namespace SlimMy.ViewModel
         }
 
         // 전송 메시지
-        public async Task ReceiveMessage(string sender, string message)
+        public async Task ReceiveMessage(string sender, string message, string messageID)
         {
             User currentUser = UserSession.Instance.CurrentUser;
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
             if (message == "ChattingStart")
             {
                 return;
             }
 
-            if (message == "상대방이 채팅방을 나갔습니다.")
+            if (message.Contains("leaveRoom"))
             {
                 string parsedMessage = string.Format("{0}님이 채팅방을 나갔습니다.", sender);
 
@@ -657,6 +690,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{sender}님이 채팅방을 나갔습니다.",
+                        IsMine = true,
                         Alignment = TextAlignment.Left
                     });
                 });
@@ -670,6 +704,12 @@ namespace SlimMy.ViewModel
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
 
+            // 받은 메시지 정보
+            var messageRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectedMessageDataOnceAsync(messageID), getMessage: r => r.Message, userData: currentUser);
+
+            if (messageRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {messageRes?.Message}");
+
             // 메시지를 보낸 사용자와 로그인 사용자가 같은 사람이 아니라면
             if (Guid.TryParse(sender, out var senderGuid) && senderGuid != currentUser.UserId)
             {
@@ -677,7 +717,13 @@ namespace SlimMy.ViewModel
                 {
                     MessageList.Add(new ChatMessage
                     {
+                        MessageID = Guid.Parse(messageID),
+                        SenderID = messageRes.ChatMessageData.SenderID,
+                        SendUserNickName = res.SenderNickName,
+                        MessageContent = message,
+                        Timestamp = messageRes.ChatMessageData.Timestamp,
                         Message = $"{res.SenderNickName}: {message}",
+                        IsMine = false,
                         Alignment = TextAlignment.Left
                     });
                 });
@@ -710,6 +756,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{sender}님이 채팅방을 나갔습니다.",
+                        IsMine = true,
                         Alignment = TextAlignment.Left
                     });
 
@@ -736,6 +783,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{res.SenderNickName}님이 참여하였습니다.",
+                        IsMine = true,
                         Alignment = TextAlignment.Left
                     });
 
@@ -785,6 +833,7 @@ namespace SlimMy.ViewModel
                     MessageList.Add(new ChatMessage
                     {
                         Message = $"{res.SenderNickName}님이 새로운 방장이 되었습니다.",
+                        IsMine = true,
                         Alignment = TextAlignment.Left
                     });
                 });
@@ -953,15 +1002,19 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 신고
+        // 채팅방 신고
         public async Task Report(object parameter)
         {
             ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
 
             // 메시지 신고 체크 박스
-            IsReportModeVisibility = Visibility.Visible;
+            IsReportModeVisibility =
+                MessageList.Any(m => m.IsMine == false)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
-            OnPropertyChanged(nameof(IsSelectedForReport));
+            OnPropertyChanged(nameof(IsReportModeVisibility));
+            OnPropertyChanged(nameof(MessageList));
 
             await _navigationService.NavigateToReportDialogViewAsync(
                 target: new ReportTarget
@@ -972,6 +1025,35 @@ namespace SlimMy.ViewModel
                 },
                 onClosed: () => IsReportModeVisibility = Visibility.Collapsed
             );
+        }
+
+        // 사용자 신고
+        public async Task UserReport(object parameter)
+        {
+            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
+
+            // 메시지 신고 체크 박스
+            IsReportModeVisibility =
+                MessageList.Any(m => m.IsMine == false)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            OnPropertyChanged(nameof(IsReportModeVisibility));
+            OnPropertyChanged(nameof(MessageList));
+
+            if (parameter is ChatMessage msg)
+            {
+                await _navigationService.NavigateToReportDialogViewAsync(
+                    target: new ReportTarget
+                    {
+                        TargetType = ReportTargetType.User,
+                        ChatRoomId = currentChattingData.ChatRoomId,
+                        TargetUserId = msg.SenderID,
+                        TargetUserNickName = msg.SendUserNickName
+                    },
+                    onClosed: () => IsReportModeVisibility = Visibility.Collapsed
+                );
+            }
         }
 
         // 채팅방 나가기
@@ -1282,6 +1364,31 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<SendNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 받은 메시지 정보
+        private async Task<SelectedMessageDataRes> SendSelectedMessageDataOnceAsync(string messageID)
+        {
+            var session = UserSession.Instance;
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectedMessageDataRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectedMessageData", userID = currentUser.UserId, messageID = Guid.Parse(messageID), accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+
+            var json = Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(req));
+            Debug.WriteLine("[SendNickName][Client JSON] " + json);
+
+            await transport.SendFrameAsync(MessageType.SelectedMessageData, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectedMessageDataRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

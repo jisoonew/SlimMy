@@ -649,7 +649,7 @@ namespace SlimMy.ViewModel
                 if (chattingThreadDic.ContainsKey(chattingRoomNum) &&
                     chattingThreadDic[chattingRoomNum].chattingThread.IsAlive)
                 {
-                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent);
+                    await chattingThreadDic[chattingRoomNum].chattingWindow.ReceiveMessage(sender, messageContent, "");
                 }
             }
         }
@@ -713,12 +713,14 @@ namespace SlimMy.ViewModel
             string roomId = parts[0];
             string messageContent = parts[1];
             string sender = parts[3];
+            string sentAt = parts[4];
+            string messageID = parts[5];
 
             var userId = UserSession.Instance.CurrentUser.UserId.ToString();
             var chatKey = $"{userId}:{roomId}";
 
             if (chattingThreadDic.TryGetValue(chatKey, out var data) && data.chattingThread.IsAlive)
-                await data.chattingWindow.ReceiveMessage(sender, messageContent);
+                await data.chattingWindow.ReceiveMessage(sender, messageContent, messageID);
 
             // 아직 창이 열려 있지 않으면
             if (!chattingThreadDic.ContainsKey(chatKey))

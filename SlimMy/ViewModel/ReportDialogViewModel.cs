@@ -220,29 +220,25 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            // 채팅방 신고
-            if(ReportTarget.TargetType == 0)
+            // 신고 정보 저장
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportOnceAsync(ReportTarget, SelectedReason.Code, DetailText), getMessage: r => r.Message, userData: currentUser);
+
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+            // 신고 사유 메시지 저장
+            foreach (var messageData in SelectedMessages)
             {
-                // 신고 정보 저장
-                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportOnceAsync(ReportTarget, SelectedReason.Code, DetailText), getMessage: r => r.Message, userData: currentUser);
+                var messageRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportMessageOnceAsync(messageData, res.ReportID), getMessage: r => r.Message, userData: currentUser);
 
-                if (res?.Ok != true)
-                    throw new InvalidOperationException($"server not ok: {res?.Message}");
-
-                // 신고 사유 메시지 저장
-                foreach(var messageData in SelectedMessages)
-                {
-                    var messageRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSubmitReportMessageOnceAsync(messageData, res.ReportID), getMessage: r => r.Message, userData: currentUser);
-
-                    if (messageRes?.Ok != true)
-                        throw new InvalidOperationException($"server not ok: {messageRes?.Message}");
-                }
-
-                MessageBox.Show("신고가 완료되었습니다.");
-
-                // 신고창 닫기
-                RequestClose?.Invoke();
+                if (messageRes?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {messageRes?.Message}");
             }
+
+            MessageBox.Show("신고가 완료되었습니다.");
+
+            // 신고창 닫기
+            RequestClose?.Invoke();
         }
 
         private async Task<TRes?> SendWithRefreshRetryOnceAsync<TRes>(Func<Task<TRes?>> sendOnceAsync, Func<TRes?, string?> getMessage, User userData)

@@ -11,9 +11,12 @@ namespace SlimMy.Model
     public class ChatMessage : BaseViewModel
     {
         public Guid MessageID { get; set; }
+        public Guid SenderID { get; set; }
+        public string SendUserNickName { get; set; }
         public string Message { get; set; }
         public string MessageContent { get; set; }
         public DateTime Timestamp { get; set; }
+        public bool IsMine { get; set; }
         public TextAlignment Alignment { get; set; }
 
         private bool _isSelectedForReport;
