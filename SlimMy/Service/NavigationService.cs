@@ -321,6 +321,36 @@ namespace SlimMy.Service
             }
         }
 
+        public async Task NavigateToReportFrameAsync(Type pageType)
+        {
+            if (_frame == null)
+            {
+                MessageBox.Show("Navigation Frame이 설정되지 않았습니다.");
+                return;
+            }
+
+            object pageInstance = null;
+
+            if (pageType == typeof(View.Report))
+            {
+                var reportViewModel = await ViewModel.ReportViewModel.CreateAsync();
+                pageInstance = new View.Report { DataContext = reportViewModel };
+            }
+            else if (pageType.IsSubclassOf(typeof(Page)))
+            {
+                pageInstance = Activator.CreateInstance(pageType);
+            }
+
+            if (pageInstance is Page page)
+            {
+                _frame.Navigate(page);
+            }
+            else
+            {
+                MessageBox.Show("올바른 Page 타입이 아닙니다.");
+            }
+        }
+
         public async Task NavigateToExerciseHistoryFrameAsync(Type pageType)
         {
             if (_frame == null)

@@ -73,8 +73,8 @@ namespace SlimMy.ViewModel
         public ICommand NextPageCommand { get; set; }
         public ICommand PreviousPageCommand { get; set; }
 
-        private static String _searchword;
-        public static String SearchWord
+        private static string _searchword;
+        public static string SearchWord
         {
             get => _searchword;
             set
@@ -101,7 +101,7 @@ namespace SlimMy.ViewModel
             }
         }
 
-        // 현재 사용자 목록을 저장하는 ObservableCollection입니다. 이 컬렉션은 XAML에서 ListView에 데이터를 바인딩하는 데 사용
+        // 현재 사용자 목록을 저장하는 ObservableCollection
         private static ObservableCollection<ChatUserList> _currentUserList = new ObservableCollection<ChatUserList>();
 
         public static ObservableCollection<ChatUserList> CurrentUserList
@@ -260,14 +260,13 @@ namespace SlimMy.ViewModel
         {
             _dataService = new DataService();
 
-            ChatRooms = new ObservableCollection<ChatRooms>(); // 컬렉션 초기화
+            ChatRooms = new ObservableCollection<ChatRooms>();
 
             ChatMessageStatus = new ObservableCollection<ChatMessageStatus>();
 
             _navigationService = new NavigationService();
         }
 
-        // 초기화 메서드
         private async Task Initialize()
         {
             await RefreshChatRooms(); // 채팅 방 불러오기

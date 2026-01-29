@@ -30,15 +30,7 @@ namespace SlimMy.ViewModel
     public class MainPageViewModel : INotifyPropertyChanged
     {
         private User _user;
-        private string _username;
-        private string nickName;
-        private string _connstring = "Data Source = 125.240.254.199; User Id = system; Password = 1234;";
-
-        CommunityViewModel community = null;
         public static string myName = null;
-        static TcpClient client = null;
-        Thread ReceiveThread = null;
-        ChattingWindowViewModel chattingWindow = null;
 
         private CancellationTokenSource _recvCts;
 
@@ -56,12 +48,7 @@ namespace SlimMy.ViewModel
         // 이벤트 정의: 로그인 성공 시 발생하는 이벤트
         public event EventHandler<ChatUserList> DataPassed; // 데이터 전달을 위한 이벤트 정의
 
-        private SignUp _signUp;
-
         List<User> UserList = new List<User>();
-
-        // 연결 확인 쓰레드
-        Task conntectCheckThread = null;
 
         public AsyncRelayCommand InsertCommand { get; set; }
 
@@ -125,8 +112,7 @@ namespace SlimMy.ViewModel
         public AsyncRelayCommand WeightHistoryCommand { get; set; }
         public AsyncRelayCommand MyPageCommand { get; set; }
         public AsyncRelayCommand LogoutCommand { get; set; }
-
-        private CommunityViewModel _communityViewModel; // Community ViewModel 인스턴스 추가
+        public AsyncRelayCommand ReportCommand { get; set; }
 
         private void SaveUser()
         {
@@ -241,6 +227,8 @@ namespace SlimMy.ViewModel
             MyPageCommand = new AsyncRelayCommand(NavigateToMyPage);
 
             LogoutCommand = new AsyncRelayCommand(LogoutBtn);
+
+            ReportCommand = new AsyncRelayCommand(ReportBtn);
         }
 
         public AsyncRelayCommand PlannerCommand { get; set; }
@@ -400,14 +388,22 @@ namespace SlimMy.ViewModel
             await _navigationService.NavigateToCommunityFrameAsync(typeof(View.Community));
         }
 
+        // 내 채팅방
         public async Task MyChatsBtn(object parameter)
         {
             await _navigationService.NavigateToFrameAsync(typeof(View.MyChats));
         }
 
+        // 대시보드
         public async Task DashBoardBtn(object parameter)
         {
             await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
+        }
+
+        // 신고
+        public async Task ReportBtn(object parameter)
+        {
+            await _navigationService.NavigateToReportFrameAsync(typeof(View.Report));
         }
 
         // 로그아웃

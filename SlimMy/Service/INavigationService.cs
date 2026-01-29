@@ -38,6 +38,8 @@ namespace SlimMy.Service
 
         Task NavigateToPlannerFrameAsync(Type pageType);
 
+        Task NavigateToReportFrameAsync(Type pageType);
+
         // 닉네임 변경 화면 전환
         Task NavigateToNickName();
 
