@@ -180,11 +180,16 @@ namespace SlimMy.ViewModel
         // 신고 채팅방 데이터 출력
         private async Task ChatRoomData()
         {
-            ChatRooms currentChattingData = ChattingSession.Instance.CurrentChattingData;
             User currentUser = UserSession.Instance.CurrentUser;
 
+            var roomId = ReportTarget?.ChatRoomId ?? Guid.Empty;
+            if (roomId == Guid.Empty)
+                return;
+
+            var reqRoom = new ChatRooms { ChatRoomId = roomId };
+
             // 특정 채팅방 데이터 출력
-            var selectChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetChatRoomDetailOnceAsync(currentChattingData), getMessage: r => r.Message, userData: currentUser);
+            var selectChatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetChatRoomDetailOnceAsync(reqRoom), getMessage: r => r.Message, userData: currentUser);
 
             if (selectChatRoomRes?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {selectChatRoomRes?.Message}");

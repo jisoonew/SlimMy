@@ -166,6 +166,10 @@ namespace SlimMy.Model
         SelectedMessageData = 285,
         SelectedMessageDataRes = 286,
         ReportPrint = 287,
-        ReportPrintRes = 288
+        ReportPrintRes = 288,
+        SelectedReportPrint = 289,
+        SelectedReportPrintRes = 290,
+        SelectedUser = 291,
+        SelectedUserRes = 292
     }
 }

@@ -1,5 +1,7 @@
 using SlimMy.Model;
 using SlimMy.Response;
+using SlimMy.Service;
+using SlimMy.Singleton;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +18,8 @@ namespace SlimMy.ViewModel
 {
     public class ReportViewModel : BaseViewModel
     {
+        private readonly INavigationService _navigationService;
+
         public ObservableCollection<ReportItem> ReportItem { get; private set; }
 
         public ObservableCollection<ReportItem> AllData { get; set; }
@@ -59,10 +63,13 @@ namespace SlimMy.ViewModel
 
         public ICommand NextPageCommand { get; set; }
         public ICommand PreviousPageCommand { get; set; }
+        public ICommand InsertCommand { get; set; }
 
         public ReportViewModel()
         {
             ReportItem = new ObservableCollection<ReportItem>();
+
+            _navigationService = new NavigationService();
         }
 
         private async Task Initialize()
@@ -85,6 +92,9 @@ canExecute: _ => CanGoToNextPage());
                 execute: _ => PreviousPage(),
                 canExecute: _ => CanGoToPreviousPage());
 
+            // 신고 목록 선택
+            InsertCommand = new AsyncRelayCommand(SelectedReport);
+
             UpdateCurrentPageData();
         }
 
@@ -96,11 +106,12 @@ canExecute: _ => CanGoToNextPage());
             return instance;
         }
 
+        // 신고 목록 출력
         public async Task RefreshReport()
         {
             User userDateBundle = UserSession.Instance.CurrentUser;
 
-            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendChatRoomPageListOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendReportPrintOnceAsync(), getMessage: r => r.Message, userData: userDateBundle);
 
             if (res?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
@@ -112,6 +123,64 @@ canExecute: _ => CanGoToNextPage());
                     ReportItem.Add(r);
                 OnPropertyChanged(nameof(ReportItem));
             });
+        }
+
+        // 신고 목록 선택
+        public async Task SelectedReport(object parameter)
+        {
+            if (parameter is ReportItem msg)
+            {
+                User userDateBundle = UserSession.Instance.CurrentUser;
+
+                var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectedReportPrintOnceAsync(msg.ReportID), getMessage: r => r.Message, userData: userDateBundle);
+
+                if (res?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+                var reqRoom = new ChatRooms
+                {
+                    ChatRoomId = res.ReportData.TargetRoomID
+                };
+
+                var chatRoomRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetChatRoomDetailOnceAsync(reqRoom), getMessage: r => r.Message, userData: userDateBundle);
+
+                if (chatRoomRes.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {chatRoomRes?.Message}");
+
+                if (res.ReportData.TargetUserID == Guid.Empty)
+                {
+                    await _navigationService.NavigateToReportDialogViewAsync(
+target: new ReportTarget
+{
+    TargetType = ReportTargetType.ChatRoom,
+    ChatRoomId = res.ReportData.TargetRoomID,
+    ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName
+},
+onClosed: null
+);
+                }
+                else
+                {
+                    User currentUser = UserSession.Instance.CurrentUser;
+
+                    var NickNameRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSendNickNameOnceAsync(res.ReportData.TargetUserID.ToString()), getMessage: r => r.Message, userData: currentUser);
+
+                    if (NickNameRes?.Ok != true)
+                        throw new InvalidOperationException($"server not ok: {NickNameRes?.Message}");
+
+                    await _navigationService.NavigateToReportDialogViewAsync(
+target: new ReportTarget
+{
+    TargetType = ReportTargetType.User,
+    ChatRoomId = res.ReportData.TargetRoomID,
+    ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName,
+    TargetUserId = res.ReportData.TargetUserID,
+    TargetUserNickName = NickNameRes.SenderNickName
+},
+onClosed: null
+);
+                }
+            }
         }
 
         private void UpdateCurrentPageData()
@@ -217,7 +286,7 @@ canExecute: _ => CanGoToNextPage());
         }
 
         // 신고 내역 출력
-        private async Task<ReportPrintRes> SendChatRoomPageListOnceAsync()
+        private async Task<ReportPrintRes> SendReportPrintOnceAsync()
         {
             var session = UserSession.Instance;
             var transport = session.CurrentUser?.Transport
@@ -236,6 +305,74 @@ canExecute: _ => CanGoToNextPage());
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<ReportPrintRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 특정 신고 내역 출력
+        private async Task<SelectedReportPrintRes> SendSelectedReportPrintOnceAsync(Guid reportID)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectedReportPrintRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "SelectedReportPrint", userID = session.CurrentUser.UserId, reportID = reportID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SelectedReportPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectedReportPrintRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 특정 사용자 닉네임
+        private async Task<SendNickNameRes> SendSendNickNameOnceAsync(string sender)
+        {
+            var session = UserSession.Instance;
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SendNickNameRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SendNickName", userID = currentUser.UserId, sender = sender, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+
+            var json = Encoding.UTF8.GetString(JsonSerializer.SerializeToUtf8Bytes(req));
+            Debug.WriteLine("[SendNickName][Client JSON] " + json);
+
+            await transport.SendFrameAsync(MessageType.SendNickName, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SendNickNameRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 특정 채팅방 데이터
+        private async Task<GetChatRoomDetailRes?> SendGetChatRoomDetailOnceAsync(ChatRooms currentChattingData)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.GetChatRoomDetailRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "GetChatRoomDetail", userID = session.CurrentUser.UserId, chatRoomID = currentChattingData.ChatRoomId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.GetChatRoomDetail, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<GetChatRoomDetailRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

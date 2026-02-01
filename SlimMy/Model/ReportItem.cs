@@ -9,10 +9,7 @@ namespace SlimMy.Model
 {
     public class ReportItem : BaseViewModel
     {
-        private Guid evidenceID;
         private Guid reportID;
-        private Guid messageID;
-        private Guid senderUserID;
         private string messageContent;
         private string targetType;
         private Guid targetUserID;
@@ -23,28 +20,10 @@ namespace SlimMy.Model
         private DateTime sentAt;
         private DateTime createdAt;
 
-        public Guid EvidenceID
-        {
-            get { return evidenceID; }
-            set { evidenceID = value; OnPropertyChanged(nameof(EvidenceID)); }
-        }
-
         public Guid ReportID
         {
             get { return reportID; }
             set { reportID = value; OnPropertyChanged(nameof(ReportID)); }
-        }
-
-        public Guid MessageID
-        {
-            get { return messageID; }
-            set { messageID = value; OnPropertyChanged(nameof(MessageID)); }
-        }
-
-        public Guid SenderUserID
-        {
-            get { return senderUserID; }
-            set { senderUserID = value; OnPropertyChanged(nameof(SenderUserID)); }
         }
 
         public Guid TargetUserID
