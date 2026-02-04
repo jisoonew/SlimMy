@@ -16,6 +16,8 @@ namespace SlimMy.Model
     {
         public ReportTargetType TargetType { get; init; }
 
+        public Guid ReportID { get; set; }
+
         public Guid ChatRoomId { get; init; }
         public string? ChatRoomTitle { get; init; }
 

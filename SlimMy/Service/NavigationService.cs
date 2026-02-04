@@ -51,11 +51,8 @@ namespace SlimMy.Service
         private ReportDialogViewModel? _reportDialogVm;
 
         // 신고
-        public async Task NavigateToReportDialogViewAsync(ReportTarget target, Action onClosed)
+        public async Task NavigateToReportDialogViewAsync(ReportTarget target, Action onClosed, bool submitCheck)
         {
-            try { _reportDialogVm = await ReportDialogViewModel.CreateAsync(target); }
-            catch (Exception ex) { MessageBox.Show(ex.ToString()); return; }
-
             if (_reportDialog != null)
             {
                 if (_reportDialog.WindowState == WindowState.Minimized)
@@ -65,7 +62,7 @@ namespace SlimMy.Service
                 return;
             }
 
-            _reportDialogVm = await ReportDialogViewModel.CreateAsync(target);
+            _reportDialogVm = await ReportDialogViewModel.CreateAsync(target, submitCheck);
 
             _reportDialog = new View.ReportDialog
             {

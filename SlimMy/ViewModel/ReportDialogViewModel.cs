@@ -68,21 +68,54 @@ namespace SlimMy.ViewModel
 
         // "선택된 메시지가 없습니다. 채팅 화면에서 메시지를 선택해 주세요."
         public Visibility SelectedEmptyVisibility
-            => (SelectedMessages == null || SelectedMessages.Count == 0)
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            => IsReportHistoryDetailMode
+                ? Visibility.Collapsed
+                : (SelectedMessages == null || SelectedMessages.Count == 0)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
 
-        // 메시지 미리보기
+        // 신고 미리보기
         public Visibility SelectedListVisibility
-            => (SelectedMessages != null && SelectedMessages.Count > 0)
+            => IsReportHistoryDetailMode
                 ? Visibility.Visible
-                : Visibility.Collapsed;
+                : (SelectedMessages != null && SelectedMessages.Count > 0)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
 
         // 기타 사유
         public Visibility IsOtherReasonSelected
-            => (SelectedReason.Code == "OTHER")
+            => (SelectedReason?.Code == "OTHER")
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+
+        private Visibility _submitButtonVisibility;
+        public Visibility SubmitButtonVisibility
+        {
+            get { return _submitButtonVisibility; }
+            set { _submitButtonVisibility = value; OnPropertyChanged(nameof(SubmitButtonVisibility)); }
+        }
+
+        private Visibility _removeButtonVisibility;
+        public Visibility RemoveButtonVisibility
+        {
+            get { return _removeButtonVisibility; }
+            set { _removeButtonVisibility = value; OnPropertyChanged(nameof(RemoveButtonVisibility)); }
+        }
+
+        // 신고 미리보기 모드
+        private bool _isReportHistoryDetailMode;
+        public bool IsReportHistoryDetailMode
+        {
+            get => _isReportHistoryDetailMode;
+            set
+            {
+                if (_isReportHistoryDetailMode == value) return;
+                _isReportHistoryDetailMode = value;
+                OnPropertyChanged(nameof(IsReportHistoryDetailMode));
+                OnPropertyChanged(nameof(SelectedEmptyVisibility));
+                OnPropertyChanged(nameof(SelectedListVisibility));
+            }
+        }
 
         // 신고 대상
         private string _targetTypeLabel;
@@ -124,6 +157,30 @@ namespace SlimMy.ViewModel
             set { _reportTarget = value; OnPropertyChanged(nameof(ReportTarget)); }
         }
 
+        // 제출 활성/비활성
+        private bool _canSubmit;
+        public bool CanSubmit
+        {
+            get { return _canSubmit; }
+            set { _canSubmit = value; OnPropertyChanged(nameof(CanSubmit)); }
+        }
+
+        // 신고 사유 활성/비활성
+        private bool _canReason;
+        public bool CanReason
+        {
+            get { return _canReason; }
+            set { _canReason = value; OnPropertyChanged(nameof(CanReason)); }
+        }
+
+        // 신고 상세 사유 활성/비활성
+        private bool _canDetailText;
+        public bool CanDetailText
+        {
+            get { return _canDetailText; }
+            set { _canDetailText = value; OnPropertyChanged(nameof(CanDetailText)); }
+        }
+
         // 메시지 삭제
         public ICommand RemoveSelectedMessageCommand { get; }
 
@@ -139,14 +196,14 @@ namespace SlimMy.ViewModel
             RemoveSelectedMessageCommand = new RelayCommand<ChatMessage>(RemoveSelectedMessage);
         }
 
-        public static async Task<ReportDialogViewModel> CreateAsync(ReportTarget target)
+        public static async Task<ReportDialogViewModel> CreateAsync(ReportTarget target, bool submitCheck)
         {
             var instance = new ReportDialogViewModel();
-            await instance.Initialize(target);
+            await instance.Initialize(target, submitCheck);
             return instance;
         }
 
-        private async Task Initialize(ReportTarget target)
+        private async Task Initialize(ReportTarget target, bool submitCheck)
         {
             SelectedMessages = new ObservableCollection<ChatMessage>();
 
@@ -158,27 +215,49 @@ namespace SlimMy.ViewModel
             };
 
             // 신고 대상
-            ApplyTarget(target);
+            ApplyTarget(target, submitCheck);
 
-            // 신고 채팅방 데이터 출력
-            await ChatRoomData();
+            // 신고 상세 데이터 출력
+            if (!submitCheck)
+            {
+                IsReportHistoryDetailMode = true;
+                await LoadReportHistoryDetailAsync();
+            }
+            else
+            {
+                IsReportHistoryDetailMode = false;
+                SelectedReason ??= ReasonOptions.FirstOrDefault();
+            }
 
             // 신고 제출
             SubmitCommand = new AsyncRelayCommand(SubmitReportAsync);
         }
 
         // 신고 대상
-        public void ApplyTarget(ReportTarget target)
+        public void ApplyTarget(ReportTarget target, bool submitCheck)
         {
             TargetTypeLabel = target.TargetType == ReportTargetType.User ? "사용자" : "채팅방";
             ChatRoomTitle = target.ChatRoomTitle ?? "";
             ChatRoomId = target.ChatRoomId == Guid.Empty ? "" : target.ChatRoomId.ToString();
             TargetUserNickName = target.TargetUserNickName;
+            SubmitButtonVisibility = submitCheck ? Visibility.Visible : Visibility.Collapsed;
+            RemoveButtonVisibility = submitCheck ? Visibility.Visible : Visibility.Collapsed;
+            CanReason = submitCheck ? true : false;
+            CanDetailText = submitCheck ? true : false;
             ReportTarget = target;
+
+            OnPropertyChanged(nameof(TargetTypeLabel));
+            OnPropertyChanged(nameof(ChatRoomTitle));
+            OnPropertyChanged(nameof(ChatRoomId));
+            OnPropertyChanged(nameof(TargetUserNickName));
+            OnPropertyChanged(nameof(SubmitButtonVisibility));
+            OnPropertyChanged(nameof(RemoveButtonVisibility));
+            OnPropertyChanged(nameof(CanReason));
+            OnPropertyChanged(nameof(CanDetailText));
         }
 
-        // 신고 채팅방 데이터 출력
-        private async Task ChatRoomData()
+        // 신고 상세 데이터 출력
+        private async Task LoadReportHistoryDetailAsync()
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
@@ -196,6 +275,39 @@ namespace SlimMy.ViewModel
 
             // 채팅방 명
             ChatRoomTitle = selectChatRoomRes.ChatRoomData.ChatRoomName;
+
+            // 신고 메시지
+            var reportMessageRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendReportMessageOnceAsync(ReportTarget.ReportID), getMessage: r => r.Message, userData: currentUser);
+
+            if (reportMessageRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {reportMessageRes?.Message}");
+
+            IsReportHistoryDetailMode = true;
+
+            SelectedMessages.Clear();
+
+            foreach (var reportData in reportMessageRes.ReportMessage)
+            {
+                SelectedMessages.Add(new ChatMessage
+                {
+                    MessageID = (Guid)reportData.MessageID,
+                    MessageContent = reportData.MessageContent,
+                    Timestamp = (DateTime)reportData.SentAt
+                });
+            }
+
+            // 특정 신고 내역 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectedReportPrintOnceAsync(ReportTarget.ReportID), getMessage: r => r.Message, userData: currentUser);
+
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+            // 신고 사유
+            SelectedReason = ReasonOptions.FirstOrDefault(x => x.Code == res.ReportData.ReasonCode)
+                ?? ReasonOptions.FirstOrDefault(x => x.Code == "OTHER");
+
+            // 상세 내용
+            DetailText = res.ReportData.DetailText;
         }
 
         // 신고 메시지 삭제
@@ -288,6 +400,26 @@ namespace SlimMy.ViewModel
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 
+        // 신고 메시지
+        private async Task<ReportMessageRes?> SendReportMessageOnceAsync(Guid reportID)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.ReportMessageRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "ReportMessage", userID = session.CurrentUser.UserId, reportID = reportID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.ReportMessage, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<ReportMessageRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
         // 신고 제출
         private async Task<SubmitReportRes> SendSubmitReportOnceAsync(ReportTarget target, string code, string detailText)
         {
@@ -323,6 +455,29 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<SubmitReportMessageRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 특정 신고 내역 출력
+        private async Task<SelectedReportPrintRes> SendSelectedReportPrintOnceAsync(Guid reportID)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectedReportPrintRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "SelectedReportPrint", userID = session.CurrentUser.UserId, reportID = reportID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SelectedReportPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectedReportPrintRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

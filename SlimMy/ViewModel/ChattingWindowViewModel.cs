@@ -1023,7 +1023,8 @@ namespace SlimMy.ViewModel
                     ChatRoomId = currentChattingData.ChatRoomId,
                     ChatRoomTitle = currentChattingData.ChatRoomName
                 },
-                onClosed: () => IsReportModeVisibility = Visibility.Collapsed
+                onClosed: () => IsReportModeVisibility = Visibility.Collapsed,
+                submitCheck: true
             );
         }
 
@@ -1051,7 +1052,8 @@ namespace SlimMy.ViewModel
                         TargetUserId = msg.SenderID,
                         TargetUserNickName = msg.SendUserNickName
                     },
-                    onClosed: () => IsReportModeVisibility = Visibility.Collapsed
+                    onClosed: () => IsReportModeVisibility = Visibility.Collapsed,
+                    submitCheck: true
                 );
             }
         }

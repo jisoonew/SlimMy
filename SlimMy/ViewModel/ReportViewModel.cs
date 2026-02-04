@@ -150,14 +150,16 @@ canExecute: _ => CanGoToNextPage());
                 if (res.ReportData.TargetUserID == Guid.Empty)
                 {
                     await _navigationService.NavigateToReportDialogViewAsync(
-target: new ReportTarget
-{
-    TargetType = ReportTargetType.ChatRoom,
-    ChatRoomId = res.ReportData.TargetRoomID,
-    ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName
-},
-onClosed: null
-);
+                        target: new ReportTarget
+                        {
+                            TargetType = ReportTargetType.ChatRoom,
+                            ReportID = res.ReportData.ReportID,
+                            ChatRoomId = res.ReportData.TargetRoomID,
+                            ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName
+                        },
+                        onClosed: null,
+                        submitCheck: false
+                        );
                 }
                 else
                 {
@@ -169,16 +171,18 @@ onClosed: null
                         throw new InvalidOperationException($"server not ok: {NickNameRes?.Message}");
 
                     await _navigationService.NavigateToReportDialogViewAsync(
-target: new ReportTarget
-{
-    TargetType = ReportTargetType.User,
-    ChatRoomId = res.ReportData.TargetRoomID,
-    ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName,
-    TargetUserId = res.ReportData.TargetUserID,
-    TargetUserNickName = NickNameRes.SenderNickName
-},
-onClosed: null
-);
+                        target: new ReportTarget
+                        {
+                            TargetType = ReportTargetType.User,
+                            ReportID = res.ReportData.ReportID,
+                            ChatRoomId = res.ReportData.TargetRoomID,
+                            ChatRoomTitle = chatRoomRes.ChatRoomData.ChatRoomName,
+                            TargetUserId = res.ReportData.TargetUserID,
+                            TargetUserNickName = NickNameRes.SenderNickName
+                        },
+                        onClosed: null,
+                        submitCheck: false
+                        );
                 }
             }
         }
