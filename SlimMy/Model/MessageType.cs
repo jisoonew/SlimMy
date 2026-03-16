@@ -172,6 +172,11 @@ namespace SlimMy.Model
         SelectedUser = 291,
         SelectedUserRes = 292,
         ReportMessage = 293,
-        ReportMessageRes = 294
+        ReportMessageRes = 294,
+        ReportWarningStateChangedRes = 346,
+        InsertNoticeRecipientPopupShow = 351,
+        InsertNoticeRecipientPopupShowRes = 352,
+        InsertNoticeRecipientReadAt = 353,
+        InsertNoticeRecipientReadAtRes = 354
     }
 }

@@ -292,7 +292,7 @@ namespace SlimMy.ViewModel
                 {
                     MessageID = (Guid)reportData.MessageID,
                     MessageContent = reportData.MessageContent,
-                    Timestamp = (DateTime)reportData.SentAt
+                    SentAt = (DateTime)reportData.SentAt
                 });
             }
 
@@ -327,7 +327,7 @@ namespace SlimMy.ViewModel
                 {
                     MessageID = msg.MessageID,
                     MessageContent = msg.MessageContent,
-                    Timestamp = msg.Timestamp
+                    SentAt = msg.SentAt
                 });
             });
         }

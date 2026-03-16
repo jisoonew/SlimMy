@@ -591,6 +591,15 @@ namespace SlimMy.ViewModel
                         messageList.Clear();
                         return;
                     }
+
+                    // 경고 공지
+                    if (type == MessageType.ReportWarningStateChangedRes)
+                    {
+                        await HandleWarningMessage(chattingPartner, message);
+
+                        messageList.Clear();
+                        return;
+                    }
                 }
             }
             messageList.Clear();
@@ -699,6 +708,58 @@ namespace SlimMy.ViewModel
 
             if (selectChatRoomRes?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {selectChatRoomRes?.Message}");
+        }
+
+        // 경고 공지
+        private async Task HandleWarningMessage(string chattingPartner, string message)
+        {
+            User currentUser = UserSession.Instance.CurrentUser;
+
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var parts = chattingPartner.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return;
+
+            var reportId = parts[0];
+            var roomId = parts[1];
+            var warningText = parts[3];
+            var targetType = parts[4];
+            var sentAt = parts[5];
+            var noticeID = parts[6];
+            var recipientUserID = parts[7];
+
+            await MainHome.MainHomeLoaded.Task;
+            await Application.Current.Dispatcher.InvokeAsync(async () =>
+            {
+                await CloseChatRoomAsync(roomId);
+            }, DispatcherPriority.Normal);
+
+            string msg = string.Format(sentAt + "\n" + warningText);
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            // 경고 공지 팝업 표시 시간 저장 요청
+            var noticeRecipientPopupShowRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientPopupShowOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+
+            if (noticeRecipientPopupShowRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {noticeRecipientPopupShowRes?.Message}");
+
+            if (messageBoxResult == MessageBoxResult.No)
+            {
+                // 경고 공지 확인 시간 저장 요청
+                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+
+                if (noticeRecipientReadAtRes?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");
+            }
+            else
+            {
+                // 경고 공지 확인 시간 저장 요청
+                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+
+                if (noticeRecipientReadAtRes?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");
+            }
         }
 
         private async Task HandleUserBundleChanged(string chattingPartner, string message)
@@ -912,6 +973,69 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<BanIsNotifiedRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 경고 공지 저장
+        private async Task<SelectedReportPrintRes> SendReportWarningDataSaveOnceAsync(Guid reportID)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport
+                ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            // 응답 대기 설치
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectedReportPrintRes, reqId, TimeSpan.FromSeconds(5));
+
+            // 요청 전송
+            var req = new { cmd = "SelectedReportPrint", userID = session.CurrentUser.UserId, reportID = reportID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SelectedReportPrint, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            // 수신 루프가 응답을 잡아주면 도착
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectedReportPrintRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 경고 공지 팝업 표시 시간 저장 요청
+        private async Task<InsertNoticeRecipientPopupShowRes> SendInsertNoticeRecipientPopupShowOnceAsync(Guid noticeID, Guid recipientUserID)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.InsertNoticeRecipientPopupShowRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "InsertNoticeRecipientPopupShow", userID = session.CurrentUser.UserId, recipientUserID = recipientUserID, noticeID = noticeID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.InsertNoticeRecipientPopupShow, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<InsertNoticeRecipientPopupShowRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 경고 공지 팝업 확인 시간 저장 요청
+        private async Task<InsertNoticeRecipientReadAtRes> SendInsertNoticeRecipientReadAtOnceAsync(Guid noticeID, Guid recipientUserID)
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.InsertNoticeRecipientReadAtRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "InsertNoticeRecipientReadAt", userID = session.CurrentUser.UserId, recipientUserID = recipientUserID, noticeID = noticeID, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.InsertNoticeRecipientReadAt, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<InsertNoticeRecipientReadAtRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

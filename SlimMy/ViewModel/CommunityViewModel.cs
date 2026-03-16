@@ -28,8 +28,6 @@ namespace SlimMy.ViewModel
         private User _user;
         private ChatRooms _chat;
         private ChatUserList _chatUserList;
-        private readonly IView _view;
-        private View.ChattingWindow _chattingWindow;
         public static event Action CountChanged;
         public static string myName = null;
         public static Guid myUid;

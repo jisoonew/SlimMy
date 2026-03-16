@@ -15,7 +15,7 @@ namespace SlimMy.Model
         public string SendUserNickName { get; set; }
         public string Message { get; set; }
         public string MessageContent { get; set; }
-        public DateTime Timestamp { get; set; }
+        public DateTime SentAt { get; set; } // 보낸 시간
         public bool IsMine { get; set; }
         public TextAlignment Alignment { get; set; }
 
