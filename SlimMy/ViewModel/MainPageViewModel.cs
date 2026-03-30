@@ -322,16 +322,27 @@ namespace SlimMy.ViewModel
                 // 이후 모든 송수신은 ssl을 사용
                 // _ = Task.Run(() => RecieveMessage(transport));
 
+                // 받지 못한 방출 메시지 출력
                 var reqNotifiedId = Guid.NewGuid();
 
                 var waitNotified = hub.WaitAsync(MessageType.NotifiedCheckRes, reqNotifiedId, TimeSpan.FromSeconds(5));
 
-                // 받지 못한 방출 메시지 출력
                 var loginNotifiedReq = new { cmd = "NotifiedCheck", userId = UserSession.Instance.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqNotifiedId };
                 await transport.SendFrameAsync(MessageType.NotifiedCheck, JsonSerializer.SerializeToUtf8Bytes(loginNotifiedReq));
 
                 var payNotifiedload = await waitNotified;
                 var notifiedRes = JsonSerializer.Deserialize<NotifiedCheckRes>(payNotifiedload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                // 받지 못한 신고 메시지 출력
+                var reqNoticeRecipientID = Guid.NewGuid();
+
+                var waitNoticeRecipient = hub.WaitAsync(MessageType.NoticeRecipientRes, reqNoticeRecipientID, TimeSpan.FromSeconds(5));
+
+                var noticeRecipientReq = new { cmd = "NoticeRecipient", userId = UserSession.Instance.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqNoticeRecipientID };
+                await transport.SendFrameAsync(MessageType.NoticeRecipient, JsonSerializer.SerializeToUtf8Bytes(noticeRecipientReq));
+
+                var noticeRecipientLoad = await waitNoticeRecipient;
+                var noticeRecipientRes = JsonSerializer.Deserialize<NoticeRecipientRes>(noticeRecipientLoad, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
                 await Application.Current.Dispatcher.InvokeAsync(async () =>
                 {
@@ -341,6 +352,7 @@ namespace SlimMy.ViewModel
 
                     await _navigationService.NavigateToDashBoardFrameAsync(typeof(View.DashBoard));
 
+                    // 받지 못한 방출 메시지 출력
                     if (notifiedRes.NotifiedCheck != null)
                     {
                         foreach (var msg in notifiedRes.NotifiedCheck)
@@ -354,6 +366,42 @@ namespace SlimMy.ViewModel
 
                             if (selectChatRoomRes?.Ok != true)
                                 throw new InvalidOperationException($"server not ok: {selectChatRoomRes?.Message}");
+                        }
+                    }
+
+                    User currentUser = UserSession.Instance.CurrentUser;
+
+                    // 받지 못한 신고 메시지 출력
+                    if (noticeRecipientRes.NoticeRecipientBundle != null)
+                    {
+                        foreach (var msg in noticeRecipientRes.NoticeRecipientBundle)
+                        {
+                            string noticeMsg = "부적절한 채팅 행위가 확인되어 아래와 같은 조치가 적용되었습니다.\n" + msg.WarningText;
+
+                            MessageBoxResult messageBoxResult = MessageBox.Show(noticeMsg, "[운영 공지]", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                            // 경고 공지 팝업 표시 시간 저장 요청
+                            var noticeRecipientPopupShowRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientPopupShowOnceAsync(msg.NoticeID, currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
+
+                            if (noticeRecipientPopupShowRes?.Ok != true)
+                                throw new InvalidOperationException($"server not ok: {noticeRecipientPopupShowRes?.Message}");
+
+                            if (messageBoxResult == MessageBoxResult.No)
+                            {
+                                // 경고 공지 확인 시간 저장 요청
+                                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(msg.NoticeID, currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
+
+                                if (noticeRecipientReadAtRes?.Ok != true)
+                                    throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");
+                            }
+                            else
+                            {
+                                // 경고 공지 확인 시간 저장 요청
+                                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(msg.NoticeID, currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
+
+                                if (noticeRecipientReadAtRes?.Ok != true)
+                                    throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");
+                            }
                         }
                     }
 
@@ -727,19 +775,19 @@ namespace SlimMy.ViewModel
             var targetType = parts[4];
             var sentAt = parts[5];
             var noticeID = parts[6];
-            var recipientUserID = parts[7];
 
             await MainHome.MainHomeLoaded.Task;
-            await Application.Current.Dispatcher.InvokeAsync(async () =>
-            {
-                await CloseChatRoomAsync(roomId);
-            }, DispatcherPriority.Normal);
 
-            string msg = string.Format(sentAt + "\n" + warningText);
-            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            await Application.Current.Dispatcher.InvokeAsync(() => { });
+
+            await CloseChatRoomAsync(roomId);
+
+            string msg = $"{sentAt}\n{warningText}";
+
+            MessageBoxResult messageBoxResult = MessageBox.Show(msg, "[운영 공지]", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             // 경고 공지 팝업 표시 시간 저장 요청
-            var noticeRecipientPopupShowRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientPopupShowOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+            var noticeRecipientPopupShowRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientPopupShowOnceAsync(Guid.Parse(noticeID), currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
 
             if (noticeRecipientPopupShowRes?.Ok != true)
                 throw new InvalidOperationException($"server not ok: {noticeRecipientPopupShowRes?.Message}");
@@ -747,7 +795,7 @@ namespace SlimMy.ViewModel
             if (messageBoxResult == MessageBoxResult.No)
             {
                 // 경고 공지 확인 시간 저장 요청
-                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
 
                 if (noticeRecipientReadAtRes?.Ok != true)
                     throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");
@@ -755,7 +803,7 @@ namespace SlimMy.ViewModel
             else
             {
                 // 경고 공지 확인 시간 저장 요청
-                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), Guid.Parse(recipientUserID)), getMessage: r => r.Message, userData: currentUser);
+                var noticeRecipientReadAtRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendInsertNoticeRecipientReadAtOnceAsync(Guid.Parse(noticeID), currentUser.UserId), getMessage: r => r.Message, userData: currentUser);
 
                 if (noticeRecipientReadAtRes?.Ok != true)
                     throw new InvalidOperationException($"server not ok: {noticeRecipientReadAtRes?.Message}");

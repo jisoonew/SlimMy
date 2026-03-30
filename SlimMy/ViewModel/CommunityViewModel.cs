@@ -297,6 +297,14 @@ namespace SlimMy.ViewModel
                 SelectedChatRoom = selectedChatRoom;
                 OnPropertyChanged(nameof(SelectedChatRoom));
 
+                User currentUser = UserSession.Instance.CurrentUser;
+
+                // 채팅방 제재 여부
+                var userSactionCheckRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendUserSactionCheckOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
+
+                if (userSactionCheckRes?.Ok != true)
+                    throw new InvalidOperationException($"server not ok: {userSactionCheckRes?.Message}");
+
                 string msg = string.Format("{0}에 입장하시겠습니까?", selectedChatRoom.ChatRoomName);
 
                 MessageBoxResult messageBoxResult = MessageBox.Show(msg, "Question", MessageBoxButton.YesNo, MessageBoxImage.Question);
@@ -306,7 +314,6 @@ namespace SlimMy.ViewModel
                 }
                 else
                 {
-                    User currentUser = UserSession.Instance.CurrentUser;
 
                     // 방출 채팅방 여부
                     var isBannedRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendIsBannedOnceAsync(selectedChatRoom), getMessage: r => r.Message, userData: currentUser);
@@ -749,6 +756,25 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<GetChatRoomUserIdsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 채팅방 제재 여부
+        private async Task<UserSanctionCheckRes?> SendUserSactionCheckOnceAsync(ChatRooms selectedChatRoom)
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.UserSactionCheckRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "UserSactionCheck", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.UserSactionCheck, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<UserSanctionCheckRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

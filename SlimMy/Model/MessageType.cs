@@ -177,6 +177,10 @@ namespace SlimMy.Model
         InsertNoticeRecipientPopupShow = 351,
         InsertNoticeRecipientPopupShowRes = 352,
         InsertNoticeRecipientReadAt = 353,
-        InsertNoticeRecipientReadAtRes = 354
+        InsertNoticeRecipientReadAtRes = 354,
+        NoticeRecipient = 357,
+        NoticeRecipientRes = 358,
+        UserSactionCheck = 359,
+        UserSactionCheckRes = 340
     }
 }

@@ -264,7 +264,7 @@ namespace SlimMy.ViewModel
                                 SendUserNickName = messageList.SendUserNickName,
                                 Message = $"나: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
-                                Timestamp = messageList.SentAt,
+                                SentAt = messageList.SentAt,
                                 IsMine = true,
                                 Alignment = TextAlignment.Right
                             };
@@ -278,7 +278,7 @@ namespace SlimMy.ViewModel
                                 SendUserNickName = messageList.SendUserNickName,
                                 Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                 MessageContent = messageList.SendMessage,
-                                Timestamp = messageList.SentAt,
+                                SentAt = messageList.SentAt,
                                 IsMine = false,
                                 Alignment = TextAlignment.Left
                             };
@@ -449,7 +449,7 @@ namespace SlimMy.ViewModel
                                     SendUserNickName = messageList.SendUserNickName,
                                     Message = $"나: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
-                                    Timestamp = messageList.SentAt,
+                                    SentAt = messageList.SentAt,
                                     IsMine = true,
                                     Alignment = TextAlignment.Right
                                 };
@@ -463,7 +463,7 @@ namespace SlimMy.ViewModel
                                     SendUserNickName = messageList.SendUserNickName,
                                     Message = $"{messageList.SendUserNickName}: {messageList.SendMessage}",
                                     MessageContent = messageList.SendMessage,
-                                    Timestamp = messageList.SentAt,
+                                    SentAt = messageList.SentAt,
                                     IsMine = false,
                                     Alignment = TextAlignment.Left
                                 };
@@ -721,7 +721,7 @@ namespace SlimMy.ViewModel
                         SenderID = messageRes.ChatMessageData.SenderID,
                         SendUserNickName = res.SenderNickName,
                         MessageContent = message,
-                        Timestamp = messageRes.ChatMessageData.Timestamp,
+                        SentAt = messageRes.ChatMessageData.SentAt,
                         Message = $"{res.SenderNickName}: {message}",
                         IsMine = false,
                         Alignment = TextAlignment.Left
