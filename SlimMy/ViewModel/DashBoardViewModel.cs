@@ -1,8 +1,10 @@
+using GalaSoft.MvvmLight.CommandWpf;
 using LiveCharts;
 using LiveCharts.Wpf;
 using SlimMy.Model;
 using SlimMy.Response;
 using SlimMy.Service;
+using SlimMyAdmin.Command;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -110,6 +112,39 @@ namespace SlimMy.ViewModel
             set { _recentWorkouts = value; OnPropertyChanged(nameof(RecentWorkouts)); }
         }
 
+        public ObservableCollection<NoticeItem> Notices { get; set; } = new();
+        public NoticeItem? SelectedNotice { get; set; }
+
+        private bool _isNoticePopupOpen;
+        public bool IsNoticePopupOpen
+        {
+            get => _isNoticePopupOpen;
+            set
+            {
+                if (_isNoticePopupOpen == value) return;
+                _isNoticePopupOpen = value;
+                OnPropertyChanged(nameof(IsNoticePopupOpen));
+            }
+        }
+
+        private bool _isNoticeDetailOpen;
+        public bool IsNoticeDetailOpen
+        {
+            get => _isNoticeDetailOpen;
+            set
+            {
+                if (_isNoticeDetailOpen == value) return;
+                _isNoticeDetailOpen = value;
+                OnPropertyChanged(nameof(IsNoticeDetailOpen));
+            }
+        }
+
+        public int UnreadNoticeCount => Notices.Count(n => !n.IsRead);
+
+        public ICommand ToggleNoticePopupCommand { get; }
+        public ICommand OpenNoticeDetailCommand { get; }
+        public ICommand CloseNoticeDetailCommand { get; }
+
         // 목표 설정
         public ICommand SetGoalCommand { get; set; }
 
@@ -121,6 +156,10 @@ namespace SlimMy.ViewModel
             _navigationService = new NavigationService();
 
             SetGoalCommand = new AsyncRelayCommand(SetGoal);
+
+            ToggleNoticePopupCommand = new RelayCommand(ToggleNoticePopup);
+            OpenNoticeDetailCommand = new AsyncRelayCommand<NoticeItem>(OpenNoticeDetail);
+            CloseNoticeDetailCommand = new RelayCommand(CloseNoticeDetail);
         }
 
         private async Task Initialize()
@@ -152,6 +191,9 @@ namespace SlimMy.ViewModel
             await TotalTimePrint();
 
             await RecentWorkoutsPrint();
+
+            // 공지 목록
+            await LoadDummyNotices();
         }
 
         public static async Task<DashBoardViewModel> CreateAsync()
@@ -166,6 +208,60 @@ namespace SlimMy.ViewModel
             {
                 MessageBox.Show("DashBoardViewModel 생성 실패: " + ex.Message);
                 return null;
+            }
+        }
+
+        private void ToggleNoticePopup(object parameter)
+        {
+            IsNoticePopupOpen = !IsNoticePopupOpen;
+        }
+
+        // 공지 목록 선택
+        private async Task OpenNoticeDetail(NoticeItem notice)
+        {
+            if (notice == null) return;
+
+            SelectedNotice = notice;
+            OnPropertyChanged(nameof(SelectedNotice));
+
+            notice.IsRead = true;
+            OnPropertyChanged(nameof(UnreadNoticeCount));
+
+            IsNoticeDetailOpen = true;
+            IsNoticePopupOpen = false;
+
+            // 공지 상세
+            await _navigationService.NavigateToNoticeDetail(notice);
+        }
+
+        private void CloseNoticeDetail(object parameter)
+        {
+            IsNoticeDetailOpen = false;
+            SelectedNotice = null;
+            OnPropertyChanged(nameof(SelectedNotice));
+        }
+
+        // 공지 목록 초기화
+        public async Task LoadDummyNotices()
+        {
+            // 공지 목록 출력
+            var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSelectNoticeListAsync(), getMessage: r => r.Message, userData: currentUser);
+
+            if (res?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {res?.Message}");
+
+            foreach(var noticeBundle in res.NoticeItemList)
+            {
+                Notices.Add(new NoticeItem
+                {
+                    NoticeID = noticeBundle.NoticeID,
+                    Title = noticeBundle.Title,
+                    Content = noticeBundle.Content,
+                    NoticeType = "공지",
+                    CreatedAt = noticeBundle.CreatedAt,
+                    ReadAt = noticeBundle.ReadAt,
+                    IsRead = noticeBundle.ReadAt == (DateTime?)null ? false : true
+                });
             }
         }
 
@@ -559,6 +655,25 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<GetRecentWorkoutsRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 공지 목록 출력
+        private async Task<SelectNoticeListRes> SendSelectNoticeListAsync()
+        {
+            var session = UserSession.Instance;
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.SelectNoticeListRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { cmd = "SelectNoticeList", userID = currentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.SelectNoticeList, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<SelectNoticeListRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

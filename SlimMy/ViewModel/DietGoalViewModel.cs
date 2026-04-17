@@ -123,6 +123,10 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
+            DietGoal.Height = Height;
+            DietGoal.Weight = Weight;
+            DietGoal.BMI = BMI;
+
             // 목표 저장
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendSaveDietGoalOnceAsync(currentUser, DietGoal), getMessage: r => r.Message, userData: currentUser);
 

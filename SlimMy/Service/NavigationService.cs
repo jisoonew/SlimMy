@@ -474,6 +474,14 @@ namespace SlimMy.Service
             }
         }
 
+        // 공지 상세
+        public async Task NavigateToNoticeDetail(NoticeItem notice)
+        {
+            var noticeViewModel = await NoticeDetailViewModel.CreateAsync(notice);
+            var pageInstance = new View.NoticeDetail { DataContext = noticeViewModel };
+            pageInstance.Show();
+        }
+
         // 모든 창을 닫고 로그인 창만 생성
         public void NavigateToLoginOnly()
         {

@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
-    public class UserSanctionCheckRes
+    public class CheckUserSanctionRes
     {
         public bool Ok { get; set; }
         public string Message { get; set; }
         public bool SanctionCheck { get; set; }
-        public DateTime? ExpiresAt { get; set; }
+        public DateTime? SanctionDate { get; set; }
         public Guid RequestID { get; set; }
     }
 }

@@ -1,3 +1,4 @@
+using SlimMy.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,12 +7,10 @@ using System.Threading.Tasks;
 
 namespace SlimMy.Response
 {
-    public class UserSanctionCheckRes
+    public class SelectNoticeListRes
     {
         public bool Ok { get; set; }
         public string Message { get; set; }
-        public bool SanctionCheck { get; set; }
-        public DateTime? ExpiresAt { get; set; }
-        public Guid RequestID { get; set; }
+        public List<NoticeItem> NoticeItemList { get; set; }
     }
 }

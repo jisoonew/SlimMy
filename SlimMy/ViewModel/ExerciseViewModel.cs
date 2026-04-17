@@ -88,6 +88,25 @@ namespace SlimMy.ViewModel
             }
         }
 
+        // 운동 세트
+        private string _sets;
+        public string Sets
+        {
+            get { return _sets; }
+            set
+            {
+                _sets = value; OnPropertyChanged(nameof(Sets));
+            }
+        }
+
+        // 횟수
+        private string _reps;
+        public string Reps
+        {
+            get { return _reps; }
+            set { _reps = value; OnPropertyChanged(nameof(Reps)); }
+        }
+
         // 계산 이후 칼로리
         private string _calories;
         public string Calories
@@ -307,19 +326,41 @@ namespace SlimMy.ViewModel
 
                     if (IsEditMode)
                     {
-                        // 선택된 운동 아이디 플래너에게 전달
-                        _planner.UpdatePlannerPrint(SelectedChatRoomData, Calories, minutes);
+                        if (SelectedCalorieMode == CalorieMode.TimeBased)
+                        {
+                            // 선택된 운동 아이디 플래너에게 전달
+                            _planner.UpdatePlannerPrint(SelectedChatRoomData, Calories, minutes);
 
-                        // 운동 선택창 닫기
-                        _navigationService.NavigateToExerciseWindow();
+                            // 운동 선택창 닫기
+                            _navigationService.NavigateToExerciseWindow();
+                        }
+                        if (SelectedCalorieMode == CalorieMode.RepetitionBased)
+                        {
+                            // 선택된 운동 아이디 플래너에게 전달
+                            _planner.UpdatePlannerPrint(SelectedChatRoomData, Calories, Convert.ToInt32(Sets), Convert.ToInt32(Reps));
+
+                            // 운동 선택창 닫기
+                            _navigationService.NavigateToExerciseWindow();
+                        }
                     }
                     else
                     {
-                        // 선택된 운동 아이디 플래너에게 전달
-                        _planner.SelectedPlannerPrint(SelectedChatRoomData, Calories, minutes);
+                        if (SelectedCalorieMode == CalorieMode.TimeBased)
+                        {
+                            // 선택된 운동 아이디 플래너에게 전달
+                            _planner.SelectedPlannerTimePrint(SelectedChatRoomData, Calories, minutes);
 
-                        // 운동 선택창 닫기
-                        _navigationService.NavigateToExerciseWindow();
+                            // 운동 선택창 닫기
+                            _navigationService.NavigateToExerciseWindow();
+                        }
+                        if (SelectedCalorieMode == CalorieMode.RepetitionBased)
+                        {
+                            // 선택된 운동 아이디 플래너에게 전달
+                            _planner.SelectedPlannerRepPrint(SelectedChatRoomData, Calories, Convert.ToInt32(Sets), Convert.ToInt32(Reps));
+
+                            // 운동 선택창 닫기
+                            _navigationService.NavigateToExerciseWindow();
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -341,10 +382,26 @@ namespace SlimMy.ViewModel
                 throw new InvalidOperationException($"server not ok: {res?.Message}");
 
             double met = (double)SelectedChatRoomData.Met;
-            minutes = Convert.ToInt32(PlannedMinutes);
-            int result = (int)(met * res.UserWeight * 3.5 / 200) * minutes;
 
-            Calories = result.ToString();
+            // 시간 기반 칼로리 계산
+            if (SelectedCalorieMode == CalorieMode.TimeBased)
+            {
+                minutes = Convert.ToInt32(PlannedMinutes);
+                int result = (int)(met * res.UserWeight * 3.5 / 200) * minutes;
+
+                Calories = result.ToString();
+            }
+            else
+            {
+                // 횟수 기반 칼로리 계산
+                // 세트 * 횟수
+                int reps = Convert.ToInt32(Sets) * Convert.ToInt32(Reps);
+                // 1회 수행하는 데 걸리는 평균 시간 (초)
+                int secondsPerRep = 3;
+                int timeSeconds = reps * secondsPerRep;
+                var hours = timeSeconds / 3600.0;
+                Calories = Math.Round(met * res.UserWeight * hours).ToString();
+            }
         }
 
         // 페이지에 따른 운동 목록 출력

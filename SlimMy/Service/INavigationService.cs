@@ -63,5 +63,8 @@ namespace SlimMy.Service
 
         // 신고창 닫기
         void NavigateToReportClose();
+
+        // 공지 상세
+        Task NavigateToNoticeDetail(NoticeItem notice);
     }
 }

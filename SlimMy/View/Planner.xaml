@@ -17,6 +17,7 @@
 
     <Page.Resources>
         <ViewModel:DateHighlightConverter x:Key="DateHighlightConverter"/>
+        <ViewModel:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </Page.Resources>
 
     <Grid>
@@ -139,20 +140,37 @@
                                 <Grid Width="500">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- 체크박스 -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- [ -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- 값 -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- 단위 -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- reps -->
+                                        <ColumnDefinition Width="Auto"/>
+                                        <!-- 회] -->
                                         <ColumnDefinition Width="*"/>
+                                        <!-- 운동명 -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- 칼로리 -->
                                         <ColumnDefinition Width="Auto"/>
+                                        <!-- kcal -->
                                     </Grid.ColumnDefinitions>
                                     <CheckBox Grid.Column="0" IsChecked="{Binding IsCompleted, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBlock Grid.Column="1" Text="[" />
-                                    <TextBlock Grid.Column="2" Text="{Binding Minutes}" />
-                                    <TextBlock Grid.Column="3" Text="분]" />
-                                    <TextBlock Grid.Column="4" Text="{Binding Name}" />
-                                    <TextBlock Grid.Column="5" Text="{Binding Calories}" HorizontalAlignment="Right" Margin="5,0" />
-                                    <TextBlock Grid.Column="6" Text="kcal" HorizontalAlignment="Right" />
+                                    <TextBlock Grid.Column="1" Text="[" Visibility="{Binding IsTimeExercise}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Minutes}" Visibility="{Binding IsTimeExercise}"/>
+                                    <TextBlock Grid.Column="3" Text="분]" Visibility="{Binding IsTimeExercise}"/>
+
+                                    <TextBlock Grid.Column="1" Text="[" Visibility="{Binding IsSetExercise}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding SetCount}" Visibility="{Binding IsSetExercise}"/>
+                                    <TextBlock Grid.Column="3" Text="세트 × " Visibility="{Binding IsSetExercise}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding RepCount}" Visibility="{Binding IsSetExercise}"/>
+                                    <TextBlock Grid.Column="5" Text="회]" Visibility="{Binding IsSetExercise}"/>
+                                    <TextBlock Grid.Column="6" Text="{Binding Name}" />
+                                    <TextBlock Grid.Column="7" Text="{Binding Calories}" />
+                                    <TextBlock Grid.Column="8" Text="kcal" />
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

@@ -181,6 +181,10 @@ namespace SlimMy.Model
         NoticeRecipient = 357,
         NoticeRecipientRes = 358,
         UserSactionCheck = 359,
-        UserSactionCheckRes = 340
+        UserSactionCheckRes = 360,
+        CheckUserSanction = 363,
+        CheckUserSanctionRes = 364,
+        SelectNoticeList = 365,
+        SelectNoticeListRes = 366
     }
 }

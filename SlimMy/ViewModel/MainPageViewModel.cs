@@ -433,7 +433,21 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            await _navigationService.NavigateToCommunityFrameAsync(typeof(View.Community));
+            // 사용자 제재 기간 확인
+            var checkUserSanctionRes = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendCheckUserSanctionOnceAsync(), getMessage: r => r.Message, userData: currentUser);
+
+            if (checkUserSanctionRes?.Ok != true)
+                throw new InvalidOperationException($"server not ok: {checkUserSanctionRes?.Message}");
+
+            // 사용자 제재 없음
+            if (checkUserSanctionRes.SanctionCheck == false)
+            {
+                await _navigationService.NavigateToCommunityFrameAsync(typeof(View.Community));
+            }
+            else
+            {
+                MessageBox.Show("이용 중 부적절한 행위가 확인되어 일정 기간 동안 이용이 제한됩니다.\n제재 기간: " + checkUserSanctionRes.SanctionDate + "\n서비스 정책을 준수하지 않을 경우 추가 제재가 적용될 수 있습니다.");
+            }
         }
 
         // 내 채팅방
@@ -1084,6 +1098,26 @@ namespace SlimMy.ViewModel
             var respPayload = await waitTask;
 
             return JsonSerializer.Deserialize<InsertNoticeRecipientReadAtRes>(
+                respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
+
+        // 사용자 제재 기간 확인
+        private async Task<CheckUserSanctionRes> SendCheckUserSanctionOnceAsync()
+        {
+            var session = UserSession.Instance;
+
+            var transport = session.CurrentUser?.Transport ?? throw new InvalidOperationException("not connected");
+
+            var reqId = Guid.NewGuid();
+
+            var waitTask = session.Responses.WaitAsync(MessageType.CheckUserSanctionRes, reqId, TimeSpan.FromSeconds(5));
+
+            var req = new { Cmd = "CheckUserSanction", userID = session.CurrentUser.UserId, accessToken = UserSession.Instance.AccessToken, requestID = reqId };
+            await transport.SendFrameAsync(MessageType.CheckUserSanction, JsonSerializer.SerializeToUtf8Bytes(req));
+
+            var respPayload = await waitTask;
+
+            return JsonSerializer.Deserialize<CheckUserSanctionRes>(
                 respPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
 

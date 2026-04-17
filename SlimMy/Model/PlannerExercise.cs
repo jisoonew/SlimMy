@@ -14,6 +14,9 @@ namespace SlimMy.Model
         public string ExerciseName { get; set; }
         public int Indexnum { get; set; }
         public int Minutes { get; set; }
+        public string PlanType { get; set; }
+        public int SetCount { get; set; }
+        public int RepCount { get; set; }
         public int Calories { get; set; }
         public bool IsCompleted { get; set; }
     }

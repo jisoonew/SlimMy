@@ -243,14 +243,39 @@ namespace SlimMy.ViewModel
             await _navigationService.NavigateToAddExerciseViewAsync(this);
         }
 
-        // 플래너 수정
+        // 플래너 수정(시간 기반)
         public void UpdatePlannerPrint(Exercise exerciseData, string calories, int minutes)
         {
             if (_editingItem == null) return;
 
+            _editingItem.IsTimeExercise = Visibility.Visible;
+            _editingItem.IsSetExercise = Visibility.Collapsed;
+
             _editingItem.ExerciseID = exerciseData.ExerciseID;
             _editingItem.Name = exerciseData.ExerciseName;
             _editingItem.Minutes = minutes;
+            _editingItem.SetCount = 0;
+            _editingItem.RepCount = 0;
+            _editingItem.PlanType = "TimeBased";
+            _editingItem.Calories = int.Parse(calories);
+
+            TotalCaloriesCalculate();
+        }
+
+        // 플래너 수정(횟수 기반)
+        public void UpdatePlannerPrint(Exercise exerciseData, string calories, int sets, int reps)
+        {
+            if (_editingItem == null) return;
+
+            _editingItem.IsTimeExercise = Visibility.Collapsed;
+            _editingItem.IsSetExercise = Visibility.Visible;
+
+            _editingItem.ExerciseID = exerciseData.ExerciseID;
+            _editingItem.Name = exerciseData.ExerciseName;
+            _editingItem.Minutes = 0;
+            _editingItem.SetCount = sets;
+            _editingItem.RepCount = reps;
+            _editingItem.PlanType = "RepetitionBased";
             _editingItem.Calories = int.Parse(calories);
 
             TotalCaloriesCalculate();
@@ -319,7 +344,7 @@ namespace SlimMy.ViewModel
                                      .ToDictionary(x => x.item.PlannerID, x => (x.item, x.OrderNo));
 
                     // 현재 플래너 목록의 플래너 아이디에 DB에 존재하는 데이터와 일치하지 않는 아이디
-                    // 즉, DB에는 있고, 현재 플래너 목록에는 없는 플래너 아이디를 추출
+                    // DB에는 있고, 현재 플래너 목록에는 없는 플래너 아이디를 추출
                     var deletedItems = dbMap.Keys.Except(uiMap.Keys).ToList();
 
                     // 선택된 플래너에서 일부를 삭제하고 저장하려고 한다면
@@ -350,7 +375,10 @@ namespace SlimMy.ViewModel
                                 Minutes = ui.Minutes,
                                 Calories = ui.Calories,
                                 IsCompleted = ui.IsCompleted,
-                                Indexnum = orderNo
+                                PlanType = ui.PlanType,
+                                Indexnum = orderNo,
+                                RepCount = ui.RepCount,
+                                SetCount = ui.SetCount
                             };
                         })
                         .Where(x => x != null).ToList();
@@ -375,6 +403,9 @@ namespace SlimMy.ViewModel
                             db.Minutes != ui.Minutes ||
                             db.Calories != ui.Calories ||
                             db.IsCompleted != ui.IsCompleted ||
+                            db.PlanType != ui.PlanType ||
+                            db.SetCount != ui.SetCount ||
+                            db.RepCount != ui.RepCount ||
                             db.Indexnum != orderNo;
 
                             if (!changed) return null;
@@ -387,6 +418,9 @@ namespace SlimMy.ViewModel
                                 Minutes = ui.Minutes,
                                 Calories = ui.Calories,
                                 IsCompleted = ui.IsCompleted,
+                                PlanType = ui.PlanType,
+                                SetCount = ui.SetCount,
+                                RepCount = ui.RepCount,
                                 Indexnum = orderNo
                             };
                         })
@@ -546,14 +580,39 @@ namespace SlimMy.ViewModel
         }
 
         // 운동 선택 이후에 데이터를 리스트 박스에 출력
-        public void SelectedPlannerPrint(Exercise exerciseData, string calories, int minutes)
+        public void SelectedPlannerTimePrint(Exercise exerciseData, string calories, int minutes)
         {
             Items.Add(new PlanItem
             {
                 ExerciseID = exerciseData.ExerciseID,
                 Name = exerciseData.ExerciseName,
                 Minutes = minutes,
-                Calories = int.Parse(calories)
+                Calories = int.Parse(calories),
+                IsTimeExercise = Visibility.Visible,
+                IsSetExercise = Visibility.Collapsed,
+                PlanType = "TimeBased",
+                SetCount = 0,
+                RepCount = 0
+            });
+
+            // 선택한 플래너의 총 칼로리
+            TotalCaloriesCalculate();
+        }
+
+        // 운동 선택 이후에 데이터를 리스트 박스에 출력
+        public void SelectedPlannerRepPrint(Exercise exerciseData, string calories, int set, int rep)
+        {
+            Items.Add(new PlanItem
+            {
+                ExerciseID = exerciseData.ExerciseID,
+                Name = exerciseData.ExerciseName,
+                Minutes = 0,
+                Calories = int.Parse(calories),
+                IsTimeExercise = Visibility.Collapsed,
+                IsSetExercise = Visibility.Visible,
+                PlanType = "RepetitionBased",
+                SetCount = set,
+                RepCount = rep
             });
 
             // 선택한 플래너의 총 칼로리
