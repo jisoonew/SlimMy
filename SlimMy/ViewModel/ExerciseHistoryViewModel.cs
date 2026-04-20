@@ -173,7 +173,7 @@ namespace SlimMy.ViewModel
         {
             User currentUser = UserSession.Instance.CurrentUser;
 
-            // 사용자의 운동 계획 출력
+            // 사용자 시간 기반 운동 내역 출력
             var res = await SendWithRefreshRetryOnceAsync(sendOnceAsync: () => SendGetExerciseHistoryOnceAsync(currentUser), getMessage: r => r.Message, userData: currentUser);
 
             if (res?.Ok != true)
@@ -181,7 +181,18 @@ namespace SlimMy.ViewModel
 
             foreach (var history in res.HistoryItem)
             {
-                FilteredExerciseLogs.Add(history);
+                if(history.PlanType == "TimeBased")
+                {
+                    history.ExerciseAmount = history.Minutes.ToString();
+
+                    FilteredExerciseLogs.Add(history);
+                }
+                if(history.PlanType == "RepetitionBased")
+                {
+                    history.ExerciseAmount = history.SetCount.ToString() + "세트 * " + history.RepCount.ToString() + "회";
+
+                    FilteredExerciseLogs.Add(history);
+                }
             }
 
             EndDate = FilteredExerciseLogs.FirstOrDefault().PlannerDate;
@@ -326,7 +337,18 @@ namespace SlimMy.ViewModel
 
             foreach (var history in res.HistoryItem)
             {
-                AllExerciseLogs.Add(history);
+                if (history.PlanType == "TimeBased")
+                {
+                    history.ExerciseAmount = history.Minutes.ToString() + "분";
+
+                    AllExerciseLogs.Add(history);
+                }
+                if (history.PlanType == "RepetitionBased")
+                {
+                    history.ExerciseAmount = history.SetCount.ToString() + "세트 * " + history.RepCount.ToString() + "회";
+
+                    AllExerciseLogs.Add(history);
+                }
             }
 
             var filtered = AllExerciseLogs.Where(x => x.PlannerDate >= StartDate && x.PlannerDate <= EndDate);

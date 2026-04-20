@@ -140,7 +140,12 @@ namespace SlimMy.ViewModel
                                 IsCompleted = ex.IsCompleted,
                                 Name = ex.ExerciseName,
                                 Minutes = ex.Minutes,
-                                Calories = ex.Calories
+                                Calories = ex.Calories,
+                                PlanType = ex.PlanType,
+                                SetCount = ex.SetCount,
+                                RepCount = ex.RepCount,
+                                IsTimeExercise = ex.Minutes > 0 ? Visibility.Visible : Visibility.Collapsed,
+                                IsSetExercise = ex.Minutes > 0 ? Visibility.Collapsed : Visibility.Visible
                             }));
 
                         PlannerTitle = _selectedPlannerGroup.PlannerTitle;

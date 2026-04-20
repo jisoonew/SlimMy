@@ -63,7 +63,8 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="날짜" Binding="{Binding PlannerDate, StringFormat=yyyy-MM-dd}" Width="*"/>
                     <DataGridTextColumn Header="운동명" Binding="{Binding ExerciseName}" Width="*"/>
-                    <DataGridTextColumn Header="시간(분)" Binding="{Binding Minutes}" Width="*"/>
+                    <DataGridTextColumn Header="운동 방식" Binding="{Binding PlanType}" Width="*"/>
+                    <DataGridTextColumn Header="운동량" Binding="{Binding ExerciseAmount}" Width="*"/>
                     <DataGridTextColumn Header="칼로리" Binding="{Binding Calories}" Width="*"/>
                     <DataGridTextColumn Header="운동 종류" Binding="{Binding Category}" Width="*"/>
                 </DataGrid.Columns>
