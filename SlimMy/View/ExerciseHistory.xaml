@@ -54,7 +54,11 @@ xmlns:lvc="clr-namespace:LiveCharts.Wpf;assembly=LiveCharts.Wpf"
                 <TextBlock Text="🔥 평균 칼로리:" FontWeight="Bold"/>
                 <TextBlock Text="{Binding AverageCalories}" Margin="5,0,20,0"/>
                 <TextBlock Text="⏱ 평균 시간:" FontWeight="Bold"/>
-                <TextBlock Text="{Binding AverageDuration}" Margin="5,0,0,0"/>
+                <TextBlock Text="{Binding AverageDuration}" Margin="5,0,20,0"/>
+                <TextBlock Text="🏋 평균 세트:" FontWeight="Bold" />
+                <TextBlock Text="{Binding AverageSetCount}" Margin="5,0,20,0"/>
+                <TextBlock Text="🔁 평균 횟수:" FontWeight="Bold"/>
+                <TextBlock Text="{Binding AverageRepCount}" Margin="5,0,0,0"/>
             </StackPanel>
             
             <!-- 운동 기록 리스트 -->

@@ -114,6 +114,9 @@ namespace SlimMy.ViewModel
             set { _labels = value; OnPropertyChanged(nameof(Labels)); }
         }
 
+        public double AverageSetCount { get; set; }
+        public double AverageRepCount { get; set; }
+
         public AsyncRelayCommand SearchCommand { get; set; }
 
         public ICommand ExportCommand { get; set; }
@@ -146,6 +149,9 @@ namespace SlimMy.ViewModel
 
             // 평균 운동 시간 계산
             AvgDuration();
+
+            // 평균 세트/횟수
+            AvgSetRep();
 
             SearchCommand = new AsyncRelayCommand(SearchExerciseHistory);
 
@@ -322,6 +328,25 @@ namespace SlimMy.ViewModel
             AverageDuration = avgDuration.ToString() + "분";
         }
 
+        // 평균 세트/횟수
+        public void AvgSetRep()
+        {
+            var repExercises = FilteredExerciseLogs
+    .Where(x => x.SetCount > 0 && x.RepCount > 0)
+    .ToList();
+
+            if (repExercises.Any())
+            {
+                AverageSetCount = repExercises.Average(x => x.SetCount);
+                AverageRepCount = repExercises.Average(x => x.RepCount);
+            }
+            else
+            {
+                AverageSetCount = 0;
+                AverageRepCount = 0;
+            }
+        }
+
         // 검색 기능
         public async Task SearchExerciseHistory(object parameter)
         {
@@ -375,6 +400,15 @@ namespace SlimMy.ViewModel
 
             // 운동 시간 그래프
             DurationTrendSeriesPrint();
+
+            // 평균 칼로리 계산
+            AvgCalories();
+
+            // 평균 운동 시간 계산
+            AvgDuration();
+
+            // 평균 세트/횟수
+            AvgSetRep();
         }
 
         // 운동 기록 CSV 내보내기
